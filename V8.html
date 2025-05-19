@@ -1730,22 +1730,50 @@
         await video.play();
         
         // 拍照按鈕事件
-        captureButton.onclick = () => {
+        captureButton.onclick = async () => {
           const canvas = document.createElement('canvas');
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           canvas.getContext('2d').drawImage(video, 0, 0);
           
-          // 儲存照片
-          pointPhotos[pointId] = canvas.toDataURL('image/jpeg');
-          
-          // 清理相機
-          stream.getTracks().forEach(track => track.stop());
-          document.body.removeChild(overlay);
-          document.body.removeChild(cameraContainer);
-          
-          // 顯示預覽
-          showPhotoPreview(pointId);
+          // 顯示處理中訊息
+          const processingMsg = document.createElement('div');
+          processingMsg.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 8px;
+            z-index: 9999;
+          `;
+          processingMsg.textContent = '正在處理照片，請稍候...';
+          document.body.appendChild(processingMsg);
+
+          try {
+            // 將 canvas 轉換為 Blob
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            // 創建 File 對象
+            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+            // 壓縮照片
+            const compressedImage = await compressImage(file);
+            pointPhotos[pointId] = compressedImage;
+
+            // 清理相機
+            stream.getTracks().forEach(track => track.stop());
+            document.body.removeChild(overlay);
+            document.body.removeChild(cameraContainer);
+            document.body.removeChild(processingMsg);
+
+            // 顯示預覽
+            showPhotoPreview(pointId);
+          } catch (error) {
+            console.error('照片處理失敗:', error);
+            alert('照片處理失敗，請重試。');
+            document.body.removeChild(processingMsg);
+          }
         };
         
         // 關閉按鈕事件
@@ -2125,6 +2153,154 @@
       }
     }
 
+    // 添加照片壓縮函數
+    async function compressImage(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            // 計算新的尺寸，保持寬高比
+            let maxWidth = 1200;  // 最大寬度
+            let maxHeight = 1200; // 最大高度
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
+            } else {
+              if (height > maxHeight) {
+                width = Math.round((width * maxHeight) / height);
+                height = maxHeight;
+              }
+            }
+
+            // 創建 canvas 進行壓縮
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            // 繪製圖片
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // 轉換為 JPEG 格式，質量為 0.8
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            resolve(compressedDataUrl);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 修改照片上傳處理程序
+    document.getElementById('photoUploader').addEventListener("change", async function() {
+      const file = this.files[0];
+      const id = this.dataset.pointId;
+      if (file && id) {
+        try {
+          // 顯示處理中訊息
+          const processingMsg = document.createElement('div');
+          processingMsg.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 8px;
+            z-index: 9999;
+          `;
+          processingMsg.textContent = '正在處理照片，請稍候...';
+          document.body.appendChild(processingMsg);
+
+          // 壓縮照片
+          const compressedImage = await compressImage(file);
+          pointPhotos[id] = compressedImage;
+
+          // 移除處理中訊息
+          document.body.removeChild(processingMsg);
+
+          // 顯示預覽
+          showPhotoPreview(id);
+        } catch (error) {
+          console.error('照片處理失敗:', error);
+          alert('照片處理失敗，請重試。');
+        }
+      }
+    });
+
+    // 修改相機拍照處理邏輯
+    async function openCamera(pointId) {
+      try {
+        const video = document.createElement('video');
+        const cameraContainer = document.createElement('div');
+        const captureButton = document.createElement('button');
+        const closeButton = document.createElement('button');
+        
+        // ... existing camera setup code ...
+
+        // 修改拍照按鈕事件
+        captureButton.onclick = async () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext('2d').drawImage(video, 0, 0);
+          
+          // 顯示處理中訊息
+          const processingMsg = document.createElement('div');
+          processingMsg.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 8px;
+            z-index: 9999;
+          `;
+          processingMsg.textContent = '正在處理照片，請稍候...';
+          document.body.appendChild(processingMsg);
+
+          try {
+            // 將 canvas 轉換為 Blob
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            // 創建 File 對象
+            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+            // 壓縮照片
+            const compressedImage = await compressImage(file);
+            pointPhotos[pointId] = compressedImage;
+
+            // 清理相機
+            stream.getTracks().forEach(track => track.stop());
+            document.body.removeChild(overlay);
+            document.body.removeChild(cameraContainer);
+            document.body.removeChild(processingMsg);
+
+            // 顯示預覽
+            showPhotoPreview(pointId);
+          } catch (error) {
+            console.error('照片處理失敗:', error);
+            alert('照片處理失敗，請重試。');
+            document.body.removeChild(processingMsg);
+          }
+        };
+
+        // ... rest of the camera code ...
+      } catch (error) {
+        console.error('相機啟動失敗:', error);
+        alert('無法啟動相機，請改用檔案上傳。');
+        document.getElementById('photoUploader').click();
+      }
+    }
+
+    // 修改照片預覽函數，添加載入提示
     function showPhotoPreview(pointId) {
       const photo = pointPhotos[pointId];
       if (!photo) {
@@ -2136,6 +2312,26 @@
       const preview = document.getElementById('photoPreview');
       const container = document.getElementById('photoPreviewContainer');
       const overlay = document.getElementById('overlay');
+      
+      // 添加載入提示
+      const loadingMsg = document.createElement('div');
+      loadingMsg.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 10px 20px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        border-radius: 4px;
+        z-index: 1001;
+      `;
+      loadingMsg.textContent = '載入中...';
+      container.appendChild(loadingMsg);
+      
+      preview.onload = function() {
+        container.removeChild(loadingMsg);
+      };
       
       preview.src = photo;
       container.style.display = 'block';
