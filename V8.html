@@ -1363,6 +1363,13 @@
       }
     }
 
+    // 添加獲取表格寬度的函數
+    function getTableWidth() {
+      const table = document.getElementById('defectTable');
+      return table.offsetWidth;
+    }
+
+    // 修改圖片載入處理函數
     imageUploader.addEventListener("change", async function () {
       const file = this.files[0];
       if (!file) return;
@@ -1400,7 +1407,7 @@
               pdfPageSelector.style.display = 'block';
               totalPagesSpan.textContent = `/ ${currentPDF.numPages} 頁`;
               pageNumberInput.max = currentPDF.numPages;
-              pageNumberInput.value = '1'; // 重設為第一頁
+              pageNumberInput.value = '1';
               
               // 預設顯示第一頁
               await renderPDFPage();
@@ -1424,12 +1431,23 @@
               points = [];
               defectBody.innerHTML = "";
               
-              // 設定畫布大小
-              canvas.width = img.width;
-              canvas.height = img.height;
+              // 計算新的尺寸
+              const maxWidth = getTableWidth();
+              const scale = maxWidth / img.width;
+              const newWidth = maxWidth;
+              const newHeight = img.height * scale;
               
-              // 儲存原始平面圖
-              originalImage = e.target.result;
+              // 設定畫布大小
+              canvas.width = newWidth;
+              canvas.height = newHeight;
+              
+              // 儲存原始圖片資訊
+              originalImage = {
+                data: e.target.result,
+                width: img.width,
+                height: img.height,
+                scale: scale
+              };
               
               // 繪製圖片
               draw();
@@ -1453,6 +1471,7 @@
       }
     });
 
+    // 修改 PDF 頁面渲染函數
     async function renderPDFPage() {
       if (!currentPDF) return;
       
@@ -1465,27 +1484,32 @@
       try {
         // 顯示載入中訊息
         const loadingMsg = document.createElement('div');
-        loadingMsg.style.position = 'fixed';
-        loadingMsg.style.top = '50%';
-        loadingMsg.style.left = '50%';
-        loadingMsg.style.transform = 'translate(-50%, -50%)';
-        loadingMsg.style.padding = '20px 40px';
-        loadingMsg.style.background = 'rgba(0,0,0,0.8)';
-        loadingMsg.style.color = 'white';
-        loadingMsg.style.borderRadius = '8px';
-        loadingMsg.style.zIndex = '9999';
+        loadingMsg.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          padding: 20px 40px;
+          background: rgba(0,0,0,0.8);
+          color: white;
+          border-radius: 8px;
+          z-index: 9999;
+        `;
         loadingMsg.textContent = '正在載入PDF頁面，請稍候...';
         document.body.appendChild(loadingMsg);
 
         // 取得指定頁面
         const page = await currentPDF.getPage(pageNumber);
         
-        // 設定適當的縮放比例
-        const viewport = page.getViewport({scale: 1.5});
+        // 計算適當的縮放比例
+        const maxWidth = getTableWidth();
+        const viewport = page.getViewport({scale: 1.0});
+        const scale = maxWidth / viewport.width;
+        const scaledViewport = page.getViewport({scale: scale});
         
         // 設定 canvas 大小
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
         
         // 清除現有的點位和表格
         points = [];
@@ -1494,13 +1518,18 @@
         // 渲染 PDF 頁面到 canvas
         const renderContext = {
           canvasContext: ctx,
-          viewport: viewport
+          viewport: scaledViewport
         };
         
         await page.render(renderContext).promise;
         
-        // 儲存當前頁面為原始圖片
-        originalImage = canvas.toDataURL();
+        // 儲存當前頁面資訊
+        originalImage = {
+          data: canvas.toDataURL(),
+          width: viewport.width,
+          height: viewport.height,
+          scale: scale
+        };
         
         // 重新繪製（包含任何點位標記）
         draw();
@@ -1834,9 +1863,14 @@
       ctx.stroke();
     }
 
+    // 修改繪圖函數
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
+      
+      if (img) {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      }
+      
       points.forEach(pt => {
         // 判斷亮顯狀態：單點亮顯 > 篩選亮顯 > 預設顏色
         const isHighlighted = pt.singleHighlight || pt.isHighlighted;
@@ -1994,7 +2028,13 @@
         
         // 1. 匯出原始平面圖
         if (originalImage) {
-          zip.file("原始平面圖.png", originalImage.split(',')[1], {base64: true});
+          if (typeof originalImage === 'string') {
+            // 舊格式的圖片資料
+            zip.file("原始平面圖.png", originalImage.split(',')[1], {base64: true});
+          } else {
+            // 新格式的圖片資料
+            zip.file("原始平面圖.png", originalImage.data.split(',')[1], {base64: true});
+          }
         }
 
         // 2. 匯出目前的平面圖（含標記）
@@ -2827,6 +2867,27 @@
       // 執行列印
       window.print();
     }
+
+    // 添加視窗大小改變事件處理
+    window.addEventListener('resize', function() {
+      if (originalImage) {
+        // 重新計算尺寸
+        const maxWidth = getTableWidth();
+        const scale = maxWidth / originalImage.width;
+        const newWidth = maxWidth;
+        const newHeight = originalImage.height * scale;
+        
+        // 更新 canvas 尺寸
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        
+        // 更新原始圖片資訊
+        originalImage.scale = scale;
+        
+        // 重新繪製
+        draw();
+      }
+    });
   </script>
 </body>
 </html>
