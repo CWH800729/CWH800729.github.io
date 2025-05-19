@@ -1622,34 +1622,27 @@
         addTableRow(id);
         draw();
         
-        // 修改相機啟動邏輯
-        const pointId = id;
-        if (isMobileDevice()) {
-          // 在移動設備上，先檢查相機權限
-          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: true })
-              .then(stream => {
-                // 有權限，停止串流並詢問用戶選擇
-                stream.getTracks().forEach(track => track.stop());
-                const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
-                if (choice) {
-                  openCamera(pointId);
-                } else {
-                  document.getElementById('photoUploader').click();
-                }
-              })
-              .catch(err => {
-                console.log('相機權限被拒絕或無法訪問:', err);
-                // 如果無法訪問相機，直接開啟檔案選擇
-                document.getElementById('photoUploader').click();
-              });
+        // 修正照片上傳觸發邏輯
+        const photoUploader = document.getElementById('photoUploader');
+        if (!photoUploader) {
+          console.error('找不到照片上傳元素');
+          return;
+        }
+        
+        photoUploader.dataset.pointId = id;
+        
+        // 檢查是否為移動設備且支援相機
+        if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          // 移動設備：提供選擇拍照或上傳
+          const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
+          if (choice) {
+            openCamera(id);
           } else {
-            // 不支援 getUserMedia，直接開啟檔案選擇
-            document.getElementById('photoUploader').click();
+            photoUploader.click();
           }
         } else {
           // PC設備：直接開啟檔案選擇
-          document.getElementById('photoUploader').click();
+          photoUploader.click();
         }
       } else {
         // 如果拖曳距離太短，重新繪製以清除預覽
@@ -1690,8 +1683,12 @@
     // 添加相機功能
     async function openCamera(pointId) {
       try {
-        // 創建相機容器
+        const video = document.createElement('video');
         const cameraContainer = document.createElement('div');
+        const captureButton = document.createElement('button');
+        const closeButton = document.createElement('button');
+        
+        // 設置容器樣式
         cameraContainer.style.cssText = `
           position: fixed;
           top: 50%;
@@ -1701,63 +1698,44 @@
           padding: 20px;
           border-radius: 10px;
           z-index: 1000;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
         `;
-
-        // 創建視訊元素
-        const video = document.createElement('video');
+        
+        // 設置視訊元素樣式
         video.style.cssText = `
           max-width: 100%;
           max-height: 70vh;
           margin-bottom: 10px;
-          background: #000;
         `;
-        video.setAttribute('playsinline', ''); // 重要：防止iOS全屏播放
-        video.setAttribute('autoplay', '');
-
-        // 創建按鈕容器
-        const buttonContainer = document.createElement('div');
-        buttonContainer.style.cssText = `
-          display: flex;
-          gap: 10px;
-          margin-top: 10px;
-        `;
-
-        // 創建拍照按鈕
-        const captureButton = document.createElement('button');
+        
+        // 設置按鈕樣式
         captureButton.textContent = '拍照';
         captureButton.style.cssText = `
           padding: 10px 20px;
+          margin: 0 10px;
           background: #4CAF50;
           color: white;
           border: none;
           border-radius: 5px;
           cursor: pointer;
-          font-size: 16px;
         `;
-
-        // 創建關閉按鈕
-        const closeButton = document.createElement('button');
+        
         closeButton.textContent = '關閉';
         closeButton.style.cssText = `
           padding: 10px 20px;
+          margin: 0 10px;
           background: #f44336;
           color: white;
           border: none;
           border-radius: 5px;
           cursor: pointer;
-          font-size: 16px;
         `;
-
+        
         // 添加元素到容器
-        buttonContainer.appendChild(captureButton);
-        buttonContainer.appendChild(closeButton);
         cameraContainer.appendChild(video);
-        cameraContainer.appendChild(buttonContainer);
-
-        // 創建遮罩層
+        cameraContainer.appendChild(captureButton);
+        cameraContainer.appendChild(closeButton);
+        
+        // 添加遮罩層
         const overlay = document.createElement('div');
         overlay.style.cssText = `
           position: fixed;
@@ -1768,56 +1746,46 @@
           background: rgba(0,0,0,0.5);
           z-index: 999;
         `;
-
+        
         document.body.appendChild(overlay);
         document.body.appendChild(cameraContainer);
-
+        
         // 獲取攝像頭串流
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: 'environment',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }, 
+          video: { facingMode: 'environment' }, 
           audio: false 
         });
-
         video.srcObject = stream;
         await video.play();
-
+        
         // 拍照按鈕事件
         captureButton.onclick = async () => {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            
-            // 在iOS上可能需要等待一下確保畫面已經準備好
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            ctx.drawImage(video, 0, 0);
-            
-            // 顯示處理中訊息
-            const processingMsg = document.createElement('div');
-            processingMsg.style.cssText = `
-              position: fixed;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              padding: 20px 40px;
-              background: rgba(0,0,0,0.8);
-              color: white;
-              border-radius: 8px;
-              z-index: 9999;
-            `;
-            processingMsg.textContent = '正在處理照片，請稍候...';
-            document.body.appendChild(processingMsg);
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext('2d').drawImage(video, 0, 0);
+          
+          // 顯示處理中訊息
+          const processingMsg = document.createElement('div');
+          processingMsg.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 8px;
+            z-index: 9999;
+          `;
+          processingMsg.textContent = '正在處理照片，請稍候...';
+          document.body.appendChild(processingMsg);
 
+          try {
             // 將 canvas 轉換為 Blob
             const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            // 創建 File 對象
             const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
-            
             // 壓縮照片
             const compressedImage = await compressImage(file);
             pointPhotos[pointId] = compressedImage;
@@ -1833,27 +1801,20 @@
           } catch (error) {
             console.error('照片處理失敗:', error);
             alert('照片處理失敗，請重試。');
-            if (document.body.contains(processingMsg)) {
-              document.body.removeChild(processingMsg);
-            }
+            document.body.removeChild(processingMsg);
           }
         };
-
+        
         // 關閉按鈕事件
         closeButton.onclick = () => {
           stream.getTracks().forEach(track => track.stop());
           document.body.removeChild(overlay);
           document.body.removeChild(cameraContainer);
+          
+          // 如果沒有拍照，則開啟檔案選擇
           document.getElementById('photoUploader').click();
         };
-
-        // 點擊遮罩層關閉
-        overlay.onclick = () => {
-          stream.getTracks().forEach(track => track.stop());
-          document.body.removeChild(overlay);
-          document.body.removeChild(cameraContainer);
-        };
-
+        
       } catch (error) {
         console.error('相機啟動失敗:', error);
         alert('無法啟動相機，請改用檔案上傳。');
@@ -1861,11 +1822,11 @@
       }
     }
 
-    // 修改設備檢測函數
+    // 添加設備檢測函數
     function isMobileDevice() {
-      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-             ('maxTouchPoints' in navigator && navigator.maxTouchPoints > 0) ||
-             (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+      return mobileRegex.test(navigator.userAgent) || 
+             ('maxTouchPoints' in navigator && navigator.maxTouchPoints > 0);
     }
 
     function drawGuideLines(x, y) {
@@ -2313,6 +2274,71 @@
         }
       }
     });
+
+    // 修改相機拍照處理邏輯
+    async function openCamera(pointId) {
+      try {
+        const video = document.createElement('video');
+        const cameraContainer = document.createElement('div');
+        const captureButton = document.createElement('button');
+        const closeButton = document.createElement('button');
+        
+        // ... existing camera setup code ...
+
+        // 修改拍照按鈕事件
+        captureButton.onclick = async () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext('2d').drawImage(video, 0, 0);
+          
+          // 顯示處理中訊息
+          const processingMsg = document.createElement('div');
+          processingMsg.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 8px;
+            z-index: 9999;
+          `;
+          processingMsg.textContent = '正在處理照片，請稍候...';
+          document.body.appendChild(processingMsg);
+
+          try {
+            // 將 canvas 轉換為 Blob
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            // 創建 File 對象
+            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+            // 壓縮照片
+            const compressedImage = await compressImage(file);
+            pointPhotos[pointId] = compressedImage;
+
+            // 清理相機
+            stream.getTracks().forEach(track => track.stop());
+            document.body.removeChild(overlay);
+            document.body.removeChild(cameraContainer);
+            document.body.removeChild(processingMsg);
+
+            // 顯示預覽
+            showPhotoPreview(pointId);
+          } catch (error) {
+            console.error('照片處理失敗:', error);
+            alert('照片處理失敗，請重試。');
+            document.body.removeChild(processingMsg);
+          }
+        };
+
+        // ... rest of the camera code ...
+      } catch (error) {
+        console.error('相機啟動失敗:', error);
+        alert('無法啟動相機，請改用檔案上傳。');
+        document.getElementById('photoUploader').click();
+      }
+    }
 
     // 修改照片預覽函數，添加載入提示
     function showPhotoPreview(pointId) {
