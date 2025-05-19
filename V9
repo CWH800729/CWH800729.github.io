@@ -7,8 +7,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://apis.google.com/js/api.js"></script>
-  <script src="https://accounts.google.com/gsi/client"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     body { 
@@ -332,9 +330,9 @@
     .action-buttons {
       position: fixed;
       bottom: 20px;
-      left: 20px;
+      left: 20px;  /* 改為靠左 */
       z-index: 1000;
-      max-width: 300px;
+      max-width: 300px;  /* 限制最大寬度 */
     }
 
     .action-container {
@@ -350,84 +348,18 @@
       margin-bottom: 10px;
     }
 
-    /* Google Drive 相關樣式 */
-    .drive-settings {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid #ddd;
-    }
-
-    .drive-settings input[type="text"] {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-
-    .drive-settings button {
-      width: 100%;
-      margin-bottom: 10px;
-      background-color: #4285f4;
+    .action-buttons button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4CAF50;
       color: white;
       border: none;
-      padding: 8px;
-      border-radius: 4px;
+      border-radius: 5px;
       cursor: pointer;
     }
 
-    .drive-settings button:hover {
-      background-color: #357abd;
-    }
-
-    .drive-settings button:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-    }
-
-    .uploaded-folders {
-      margin-top: 15px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .uploaded-folders h4 {
-      margin: 0 0 10px 0;
-      font-size: 14px;
-      color: #666;
-    }
-
-    .uploaded-folder-item {
-      display: flex;
-      align-items: center;
-      padding: 5px 0;
-      border-bottom: 1px solid #eee;
-    }
-
-    .uploaded-folder-item a {
-      color: #4285f4;
-      text-decoration: none;
-      flex-grow: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .uploaded-folder-item a:hover {
-      text-decoration: underline;
-    }
-
-    .uploaded-folder-item .delete-btn {
-      color: #dc3545;
-      background: none;
-      border: none;
-      padding: 2px 5px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    .uploaded-folder-item .delete-btn:hover {
-      color: #c82333;
+    .action-buttons button:hover {
+      background-color: #45a049;
     }
 
     /* 匯入匯出說明樣式 */
@@ -1224,22 +1156,6 @@
           <li>匯入資料：可載入先前匯出的資料包，繼續編輯或新增資料</li>
         </ul>
       </div>
-      
-      <!-- Google Drive 設定區域 -->
-      <div class="drive-settings">
-        <h4>Google Drive 上傳設定</h4>
-        <input type="text" id="driveFolderUrl" placeholder="請輸入 Google Drive 共享資料夾網址" />
-        <button id="saveDriveSettings" onclick="saveDriveSettings()">儲存設定</button>
-        <button id="uploadToDrive" onclick="uploadToDrive()" disabled>
-          <i class="fas fa-cloud-upload-alt"></i> 上傳至 Google Drive
-        </button>
-      </div>
-
-      <!-- 已上傳資料夾列表 -->
-      <div class="uploaded-folders">
-        <h4>已上傳的資料夾</h4>
-        <div id="uploadedFoldersList"></div>
-      </div>
     </div>
   </div>
 
@@ -1315,7 +1231,6 @@
       updateSummaryTable();
       initializeSignatures();
       updateFooter();
-      loadDriveSettings(); // 載入 Google Drive 設定
     });
 
     // 每天凌晨更新日期
@@ -1448,6 +1363,13 @@
       }
     }
 
+    // 添加獲取表格寬度的函數
+    function getTableWidth() {
+      const table = document.getElementById('defectTable');
+      return table.offsetWidth;
+    }
+
+    // 修改圖片載入處理函數
     imageUploader.addEventListener("change", async function () {
       const file = this.files[0];
       if (!file) return;
@@ -1485,7 +1407,7 @@
               pdfPageSelector.style.display = 'block';
               totalPagesSpan.textContent = `/ ${currentPDF.numPages} 頁`;
               pageNumberInput.max = currentPDF.numPages;
-              pageNumberInput.value = '1'; // 重設為第一頁
+              pageNumberInput.value = '1';
               
               // 預設顯示第一頁
               await renderPDFPage();
@@ -1509,12 +1431,23 @@
               points = [];
               defectBody.innerHTML = "";
               
-              // 設定畫布大小
-              canvas.width = img.width;
-              canvas.height = img.height;
+              // 計算新的尺寸
+              const maxWidth = getTableWidth();
+              const scale = maxWidth / img.width;
+              const newWidth = maxWidth;
+              const newHeight = img.height * scale;
               
-              // 儲存原始平面圖
-              originalImage = e.target.result;
+              // 設定畫布大小
+              canvas.width = newWidth;
+              canvas.height = newHeight;
+              
+              // 儲存原始圖片資訊
+              originalImage = {
+                data: e.target.result,
+                width: img.width,
+                height: img.height,
+                scale: scale
+              };
               
               // 繪製圖片
               draw();
@@ -1538,6 +1471,7 @@
       }
     });
 
+    // 修改 PDF 頁面渲染函數
     async function renderPDFPage() {
       if (!currentPDF) return;
       
@@ -1550,27 +1484,32 @@
       try {
         // 顯示載入中訊息
         const loadingMsg = document.createElement('div');
-        loadingMsg.style.position = 'fixed';
-        loadingMsg.style.top = '50%';
-        loadingMsg.style.left = '50%';
-        loadingMsg.style.transform = 'translate(-50%, -50%)';
-        loadingMsg.style.padding = '20px 40px';
-        loadingMsg.style.background = 'rgba(0,0,0,0.8)';
-        loadingMsg.style.color = 'white';
-        loadingMsg.style.borderRadius = '8px';
-        loadingMsg.style.zIndex = '9999';
+        loadingMsg.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          padding: 20px 40px;
+          background: rgba(0,0,0,0.8);
+          color: white;
+          border-radius: 8px;
+          z-index: 9999;
+        `;
         loadingMsg.textContent = '正在載入PDF頁面，請稍候...';
         document.body.appendChild(loadingMsg);
 
         // 取得指定頁面
         const page = await currentPDF.getPage(pageNumber);
         
-        // 設定適當的縮放比例
-        const viewport = page.getViewport({scale: 1.5});
+        // 計算適當的縮放比例
+        const maxWidth = getTableWidth();
+        const viewport = page.getViewport({scale: 1.0});
+        const scale = maxWidth / viewport.width;
+        const scaledViewport = page.getViewport({scale: scale});
         
         // 設定 canvas 大小
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
         
         // 清除現有的點位和表格
         points = [];
@@ -1579,13 +1518,18 @@
         // 渲染 PDF 頁面到 canvas
         const renderContext = {
           canvasContext: ctx,
-          viewport: viewport
+          viewport: scaledViewport
         };
         
         await page.render(renderContext).promise;
         
-        // 儲存當前頁面為原始圖片
-        originalImage = canvas.toDataURL();
+        // 儲存當前頁面資訊
+        originalImage = {
+          data: canvas.toDataURL(),
+          width: viewport.width,
+          height: viewport.height,
+          scale: scale
+        };
         
         // 重新繪製（包含任何點位標記）
         draw();
@@ -1600,149 +1544,64 @@
       }
     }
 
-    canvas.addEventListener("mousedown", function(e) {
+    canvas.addEventListener("mousedown", handleStart);
+    canvas.addEventListener("mousemove", handleMove);
+    canvas.addEventListener("mouseup", handleEnd);
+    canvas.addEventListener("mouseout", handleEnd);
+
+    // 添加觸控事件支援
+    canvas.addEventListener("touchstart", handleTouchStart);
+    canvas.addEventListener("touchmove", handleTouchMove);
+    canvas.addEventListener("touchend", handleTouchEnd);
+    canvas.addEventListener("touchcancel", handleTouchEnd);
+
+    // 統一的事件處理函數
+    function handleStart(e) {
       if (!img.src && !currentPDF) {
         alert('請先上傳平面圖');
         return;
       }
       
       const rect = canvas.getBoundingClientRect();
+      const point = getEventPoint(e);
       startPoint = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        x: point.x - rect.left,
+        y: point.y - rect.top
       };
       isDragging = true;
       currentPoint = null;
-    });
+    }
 
-    // 新增相機功能
-    async function openCamera(pointId) {
-      try {
-        const video = document.createElement('video');
-        const cameraContainer = document.createElement('div');
-        const captureButton = document.createElement('button');
-        const closeButton = document.createElement('button');
-        
-        // 設置容器樣式
-        cameraContainer.style.cssText = `
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: black;
-          padding: 20px;
-          border-radius: 10px;
-          z-index: 1000;
-        `;
-        
-        // 設置視訊元素樣式
-        video.style.cssText = `
-          max-width: 100%;
-          max-height: 70vh;
-          margin-bottom: 10px;
-        `;
-        
-        // 設置按鈕樣式
-        captureButton.textContent = '拍照';
-        captureButton.style.cssText = `
-          padding: 10px 20px;
-          margin: 0 10px;
-          background: #4CAF50;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        `;
-        
-        closeButton.textContent = '關閉';
-        closeButton.style.cssText = `
-          padding: 10px 20px;
-          margin: 0 10px;
-          background: #f44336;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        `;
-        
-        // 添加元素到容器
-        cameraContainer.appendChild(video);
-        cameraContainer.appendChild(captureButton);
-        cameraContainer.appendChild(closeButton);
-        
-        // 添加遮罩層
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0,0,0,0.5);
-          z-index: 999;
-        `;
-        
-        document.body.appendChild(overlay);
-        document.body.appendChild(cameraContainer);
-        
-        // 獲取攝像頭串流
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' }, 
-          audio: false 
-        });
-        video.srcObject = stream;
-        await video.play();
-        
-        // 拍照按鈕事件
-        captureButton.onclick = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          canvas.getContext('2d').drawImage(video, 0, 0);
-          
-          // 儲存照片
-          pointPhotos[pointId] = canvas.toDataURL('image/jpeg');
-          
-          // 清理相機
-          stream.getTracks().forEach(track => track.stop());
-          document.body.removeChild(overlay);
-          document.body.removeChild(cameraContainer);
-          
-          // 顯示預覽
-          showPhotoPreview(pointId);
-        };
-        
-        // 關閉按鈕事件
-        closeButton.onclick = () => {
-          stream.getTracks().forEach(track => track.stop());
-          document.body.removeChild(overlay);
-          document.body.removeChild(cameraContainer);
-          
-          // 如果沒有拍照，則開啟檔案選擇
-          document.getElementById('photoUploader').click();
-        };
-        
-      } catch (error) {
-        console.error('相機啟動失敗:', error);
-        alert('無法啟動相機，請改用檔案上傳。');
-        document.getElementById('photoUploader').click();
+    function handleMove(e) {
+      if (!isDragging) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const point = getEventPoint(e);
+      currentPoint = {
+        x: point.x - rect.left,
+        y: point.y - rect.top
+      };
+      
+      // 繪製預覽
+      draw();
+      if (startPoint && currentPoint) {
+        ctx.beginPath();
+        ctx.moveTo(startPoint.x, startPoint.y);
+        ctx.lineTo(currentPoint.x, currentPoint.y);
+        ctx.strokeStyle = defaultArrowColor;
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
     }
 
-    // 添加設備檢測函數
-    function isMobileDevice() {
-      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-      return mobileRegex.test(navigator.userAgent) || 
-             ('maxTouchPoints' in navigator && navigator.maxTouchPoints > 0);
-    }
-
-    canvas.addEventListener("mouseup", function(e) {
+    function handleEnd(e) {
       if (!isDragging) return;
       isDragging = false;
       
       const rect = canvas.getBoundingClientRect();
-      const endX = e.clientX - rect.left;
-      const endY = e.clientY - rect.top;
+      const point = getEventPoint(e);
+      const endX = point.x - rect.left;
+      const endY = point.y - rect.top;
       
       // 計算箭頭方向
       const dx = endX - startPoint.x;
@@ -1763,33 +1622,251 @@
         addTableRow(id);
         draw();
         
-        // 修正照片上傳觸發邏輯
-        const photoUploader = document.getElementById('photoUploader');
-        if (!photoUploader) {
-          console.error('找不到照片上傳元素');
-          return;
-        }
-        
-        photoUploader.dataset.pointId = id;
-        
-        // 檢查是否為移動設備且支援相機
-        if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          // 移動設備：提供選擇拍照或上傳
-          const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
-          if (choice) {
-            openCamera(id);
+        // 修改相機啟動邏輯
+        const pointId = id;
+        if (isMobileDevice()) {
+          // 在移動設備上，先檢查相機權限
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+              .then(stream => {
+                // 有權限，停止串流並詢問用戶選擇
+                stream.getTracks().forEach(track => track.stop());
+                const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
+                if (choice) {
+                  openCamera(pointId);
+                } else {
+                  document.getElementById('photoUploader').click();
+                }
+              })
+              .catch(err => {
+                console.log('相機權限被拒絕或無法訪問:', err);
+                // 如果無法訪問相機，直接開啟檔案選擇
+                document.getElementById('photoUploader').click();
+              });
           } else {
-            photoUploader.click();
+            // 不支援 getUserMedia，直接開啟檔案選擇
+            document.getElementById('photoUploader').click();
           }
         } else {
           // PC設備：直接開啟檔案選擇
-          photoUploader.click();
+          document.getElementById('photoUploader').click();
         }
       } else {
         // 如果拖曳距離太短，重新繪製以清除預覽
         draw();
       }
-    });
+    }
+
+    // 觸控事件處理函數
+    function handleTouchStart(e) {
+      e.preventDefault(); // 防止頁面滾動
+      handleStart(e.touches[0]);
+    }
+
+    function handleTouchMove(e) {
+      e.preventDefault(); // 防止頁面滾動
+      handleMove(e.touches[0]);
+    }
+
+    function handleTouchEnd(e) {
+      e.preventDefault(); // 防止頁面滾動
+      if (e.touches.length === 0) {
+        handleEnd(e.changedTouches[0]);
+      }
+    }
+
+    // 獲取事件座標的通用函數
+    function getEventPoint(e) {
+      return {
+        x: e.clientX || e.touches[0].clientX,
+        y: e.clientY || e.touches[0].clientY
+      };
+    }
+
+    // 移除原有的事件監聽器
+    // canvas.addEventListener("mousedown", function(e) { ... });
+    // canvas.addEventListener("mouseup", function(e) { ... });
+
+    // 添加相機功能
+    async function openCamera(pointId) {
+      try {
+        // 創建相機容器
+        const cameraContainer = document.createElement('div');
+        cameraContainer.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: black;
+          padding: 20px;
+          border-radius: 10px;
+          z-index: 1000;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        `;
+
+        // 創建視訊元素
+        const video = document.createElement('video');
+        video.style.cssText = `
+          max-width: 100%;
+          max-height: 70vh;
+          margin-bottom: 10px;
+          background: #000;
+        `;
+        video.setAttribute('playsinline', ''); // 重要：防止iOS全屏播放
+        video.setAttribute('autoplay', '');
+
+        // 創建按鈕容器
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+          display: flex;
+          gap: 10px;
+          margin-top: 10px;
+        `;
+
+        // 創建拍照按鈕
+        const captureButton = document.createElement('button');
+        captureButton.textContent = '拍照';
+        captureButton.style.cssText = `
+          padding: 10px 20px;
+          background: #4CAF50;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 16px;
+        `;
+
+        // 創建關閉按鈕
+        const closeButton = document.createElement('button');
+        closeButton.textContent = '關閉';
+        closeButton.style.cssText = `
+          padding: 10px 20px;
+          background: #f44336;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 16px;
+        `;
+
+        // 添加元素到容器
+        buttonContainer.appendChild(captureButton);
+        buttonContainer.appendChild(closeButton);
+        cameraContainer.appendChild(video);
+        cameraContainer.appendChild(buttonContainer);
+
+        // 創建遮罩層
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.5);
+          z-index: 999;
+        `;
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(cameraContainer);
+
+        // 獲取攝像頭串流
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }, 
+          audio: false 
+        });
+
+        video.srcObject = stream;
+        await video.play();
+
+        // 拍照按鈕事件
+        captureButton.onclick = async () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // 在iOS上可能需要等待一下確保畫面已經準備好
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            ctx.drawImage(video, 0, 0);
+            
+            // 顯示處理中訊息
+            const processingMsg = document.createElement('div');
+            processingMsg.style.cssText = `
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              padding: 20px 40px;
+              background: rgba(0,0,0,0.8);
+              color: white;
+              border-radius: 8px;
+              z-index: 9999;
+            `;
+            processingMsg.textContent = '正在處理照片，請稍候...';
+            document.body.appendChild(processingMsg);
+
+            // 將 canvas 轉換為 Blob
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+            
+            // 壓縮照片
+            const compressedImage = await compressImage(file);
+            pointPhotos[pointId] = compressedImage;
+
+            // 清理相機
+            stream.getTracks().forEach(track => track.stop());
+            document.body.removeChild(overlay);
+            document.body.removeChild(cameraContainer);
+            document.body.removeChild(processingMsg);
+
+            // 顯示預覽
+            showPhotoPreview(pointId);
+          } catch (error) {
+            console.error('照片處理失敗:', error);
+            alert('照片處理失敗，請重試。');
+            if (document.body.contains(processingMsg)) {
+              document.body.removeChild(processingMsg);
+            }
+          }
+        };
+
+        // 關閉按鈕事件
+        closeButton.onclick = () => {
+          stream.getTracks().forEach(track => track.stop());
+          document.body.removeChild(overlay);
+          document.body.removeChild(cameraContainer);
+          document.getElementById('photoUploader').click();
+        };
+
+        // 點擊遮罩層關閉
+        overlay.onclick = () => {
+          stream.getTracks().forEach(track => track.stop());
+          document.body.removeChild(overlay);
+          document.body.removeChild(cameraContainer);
+        };
+
+      } catch (error) {
+        console.error('相機啟動失敗:', error);
+        alert('無法啟動相機，請改用檔案上傳。');
+        document.getElementById('photoUploader').click();
+      }
+    }
+
+    // 修改設備檢測函數
+    function isMobileDevice() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+             ('maxTouchPoints' in navigator && navigator.maxTouchPoints > 0) ||
+             (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+    }
 
     function drawGuideLines(x, y) {
       ctx.setLineDash([5, 5]); // 設置虛線樣式
@@ -1825,9 +1902,14 @@
       ctx.stroke();
     }
 
+    // 修改繪圖函數
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
+      
+      if (img) {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      }
+      
       points.forEach(pt => {
         // 判斷亮顯狀態：單點亮顯 > 篩選亮顯 > 預設顏色
         const isHighlighted = pt.singleHighlight || pt.isHighlighted;
@@ -1985,7 +2067,13 @@
         
         // 1. 匯出原始平面圖
         if (originalImage) {
-          zip.file("原始平面圖.png", originalImage.split(',')[1], {base64: true});
+          if (typeof originalImage === 'string') {
+            // 舊格式的圖片資料
+            zip.file("原始平面圖.png", originalImage.split(',')[1], {base64: true});
+          } else {
+            // 新格式的圖片資料
+            zip.file("原始平面圖.png", originalImage.data.split(',')[1], {base64: true});
+          }
         }
 
         // 2. 匯出目前的平面圖（含標記）
@@ -2144,6 +2232,89 @@
       }
     }
 
+    // 添加照片壓縮函數
+    async function compressImage(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            // 計算新的尺寸，保持寬高比
+            let maxWidth = 1200;  // 最大寬度
+            let maxHeight = 1200; // 最大高度
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
+            } else {
+              if (height > maxHeight) {
+                width = Math.round((width * maxHeight) / height);
+                height = maxHeight;
+              }
+            }
+
+            // 創建 canvas 進行壓縮
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            // 繪製圖片
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // 轉換為 JPEG 格式，質量為 0.8
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            resolve(compressedDataUrl);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 修改照片上傳處理程序
+    document.getElementById('photoUploader').addEventListener("change", async function() {
+      const file = this.files[0];
+      const id = this.dataset.pointId;
+      if (file && id) {
+        try {
+          // 顯示處理中訊息
+          const processingMsg = document.createElement('div');
+          processingMsg.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 8px;
+            z-index: 9999;
+          `;
+          processingMsg.textContent = '正在處理照片，請稍候...';
+          document.body.appendChild(processingMsg);
+
+          // 壓縮照片
+          const compressedImage = await compressImage(file);
+          pointPhotos[id] = compressedImage;
+
+          // 移除處理中訊息
+          document.body.removeChild(processingMsg);
+
+          // 顯示預覽
+          showPhotoPreview(id);
+        } catch (error) {
+          console.error('照片處理失敗:', error);
+          alert('照片處理失敗，請重試。');
+        }
+      }
+    });
+
+    // 修改照片預覽函數，添加載入提示
     function showPhotoPreview(pointId) {
       const photo = pointPhotos[pointId];
       if (!photo) {
@@ -2155,6 +2326,26 @@
       const preview = document.getElementById('photoPreview');
       const container = document.getElementById('photoPreviewContainer');
       const overlay = document.getElementById('overlay');
+      
+      // 添加載入提示
+      const loadingMsg = document.createElement('div');
+      loadingMsg.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 10px 20px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        border-radius: 4px;
+        z-index: 1001;
+      `;
+      loadingMsg.textContent = '載入中...';
+      container.appendChild(loadingMsg);
+      
+      preview.onload = function() {
+        container.removeChild(loadingMsg);
+      };
       
       preview.src = photo;
       container.style.display = 'block';
@@ -2634,7 +2825,6 @@
       updateSummaryTable();
       initializeSignatures();
       updateFooter();
-      loadDriveSettings(); // 載入 Google Drive 設定
     });
 
     // 在標題變更時更新頁尾
@@ -2652,325 +2842,26 @@
       window.print();
     }
 
-    // Google Drive API 相關設定
-    const CLIENT_ID = 562620354715-hp32d8gmhmvuehu46d1pcrrjqj3l2kqr.apps.googleusercontent.com; // 需要替換為實際的 Client ID
-    const API_KEY = 'YOUR_API_KEY';     // 需要替換為實際的 API Key
-    const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
-    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-
-    let tokenClient;
-    let gapiInited = false;
-    let gisInited = false;
-    let driveFolderId = null;
-    let uploadedFolders = [];
-
-    // 初始化 Google API
-    function gapiLoaded() {
-      gapi.load('client', initializeGapiClient);
-    }
-
-    async function initializeGapiClient() {
-      await gapi.client.init({
-        apiKey: API_KEY,
-        discoveryDocs: DISCOVERY_DOCS,
-      });
-      gapiInited = true;
-      maybeEnableUploadButton();
-    }
-
-    function gisLoaded() {
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: '', // 在需要時設定
-      });
-      gisInited = true;
-      maybeEnableUploadButton();
-    }
-
-    function maybeEnableUploadButton() {
-      if (gapiInited && gisInited && driveFolderId) {
-        document.getElementById('uploadToDrive').disabled = false;
-      }
-    }
-
-    // 儲存 Google Drive 設定
-    function saveDriveSettings() {
-      const folderUrl = document.getElementById('driveFolderUrl').value.trim();
-      if (!folderUrl) {
-        alert('請輸入 Google Drive 共享資料夾網址');
-        return;
-      }
-
-      // 從 URL 中提取資料夾 ID
-      const match = folderUrl.match(/\/folders\/([a-zA-Z0-9-_]+)/);
-      if (!match) {
-        alert('無效的 Google Drive 資料夾網址');
-        return;
-      }
-
-      driveFolderId = match[1];
-      localStorage.setItem('driveFolderId', driveFolderId);
-      maybeEnableUploadButton();
-      alert('設定已儲存');
-    }
-
-    // 載入已儲存的設定
-    function loadDriveSettings() {
-      const savedFolderId = localStorage.getItem('driveFolderId');
-      if (savedFolderId) {
-        driveFolderId = savedFolderId;
-        document.getElementById('driveFolderUrl').value = `https://drive.google.com/drive/folders/${savedFolderId}`;
-        maybeEnableUploadButton();
-      }
-
-      // 載入已上傳的資料夾列表
-      const savedFolders = localStorage.getItem('uploadedFolders');
-      if (savedFolders) {
-        uploadedFolders = JSON.parse(savedFolders);
-        updateUploadedFoldersList();
-      }
-    }
-
-    // 更新已上傳資料夾列表
-    function updateUploadedFoldersList() {
-      const container = document.getElementById('uploadedFoldersList');
-      container.innerHTML = '';
-
-      uploadedFolders.forEach((folder, index) => {
-        const item = document.createElement('div');
-        item.className = 'uploaded-folder-item';
-        item.innerHTML = `
-          <a href="${folder.url}" target="_blank">${folder.title}</a>
-          <button class="delete-btn" onclick="deleteUploadedFolder(${index})">
-            <i class="fas fa-times"></i>
-          </button>
-        `;
-        container.appendChild(item);
-      });
-    }
-
-    // 刪除已上傳的資料夾記錄
-    function deleteUploadedFolder(index) {
-      if (confirm('確定要刪除此資料夾記錄嗎？')) {
-        uploadedFolders.splice(index, 1);
-        localStorage.setItem('uploadedFolders', JSON.stringify(uploadedFolders));
-        updateUploadedFoldersList();
-      }
-    }
-
-    // 上傳至 Google Drive
-    async function uploadToDrive() {
-      if (!driveFolderId) {
-        alert('請先設定 Google Drive 資料夾');
-        return;
-      }
-
-      try {
-        // 顯示上傳中訊息
-        const processingMsg = document.createElement('div');
-        processingMsg.style.cssText = `
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          padding: 20px 40px;
-          background: rgba(0,0,0,0.8);
-          color: white;
-          border-radius: 8px;
-          z-index: 9999;
-        `;
-        processingMsg.textContent = '正在上傳至 Google Drive，請稍候...';
-        document.body.appendChild(processingMsg);
-
-        // 獲取認證
-        tokenClient.callback = async (resp) => {
-          if (resp.error !== undefined) {
-            throw (resp);
-          }
-          await uploadFiles();
-        };
-
-        if (gapi.client.getToken() === null) {
-          tokenClient.requestAccessToken({prompt: 'consent'});
-        } else {
-          tokenClient.requestAccessToken({prompt: ''});
-        }
-      } catch (err) {
-        console.error('上傳失敗:', err);
-        alert('上傳過程發生錯誤，請重試。');
-        if (document.body.contains(processingMsg)) {
-          document.body.removeChild(processingMsg);
-        }
-      }
-    }
-
-    // 上傳檔案到 Google Drive
-    async function uploadFiles() {
-      const title = document.getElementById('pageTitle').value || '未命名';
-      const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
-      const folderName = `${currentDate}-${title}`;
-
-      try {
-        // 1. 創建資料夾
-        const folderMetadata = {
-          name: folderName,
-          mimeType: 'application/vnd.google-apps.folder',
-          parents: [driveFolderId]
-        };
-
-        const folder = await gapi.client.drive.files.create({
-          resource: folderMetadata,
-          fields: 'id, webViewLink'
-        });
-
-        const folderId = folder.result.id;
-        const folderUrl = folder.result.webViewLink;
-
-        // 2. 上傳平面圖
-        if (originalImage) {
-          const imageBlob = await fetch(originalImage).then(r => r.blob());
-          const imageMetadata = {
-            name: '原始平面圖.png',
-            parents: [folderId]
-          };
-          await uploadFile(imageBlob, imageMetadata);
-        }
-
-        // 3. 上傳標記平面圖
-        const canvasBlob = await new Promise(resolve => canvas.toBlob(resolve));
-        const markedImageMetadata = {
-          name: '標記平面圖.png',
-          parents: [folderId]
-        };
-        await uploadFile(canvasBlob, markedImageMetadata);
-
-        // 4. 上傳照片
-        for (const [pointId, photoData] of Object.entries(pointPhotos)) {
-          const photoBlob = await fetch(photoData).then(r => r.blob());
-          const photoMetadata = {
-            name: `${pointId}.jpg`,
-            parents: [folderId]
-          };
-          await uploadFile(photoBlob, photoMetadata);
-        }
-
-        // 5. 上傳 Excel 報表
-        const wb = XLSX.utils.book_new();
+    // 添加視窗大小改變事件處理
+    window.addEventListener('resize', function() {
+      if (originalImage) {
+        // 重新計算尺寸
+        const maxWidth = getTableWidth();
+        const scale = maxWidth / originalImage.width;
+        const newWidth = maxWidth;
+        const newHeight = originalImage.height * scale;
         
-        // 缺失資料工作表
-        const defectSheet = XLSX.utils.aoa_to_sheet([
-          ['點位編號', '缺失說明', '缺失類別', '廠商', '修繕進度', '照片狀態', '座標X', '座標Y'],
-          ...Array.from(defectBody.rows).map((row, index) => {
-            const point = points[index];
-            return [
-              row.cells[0].textContent,
-              row.cells[1].querySelector('input')?.value || row.cells[1].textContent,
-              row.cells[2].textContent,
-              row.cells[3].textContent,
-              row.cells[4].textContent,
-              pointPhotos['點' + row.cells[0].textContent] ? '有' : '無',
-              point ? Math.round(point.x) : '',
-              point ? Math.round(point.y) : ''
-            ];
-          })
-        ]);
-
-        // 關鍵字資料工作表
-        const keywordSheet = XLSX.utils.aoa_to_sheet([
-          ['關鍵字', '缺失類別', '廠商'],
-          ...customKeywordMap.map(item => [
-            item.keyword,
-            item.category,
-            item.vendor
-          ])
-        ]);
-
-        // 廠商統計工作表
-        const vendorStats = {};
-        Array.from(defectBody.rows).forEach(row => {
-          const vendor = row.cells[3].textContent || '未指定';
-          const status = row.cells[4].textContent;
-          
-          if (!vendorStats[vendor]) {
-            vendorStats[vendor] = {
-              total: 0,
-              '未修繕': 0,
-              '已完成修繕': 0,
-              '已檢查': 0
-            };
-          }
-          vendorStats[vendor].total++;
-          vendorStats[vendor][status]++;
-        });
-
-        const statsSheet = XLSX.utils.aoa_to_sheet([
-          ['廠商名稱', '總缺失數', '未修繕', '已完成修繕', '已檢查', '完成率'],
-          ...Object.entries(vendorStats).map(([vendor, stats]) => {
-            const completionRate = ((stats['已完成修繕'] + stats['已檢查']) / stats.total * 100).toFixed(1) + '%';
-            return [
-              vendor,
-              stats.total,
-              stats['未修繕'],
-              stats['已完成修繕'],
-              stats['已檢查'],
-              completionRate
-            ];
-          })
-        ]);
-
-        XLSX.utils.book_append_sheet(wb, defectSheet, "缺失清單");
-        XLSX.utils.book_append_sheet(wb, keywordSheet, "關鍵字設定");
-        XLSX.utils.book_append_sheet(wb, statsSheet, "廠商統計");
-
-        const excelBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-        const excelBlob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const excelMetadata = {
-          name: `${currentDate}-${title}-缺失紀錄.xlsx`,
-          parents: [folderId]
-        };
-        await uploadFile(excelBlob, excelMetadata);
-
-        // 6. 儲存上傳記錄
-        uploadedFolders.push({
-          title: folderName,
-          url: folderUrl,
-          date: new Date().toISOString()
-        });
-        localStorage.setItem('uploadedFolders', JSON.stringify(uploadedFolders));
-        updateUploadedFoldersList();
-
-        document.body.removeChild(processingMsg);
-        alert(`資料已成功上傳至 Google Drive！\n資料夾名稱：${folderName}`);
-      } catch (err) {
-        console.error('上傳失敗:', err);
-        alert('上傳過程發生錯誤，請重試。');
-        if (document.body.contains(processingMsg)) {
-          document.body.removeChild(processingMsg);
-        }
+        // 更新 canvas 尺寸
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        
+        // 更新原始圖片資訊
+        originalImage.scale = scale;
+        
+        // 重新繪製
+        draw();
       }
-    }
-
-    // 上傳單個檔案
-    async function uploadFile(file, metadata) {
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', file);
-
-      const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + gapi.client.getToken().access_token,
-        },
-        body: form
-      });
-
-      if (!response.ok) {
-        throw new Error(`上傳失敗: ${response.statusText}`);
-      }
-
-      return response.json();
-    }
+    });
   </script>
 </body>
 </html>
