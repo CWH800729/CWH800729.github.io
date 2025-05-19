@@ -1515,22 +1515,143 @@
       }
     }
 
-    canvas.addEventListener("mousedown", function(e) {
+    canvas.addEventListener("mousedown", handleStart);
+    canvas.addEventListener("mousemove", handleMove);
+    canvas.addEventListener("mouseup", handleEnd);
+    canvas.addEventListener("mouseout", handleEnd);
+
+    // 添加觸控事件支援
+    canvas.addEventListener("touchstart", handleTouchStart);
+    canvas.addEventListener("touchmove", handleTouchMove);
+    canvas.addEventListener("touchend", handleTouchEnd);
+    canvas.addEventListener("touchcancel", handleTouchEnd);
+
+    // 統一的事件處理函數
+    function handleStart(e) {
       if (!img.src && !currentPDF) {
         alert('請先上傳平面圖');
         return;
       }
       
       const rect = canvas.getBoundingClientRect();
+      const point = getEventPoint(e);
       startPoint = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        x: point.x - rect.left,
+        y: point.y - rect.top
       };
       isDragging = true;
       currentPoint = null;
-    });
+    }
 
-    // 新增相機功能
+    function handleMove(e) {
+      if (!isDragging) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const point = getEventPoint(e);
+      currentPoint = {
+        x: point.x - rect.left,
+        y: point.y - rect.top
+      };
+      
+      // 繪製預覽
+      draw();
+      if (startPoint && currentPoint) {
+        ctx.beginPath();
+        ctx.moveTo(startPoint.x, startPoint.y);
+        ctx.lineTo(currentPoint.x, currentPoint.y);
+        ctx.strokeStyle = defaultArrowColor;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    function handleEnd(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      
+      const rect = canvas.getBoundingClientRect();
+      const point = getEventPoint(e);
+      const endX = point.x - rect.left;
+      const endY = point.y - rect.top;
+      
+      // 計算箭頭方向
+      const dx = endX - startPoint.x;
+      const dy = endY - startPoint.y;
+      
+      // 只有當拖曳距離大於5像素時才建立點位
+      if (Math.sqrt(dx * dx + dy * dy) > 5) {
+        const pointCount = points.length + 1;
+        const id = "點" + pointCount;
+        points.push({
+          id,
+          x: startPoint.x,
+          y: startPoint.y,
+          dx: dx,
+          dy: dy
+        });
+        
+        addTableRow(id);
+        draw();
+        
+        // 修正照片上傳觸發邏輯
+        const photoUploader = document.getElementById('photoUploader');
+        if (!photoUploader) {
+          console.error('找不到照片上傳元素');
+          return;
+        }
+        
+        photoUploader.dataset.pointId = id;
+        
+        // 檢查是否為移動設備且支援相機
+        if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          // 移動設備：提供選擇拍照或上傳
+          const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
+          if (choice) {
+            openCamera(id);
+          } else {
+            photoUploader.click();
+          }
+        } else {
+          // PC設備：直接開啟檔案選擇
+          photoUploader.click();
+        }
+      } else {
+        // 如果拖曳距離太短，重新繪製以清除預覽
+        draw();
+      }
+    }
+
+    // 觸控事件處理函數
+    function handleTouchStart(e) {
+      e.preventDefault(); // 防止頁面滾動
+      handleStart(e.touches[0]);
+    }
+
+    function handleTouchMove(e) {
+      e.preventDefault(); // 防止頁面滾動
+      handleMove(e.touches[0]);
+    }
+
+    function handleTouchEnd(e) {
+      e.preventDefault(); // 防止頁面滾動
+      if (e.touches.length === 0) {
+        handleEnd(e.changedTouches[0]);
+      }
+    }
+
+    // 獲取事件座標的通用函數
+    function getEventPoint(e) {
+      return {
+        x: e.clientX || e.touches[0].clientX,
+        y: e.clientY || e.touches[0].clientY
+      };
+    }
+
+    // 移除原有的事件監聽器
+    // canvas.addEventListener("mousedown", function(e) { ... });
+    // canvas.addEventListener("mouseup", function(e) { ... });
+
+    // 添加相機功能
     async function openCamera(pointId) {
       try {
         const video = document.createElement('video');
@@ -1650,61 +1771,6 @@
       return mobileRegex.test(navigator.userAgent) || 
              ('maxTouchPoints' in navigator && navigator.maxTouchPoints > 0);
     }
-
-    canvas.addEventListener("mouseup", function(e) {
-      if (!isDragging) return;
-      isDragging = false;
-      
-      const rect = canvas.getBoundingClientRect();
-      const endX = e.clientX - rect.left;
-      const endY = e.clientY - rect.top;
-      
-      // 計算箭頭方向
-      const dx = endX - startPoint.x;
-      const dy = endY - startPoint.y;
-      
-      // 只有當拖曳距離大於5像素時才建立點位
-      if (Math.sqrt(dx * dx + dy * dy) > 5) {
-        const pointCount = points.length + 1;
-        const id = "點" + pointCount;
-        points.push({
-          id,
-          x: startPoint.x,
-          y: startPoint.y,
-          dx: dx,
-          dy: dy
-        });
-        
-        addTableRow(id);
-        draw();
-        
-        // 修正照片上傳觸發邏輯
-        const photoUploader = document.getElementById('photoUploader');
-        if (!photoUploader) {
-          console.error('找不到照片上傳元素');
-          return;
-        }
-        
-        photoUploader.dataset.pointId = id;
-        
-        // 檢查是否為移動設備且支援相機
-        if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          // 移動設備：提供選擇拍照或上傳
-          const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
-          if (choice) {
-            openCamera(id);
-          } else {
-            photoUploader.click();
-          }
-        } else {
-          // PC設備：直接開啟檔案選擇
-          photoUploader.click();
-        }
-      } else {
-        // 如果拖曳距離太短，重新繪製以清除預覽
-        draw();
-      }
-    });
 
     function drawGuideLines(x, y) {
       ctx.setLineDash([5, 5]); // 設置虛線樣式
