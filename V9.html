@@ -1,0 +1,2595 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>平面圖與缺失表格整合頁（含關鍵字管理表格）</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    body { 
+      font-family: sans-serif; 
+      padding: 20px; 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+    
+    .canvas-container {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      margin: 20px 0 10px 0;
+      width: 100%;  /* 確保容器寬度為100% */
+      overflow: hidden;  /* 防止內容溢出 */
+    }
+    
+    canvas { 
+      border: 1px solid #ccc; 
+      display: block;
+      max-width: 100%;  /* 確保canvas不會超出容器 */
+      height: auto;  /* 保持寬高比 */
+    }
+    
+    table { 
+      border-collapse: collapse; 
+      width: 100%; 
+      margin-top: 10px;
+      border: none;
+    }
+    
+    th, td { 
+      padding: 12px 8px;
+      border: none;
+      border-bottom: 1px dashed #ccc;
+      line-height: 1.5; /* 設置基本行高為1.5倍 */
+      height: 18pt; /* 基於12pt字體大小的1.5倍 */
+      box-sizing: border-box;
+    }
+
+    /* 標題文字大小 */
+    h2 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    /* 表格標題樣式 */
+    th {
+      font-size: 12pt;
+      font-weight: bold;
+      background-color: #f5f5f5;
+      text-align: center;
+      white-space: nowrap; /* 防止標題換行 */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      height: 18pt; /* 固定標題高度 */
+    }
+
+    /* 表格內容樣式 */
+    td {
+      font-size: 12pt;
+      text-align: left;
+      white-space: nowrap; /* 預設不換行 */
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 只允許缺失說明換行 */
+    td:nth-child(2) {
+      white-space: normal; /* 允許換行 */
+      min-height: 18pt; /* 最小高度 */
+      height: auto; /* 允許自動增加高度 */
+    }
+
+    /* 保持某些欄位置中且不換行 */
+    td:first-child, /* 點位編號 */
+    td:nth-child(5), /* 修繕進度 */
+    td:last-child { /* 操作按鈕 */
+      text-align: center;
+      white-space: nowrap;
+      height: 18pt; /* 固定高度 */
+    }
+
+    /* 輸入框樣式調整 */
+    input[type="text"] { 
+      width: 95%; 
+      padding: 6px;
+      font-size: 12pt;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      line-height: 1.5;
+      height: 18pt;
+      box-sizing: border-box;
+    }
+
+    /* 缺失說明的輸入框特殊處理 */
+    td:nth-child(2) input[type="text"] {
+      height: auto; /* 允許自動增加高度 */
+      min-height: 18pt;
+    }
+
+    /* 列印樣式 */
+    @media print {
+      th, td {
+        font-size: 12pt !important;
+        line-height: 1.5 !important;
+        height: 18pt !important;
+      }
+
+      td:nth-child(2) {
+        height: auto !important;
+        min-height: 18pt !important;
+      }
+
+      input[type="text"] {
+        font-size: 12pt !important;
+        height: 18pt !important;
+      }
+
+      td:nth-child(2) input[type="text"] {
+        height: auto !important;
+        min-height: 18pt !important;
+      }
+    }
+
+    /* 按鈕樣式調整 */
+    button {
+      padding: 6px 12px;
+      margin: 0 2px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #f8f8f8;
+      font-size: 14px;
+    }
+
+    /* 檔案上傳按鈕樣式 */
+    input[type="file"] {
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    /* 狀態文字樣式 */
+    .status { 
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    /* 可點擊的點位編號樣式 */
+    td.clickable { 
+      color: blue; 
+      text-decoration: underline; 
+      cursor: pointer;
+      user-select: none;  /* 防止文字被選中 */
+    }
+
+    /* 表格最後一行不要有底線 */
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* 表格標題底線加粗 */
+    thead tr {
+      border-bottom: 2px solid #ccc;
+    }
+    
+    /* 設定各欄位最適寬度 */
+    #defectTable th:nth-child(1), /* 點位編號 */
+    #defectTable td:nth-child(1) {
+      width: 10%;
+    }
+    
+    #defectTable th:nth-child(2), /* 缺失說明 */
+    #defectTable td:nth-child(2) {
+      width: 35%;
+    }
+    
+    #defectTable th:nth-child(3), /* 缺失類別 */
+    #defectTable td:nth-child(3) {
+      width: 15%;
+    }
+    
+    #defectTable th:nth-child(4), /* 廠商 */
+    #defectTable td:nth-child(4) {
+      width: 15%;
+    }
+    
+    #defectTable th:nth-child(5), /* 修繕進度 */
+    #defectTable td:nth-child(5) {
+      width: 12%;
+    }
+    
+    #defectTable th:nth-child(6), /* 操作 */
+    #defectTable td:nth-child(6) {
+      width: 13%;
+    }
+
+    input[type="text"] { 
+      width: 95%; 
+      padding: 4px;
+    }
+    
+    .status { 
+      cursor: pointer; 
+    }
+    
+    td.clickable { 
+      color: blue; 
+      text-decoration: underline; 
+      cursor: pointer; 
+    }
+    
+    #keywordTable { 
+      margin-top: 20px; 
+      display: none; 
+    }
+    
+    #toggleKeywordBtn { 
+      margin-bottom: 10px; 
+    }
+
+    /* 美化按鈕樣式 */
+    button:hover {
+      background-color: #e8e8e8;
+    }
+
+    /* 照片預覽容器樣式 */
+    #photoPreviewContainer {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      z-index: 1000;
+      display: none;
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+
+    #photoPreview {
+      max-width: 100%;
+      max-height: 70vh;
+      object-fit: contain;
+    }
+
+    #closePreview {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      background: #f0f0f0;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 18px;
+      line-height: 30px;
+      text-align: center;
+    }
+
+    #closePreview:hover {
+      background: #e0e0e0;
+    }
+
+    /* 遮罩層 */
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
+
+    /* PDF 頁面選擇容器樣式 */
+    #pdfPageSelector {
+      margin: 10px 0;
+      display: none;
+    }
+
+    #pdfPageSelector label {
+      margin-right: 10px;
+    }
+
+    #pageNumber {
+      width: 60px;
+      padding: 4px;
+    }
+
+    /* 新增標題列樣式 */
+    .page-header {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 15px;
+    }
+
+    .title-container {
+      margin-bottom: 10px;
+    }
+
+    .date-display {
+      font-size: 18px;
+      color: #666;
+      margin-top: 5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .defect-count {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+
+    /* 新增匯出/匯入按鈕容器樣式 */
+    .action-buttons {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;  /* 改為靠左 */
+      z-index: 1000;
+      max-width: 300px;  /* 限制最大寬度 */
+    }
+
+    .action-container {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .action-buttons-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .action-buttons button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .action-buttons button:hover {
+      background-color: #45a049;
+    }
+
+    /* 匯入匯出說明樣式 */
+    .action-instructions {
+      font-size: 16px;
+      text-align: center;
+    }
+
+    .action-instructions p {
+      margin: 5px 0;
+    }
+
+    .action-instructions ul {
+      margin: 5px 0;
+      padding-left: 20px;
+      list-style-type: none;
+      text-align: left;
+    }
+
+    .action-instructions li {
+      margin: 3px 0;
+      position: relative;
+    }
+
+    .action-instructions li:before {
+      content: "•";
+      color: #4CAF50;
+      font-weight: bold;
+      position: absolute;
+      left: -15px;
+    }
+
+    /* 關鍵字表格樣式調整 */
+    #keywordTable input[type="text"] {
+      width: 90%;
+      padding: 6px;
+      margin: 2px;
+    }
+
+    #keywordTable td {
+      padding: 8px;
+    }
+
+    /* 修改操作提示樣式 */
+    .instruction-message {
+      background-color: #f8f9fa;
+      border-left: 4px solid #4CAF50;
+      padding: 15px 20px;
+      margin: 10px auto;  /* 減少上下邊距 */
+      border-radius: 0 4px 4px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      font-size: 16px;  /* 稍微縮小字體 */
+      color: #333;
+      max-width: 1200px;  /* 與 body 最大寬度一致 */
+      text-align: center;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .instruction-message i {
+      color: #4CAF50;
+      margin-right: 8px;
+    }
+
+    /* 確保表格內容不會被按鈕遮擋 */
+    #defectTable {
+      margin-bottom: 100px;  /* 為固定位置的按鈕留出空間 */
+    }
+
+    /* 表格文字對齊調整 */
+    #defectTable th {
+      text-align: center;
+      font-size: 18px;  /* 放大表格標題 */
+      padding: 15px 8px;
+    }
+
+    #defectTable td {
+      text-align: center;
+      font-size: 16px;
+      padding: 12px 8px;
+      height: 50px;  /* 確保單元格高度一致 */
+      vertical-align: middle;  /* 垂直置中 */
+    }
+
+    /* 缺失說明欄位靠左對齊 */
+    #defectTable td:nth-child(2) {
+      text-align: left;
+    }
+
+    /* 關鍵字表格文字對齊 */
+    #keywordTable th {
+      text-align: center;
+      font-size: 18px;
+      padding: 15px 8px;
+    }
+
+    #keywordTable td {
+      text-align: center;
+      font-size: 16px;
+      padding: 12px 8px;
+    }
+
+    /* 按鈕文字調整 */
+    button {
+      font-size: 16px;
+      padding: 8px 15px;
+    }
+
+    /* 表格列高調整 */
+    #defectTable tr {
+      min-height: 50px;  /* 設定最小列高 */
+    }
+
+    /* 移除原有的顏色選擇器容器樣式 */
+    .color-picker-container {
+      display: none;  /* 預設隱藏 */
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+      width: 300px;
+    }
+
+    /* 設定按鈕樣式 */
+    .settings-btn {
+      position: absolute;  /* 改為 absolute，相對於 canvas-container 定位 */
+      right: 10px;        /* 減少右邊距 */
+      top: 10px;          /* 減少上邊距 */
+      background-color: white;
+      border: none;
+      border-radius: 50%;
+      width: 36px;        /* 稍微縮小按鈕 */
+      height: 36px;       /* 稍微縮小按鈕 */
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      cursor: pointer;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;    /* 稍微縮小圖示 */
+      transition: transform 0.3s ease;
+    }
+
+    .settings-btn:hover {
+      transform: rotate(45deg);
+    }
+
+    .color-picker-group {
+      margin-bottom: 20px;
+    }
+
+    .color-picker-group label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .color-picker-group input[type="color"] {
+      width: 100%;
+      height: 40px;
+      padding: 2px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .color-picker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .color-picker-header h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .color-picker-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+    }
+
+    .color-picker-close:hover {
+      color: #333;
+    }
+
+    /* 篩選器容器樣式 */
+    .filter-container {
+      margin: 20px 0;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-group {
+      display: inline-block;
+      margin-right: 20px;
+    }
+
+    .filter-group label {
+      margin-right: 10px;
+      font-weight: bold;
+    }
+
+    .filter-group select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-width: 150px;
+    }
+
+    /* 表格標題排序樣式 */
+    .sortable {
+      cursor: pointer;
+      position: relative;
+      padding-right: 20px !important;
+    }
+
+    .sortable:hover {
+      background-color: #e9ecef;
+    }
+
+    .sortable::after {
+      content: '↕';
+      position: absolute;
+      right: 5px;
+      opacity: 0.3;
+    }
+
+    .sortable.asc::after {
+      content: '↑';
+      opacity: 1;
+    }
+
+    .sortable.desc::after {
+      content: '↓';
+      opacity: 1;
+    }
+
+    /* 重置按鈕樣式 */
+    .reset-filter {
+      padding: 8px 15px;
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    .reset-filter:hover {
+      background-color: #5a6268;
+    }
+
+    /* 統計表格樣式 */
+    .summary-container {
+      margin: 30px 0;
+      padding: 20px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .summary-title {
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #dee2e6;
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .summary-table th,
+    .summary-table td {
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #dee2e6;
+    }
+
+    .summary-table th {
+      background-color: #e9ecef;
+      font-weight: bold;
+    }
+
+    .summary-table tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+
+    .summary-table tr:hover {
+      background-color: #e9ecef;
+    }
+
+    .status-cell {
+      font-weight: bold;
+    }
+
+    .status-cell.not-fixed {
+      color: #dc3545;
+    }
+
+    .status-cell.fixed {
+      color: #28a745;
+    }
+
+    .status-cell.checked {
+      color: #007bff;
+    }
+
+    .progress-bar {
+      height: 20px;
+      background-color: #e9ecef;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background-color: #28a745;
+      transition: width 0.3s ease;
+    }
+
+    /* 簽名區域樣式 */
+    .signature-container {
+      margin: 30px 0;
+      padding: 20px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .signature-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .signature-box {
+      flex: 1;
+      margin: 0 15px;
+      text-align: center;
+    }
+
+    .signature-canvas {
+      border: 1px solid #ccc;
+      margin: 10px 0;
+      background-color: white;
+    }
+
+    .signature-label {
+      font-size: 16px;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .signature-buttons {
+      margin-top: 10px;
+    }
+
+    .signature-buttons button {
+      margin: 0 5px;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+
+    /* 頁碼和標題樣式 */
+    .print-footer {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 12pt;
+    }
+
+    .page-number {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      font-size: 12pt;
+    }
+
+    /* 列印樣式調整 */
+    @media print {
+      @page {
+        margin: 2cm;
+      }
+
+      body {
+        padding: 0;
+      }
+
+      .action-buttons,
+      .filter-container,
+      #keywordTable,
+      #toggleKeywordBtn,
+      .settings-btn,
+      #drawInstruction,
+      button,
+      input[type="file"],
+      .summary-container {
+        display: none !important;
+      }
+
+      #defectTable th:nth-child(3),
+      #defectTable th:nth-child(4),
+      #defectTable th:nth-child(5),
+      #defectTable th:nth-child(6),
+      #defectTable td:nth-child(3),
+      #defectTable td:nth-child(4),
+      #defectTable td:nth-child(5),
+      #defectTable td:nth-child(6) {
+        display: none;
+      }
+
+      .signature-container {
+        page-break-inside: avoid;
+        background-color: white;
+        box-shadow: none;
+      }
+
+      .signature-buttons {
+        display: none;
+      }
+
+      .print-footer {
+        display: block;
+      }
+
+      .page-number {
+        display: block;
+      }
+
+      .signature-canvas {
+        border: 1px solid #000;
+      }
+    }
+
+    /* 列印按鈕樣式 */
+    .print-button-container {
+      text-align: right;
+      margin: 20px 0;
+      padding-right: 20px;
+    }
+
+    .print-button {
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .print-button:hover {
+      background-color: #45a049;
+    }
+
+    /* 頁尾樣式 */
+    .page-footer {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      display: none;
+      padding: 0 20px;
+    }
+
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
+
+    .footer-title {
+      text-align: center;
+      flex-grow: 1;
+      font-size: 14pt;
+      font-weight: bold;
+    }
+
+    .footer-page {
+      font-size: 12pt;
+      white-space: nowrap;
+    }
+
+    /* 列印樣式調整 */
+    @media print {
+      @page {
+        size: A4;
+        margin: 1.5cm;
+      }
+
+      body {
+        padding: 0;
+        margin: 0;
+      }
+
+      .page-header {
+        margin-bottom: 15px;
+      }
+
+      .title-input {
+        border: none;
+        font-size: 24pt;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 5px;
+      }
+
+      .date-display {
+        font-size: 14pt;
+      }
+
+      .canvas-container {
+        transform: scale(0.75);
+        transform-origin: top center;
+        margin: 0 auto;
+      }
+
+      #defectTable {
+        font-size: 10pt;
+        margin: 15px 0;
+        page-break-inside: avoid;
+      }
+
+      #defectTable th,
+      #defectTable td {
+        padding: 4px;
+        height: auto;
+        min-height: auto;
+      }
+
+      .signature-container {
+        transform: scale(0.9);
+        transform-origin: top center;
+        margin: 15px auto;
+        page-break-inside: avoid;
+        background-color: transparent;
+        box-shadow: none;
+      }
+
+      .print-button-container,
+      .action-buttons,
+      .filter-container,
+      #keywordTable,
+      #toggleKeywordBtn,
+      .settings-btn,
+      #drawInstruction,
+      button:not(.signature-canvas),
+      input[type="file"],
+      .summary-container {
+        display: none !important;
+      }
+
+      .page-footer {
+        display: block;
+        position: fixed;
+        bottom: 1cm;
+        width: 100%;
+      }
+
+      /* 移除不需要的列 */
+      #defectTable th:nth-child(3),
+      #defectTable th:nth-child(4),
+      #defectTable th:nth-child(5),
+      #defectTable th:nth-child(6),
+      #defectTable td:nth-child(3),
+      #defectTable td:nth-child(4),
+      #defectTable td:nth-child(5),
+      #defectTable td:nth-child(6) {
+        display: none;
+      }
+
+      /* 調整剩餘列的寬度 */
+      #defectTable th:nth-child(1),
+      #defectTable td:nth-child(1) {
+        width: 15%;
+      }
+
+      #defectTable th:nth-child(2),
+      #defectTable td:nth-child(2) {
+        width: 85%;
+      }
+
+      /* 移除元素間的多餘空白 */
+      * {
+        margin-bottom: 0;
+      }
+
+      .signature-row {
+        margin-bottom: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 新增標題列 -->
+  <div class="page-header">
+    <div class="title-container">
+      <input type="text" 
+             class="title-input" 
+             id="pageTitle" 
+             placeholder="請輸入標題..."
+             oninput="saveTitle()"
+             value="平面圖標記 + 缺失表格">
+    </div>
+    <div class="date-display">
+      <span id="currentDate"></span>
+      <span class="defect-count">總缺失數量：<span id="totalDefects"></span></span>
+    </div>
+  </div>
+
+  <input type="file" id="imageUploader" accept=".jpg,.jpeg,.png,.pdf" />
+  
+  <div id="pdfPageSelector">
+    <label for="pageNumber">選擇頁面：</label>
+    <input type="number" id="pageNumber" min="1" value="1">
+    <span id="totalPages"></span>
+    <button onclick="renderPDFPage()">確認</button>
+  </div>
+  
+  <!-- 確保 photoUploader 存在於正確位置 -->
+  <input type="file" id="photoUploader" accept=".jpg,.jpeg,.png" style="display:none" />
+  
+  <div class="canvas-container">
+    <canvas id="floorCanvas"></canvas>
+    <button class="settings-btn" onclick="toggleSettings()">
+      <i class="fas fa-cog"></i>
+    </button>
+  </div>
+
+  <div class="color-picker-container" id="colorPickerContainer">
+    <div class="color-picker-header">
+      <h3>箭頭顏色設定</h3>
+      <button class="color-picker-close" onclick="toggleSettings()">×</button>
+    </div>
+    <div class="color-picker-group">
+      <label>預設箭頭顏色：</label>
+      <input type="color" id="defaultColor" value="#008000" onchange="updateColors()">
+    </div>
+    <div class="color-picker-group">
+      <label>亮顯箭頭顏色：</label>
+      <input type="color" id="highlightColor" value="#ff0000" onchange="updateColors()">
+    </div>
+  </div>
+
+  <!-- 移動操作提示到這裡並移除 display: none -->
+  <div id="drawInstruction" class="instruction-message">
+    <i class="fas fa-info-circle"></i> 操作說明：請在平面圖上點擊缺失位置，並拖曳滑鼠來指示箭頭方向。完成後會自動開啟照片上傳視窗。
+  </div>
+
+  <button onclick="openKeywordPrompt()">新增關鍵字</button>
+  <button onclick="processDescriptions()">關鍵字比對</button>
+  <button id="toggleKeywordBtn" onclick="toggleKeywordTable()">展開/隱藏 關鍵字清單</button>
+
+  <div id="keywordTable">
+    <table>
+      <thead>
+        <tr><th>關鍵字</th><th>分類</th><th>廠商</th><th>操作</th></tr>
+      </thead>
+      <tbody id="keywordBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 在缺失表格前添加篩選器 -->
+  <div class="filter-container">
+    <div class="filter-group">
+      <label for="vendorFilter">廠商篩選：</label>
+      <select id="vendorFilter" onchange="applyFilters()">
+        <option value="">全部廠商</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="statusFilter">修繕狀態：</label>
+      <select id="statusFilter" onchange="applyFilters()">
+        <option value="">全部狀態</option>
+        <option value="未修繕">未修繕</option>
+        <option value="已完成修繕">已完成修繕</option>
+        <option value="已檢查">已檢查</option>
+      </select>
+    </div>
+    <button class="reset-filter" onclick="resetFilters()">重置篩選</button>
+  </div>
+
+  <table id="defectTable">
+    <thead>
+      <tr>
+        <th class="sortable" onclick="sortTable(0)">點位編號</th>
+        <th class="sortable" onclick="sortTable(1)">缺失說明</th>
+        <th class="sortable" onclick="sortTable(2)">缺失類別</th>
+        <th class="sortable" onclick="sortTable(3)">廠商</th>
+        <th class="sortable" onclick="sortTable(4)">修繕進度</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="defectBody"></tbody>
+  </table>
+
+  <!-- 在統計表格前添加簽名區域 -->
+  <div class="signature-container">
+    <div class="signature-row">
+      <div class="signature-box">
+        <div class="signature-label">業主簽名</div>
+        <canvas class="signature-canvas" id="ownerSignature" width="300" height="150"></canvas>
+        <div class="signature-buttons">
+          <button onclick="clearSignature('ownerSignature')">清除</button>
+        </div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-label">客戶簽名</div>
+        <canvas class="signature-canvas" id="clientSignature" width="300" height="150"></canvas>
+        <div class="signature-buttons">
+          <button onclick="clearSignature('clientSignature')">清除</button>
+        </div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-label">營造廠簽名</div>
+        <canvas class="signature-canvas" id="constructorSignature" width="300" height="150"></canvas>
+        <div class="signature-buttons">
+          <button onclick="clearSignature('constructorSignature')">清除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加頁碼和標題 -->
+  <div class="print-footer" id="printFooter"></div>
+  <div class="page-number" id="pageNumber"></div>
+
+  <!-- 添加統計表格 -->
+  <div class="summary-container">
+    <h3 class="summary-title">廠商修繕狀態統計表</h3>
+    <table class="summary-table" id="summaryTable">
+      <thead>
+        <tr>
+          <th>廠商名稱</th>
+          <th>總缺失數</th>
+          <th>未修繕</th>
+          <th>已完成修繕</th>
+          <th>已檢查</th>
+          <th>修繕進度</th>
+        </tr>
+      </thead>
+      <tbody id="summaryBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 添加照片預覽容器 -->
+  <div id="overlay"></div>
+  <div id="photoPreviewContainer">
+    <button id="closePreview">×</button>
+    <img id="photoPreview" alt="點位照片預覽">
+  </div>
+
+  <div class="action-buttons">
+    <div class="action-container">
+      <div class="action-buttons-row">
+        <button onclick="exportAllData()">匯出資料</button>
+        <button onclick="importData()">匯入資料</button>
+      </div>
+      <div class="action-instructions">
+        <p><strong>使用說明：</strong></p>
+        <ul>
+          <li>匯出資料：將儲存目前的平面圖、缺失標記、照片及關鍵字設定</li>
+          <li>匯入資料：可載入先前匯出的資料包，繼續編輯或新增資料</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="importFileInput" style="display: none" accept=".zip" />
+
+  <!-- 添加列印按鈕（移到統計表格前） -->
+  <div class="print-button-container">
+    <button class="print-button" onclick="handlePrint()">
+      <i class="fas fa-print"></i> 列印文件
+    </button>
+  </div>
+
+  <!-- 添加頁尾 -->
+  <div class="page-footer">
+    <div class="footer-content">
+      <div class="footer-title" id="footerTitle"></div>
+      <div class="footer-page" id="footerPage"></div>
+    </div>
+  </div>
+
+  <script>
+    // 在其他 script 內容之前添加日期相關函數
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const weekDay = ['日', '一', '二', '三', '四', '五', '六'][date.getDay()];
+      return `${year}年${month}月${day}日 星期${weekDay}`;
+    }
+
+    // 更新日期顯示
+    function updateDate() {
+      const dateElement = document.getElementById('currentDate');
+      dateElement.textContent = formatDate(new Date());
+      updateDefectCount();
+    }
+
+    // 更新缺失數量
+    function updateDefectCount() {
+      // 獲取所有點位編號
+      const rows = document.getElementById('defectBody').rows;
+      let maxPointNumber = 0;
+      
+      // 遍歷所有行找出最大點位編號
+      Array.from(rows).forEach(row => {
+        const pointNumber = parseInt(row.cells[0].textContent);
+        maxPointNumber = Math.max(maxPointNumber, pointNumber);
+      });
+      
+      document.getElementById('totalDefects').textContent = maxPointNumber;
+    }
+
+    // 保存標題到 localStorage
+    function saveTitle() {
+      const titleInput = document.getElementById('pageTitle');
+      localStorage.setItem('pageTitle', titleInput.value);
+    }
+
+    // 載入儲存的標題
+    function loadTitle() {
+      const titleInput = document.getElementById('pageTitle');
+      const savedTitle = localStorage.getItem('pageTitle');
+      if (savedTitle) {
+        titleInput.value = savedTitle;
+      }
+    }
+
+    // 頁面載入時執行
+    document.addEventListener('DOMContentLoaded', function() {
+      updateDate();
+      loadTitle();
+      updateVendorFilter();
+      updateSummaryTable();
+      initializeSignatures();
+      updateFooter();
+    });
+
+    // 每天凌晨更新日期
+    setInterval(() => {
+      const now = new Date();
+      if (now.getHours() === 0 && now.getMinutes() === 0) {
+        updateDate();
+      }
+    }, 60000); // 每分鐘檢查一次
+
+    // 設定 PDF.js 工作路徑
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    
+    let currentPDF = null;
+
+    const keywordMap = [
+      { keyword: "油漆", category: "油漆", vendor: "廠商A" },
+      { keyword: "地磚", category: "地坪", vendor: "廠商B" },
+    ];
+    let customKeywordMap = [];
+    const statusCycle = ["未修繕", "已完成修繕", "已檢查"];
+    const canvas = document.getElementById("floorCanvas");
+    const ctx = canvas.getContext("2d");
+    const imageUploader = document.getElementById("imageUploader");
+    const photoUploader = document.getElementById("photoUploader");
+    const defectBody = document.getElementById("defectBody");
+    const keywordBody = document.getElementById("keywordBody");
+    let img = new Image();
+    let points = [];
+    let pointPhotos = {};
+    let highlightedId = null;
+    let isDragging = false;
+    let startPoint = null;
+    let currentPoint = null;
+    let originalImage = null;
+
+    // 添加顏色變數
+    let defaultArrowColor = "#008000"; // 綠色
+    let highlightArrowColor = "#ff0000"; // 紅色
+
+    function updateColors() {
+      defaultArrowColor = document.getElementById('defaultColor').value;
+      highlightArrowColor = document.getElementById('highlightColor').value;
+      
+      // 保存顏色設定
+      localStorage.setItem('defaultArrowColor', defaultArrowColor);
+      localStorage.setItem('highlightArrowColor', highlightArrowColor);
+      
+      draw(); // 重新繪製以更新顏色
+    }
+
+    function toggleKeywordTable() {
+      const tbl = document.getElementById("keywordTable");
+      tbl.style.display = tbl.style.display === "none" ? "block" : "none";
+    }
+
+    function openKeywordPrompt() {
+      const keyword = prompt("請輸入新的關鍵字（例如：窗框）");
+      if (!keyword) return;
+      const category = prompt("請輸入此關鍵字對應的項目分類");
+      const vendor = prompt("請輸入此關鍵字對應的廠商名稱");
+      if (category && vendor) {
+        customKeywordMap.push({ keyword, category, vendor });
+        updateKeywordTable();
+        alert("已儲存關鍵字設定");
+      }
+    }
+
+    function updateKeywordTable() {
+      keywordBody.innerHTML = "";
+      customKeywordMap.forEach((item, idx) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${item.keyword}</td>
+          <td>${item.category}</td>
+          <td>${item.vendor}</td>
+          <td>
+            <button onclick="editKeyword(${idx})">編輯</button>
+            <button onclick="deleteKeyword(${idx})">刪除</button>
+          </td>`;
+        keywordBody.appendChild(row);
+      });
+    }
+
+    function editKeyword(index) {
+      const row = keywordBody.children[index];
+      const item = customKeywordMap[index];
+      const isEditing = row.querySelector('input') === null;
+      
+      if (isEditing) {
+        row.innerHTML = `
+          <td><input type="text" value="${item.keyword}"></td>
+          <td><input type="text" value="${item.category}"></td>
+          <td><input type="text" value="${item.vendor}"></td>
+          <td>
+            <button onclick="saveKeyword(${index})">儲存</button>
+            <button onclick="deleteKeyword(${index})">刪除</button>
+          </td>`;
+      }
+    }
+
+    function saveKeyword(index) {
+      const row = keywordBody.children[index];
+      const inputs = row.querySelectorAll('input');
+      
+      customKeywordMap[index] = {
+        keyword: inputs[0].value,
+        category: inputs[1].value,
+        vendor: inputs[2].value
+      };
+      
+      updateKeywordTable();
+    }
+
+    function deleteKeyword(index) {
+      customKeywordMap.splice(index, 1);
+      updateKeywordTable();
+    }
+
+    function processDescriptions() {
+      for (let row of defectBody.children) {
+        const input = row.cells[1].querySelector("input");
+        const desc = input.value;
+        let match = keywordMap.find(k => desc.includes(k.keyword));
+        if (!match) {
+          match = customKeywordMap.find(k => desc.includes(k.keyword));
+        }
+        row.cells[2].textContent = match ? match.category : "未分類";
+        row.cells[3].textContent = match ? match.vendor : "未指定";
+      }
+    }
+
+    imageUploader.addEventListener("change", async function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      // 顯示載入中訊息
+      const loadingMsg = document.createElement('div');
+      loadingMsg.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 20px 40px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        border-radius: 8px;
+        z-index: 9999;
+      `;
+      loadingMsg.textContent = '正在載入檔案，請稍候...';
+      document.body.appendChild(loadingMsg);
+
+      try {
+        if (file.type === 'application/pdf') {
+          // 處理 PDF 檔案
+          const reader = new FileReader();
+          reader.onload = async function(e) {
+            try {
+              // 載入 PDF
+              currentPDF = await pdfjsLib.getDocument({data: new Uint8Array(e.target.result)}).promise;
+              
+              // 顯示頁面選擇器
+              const pdfPageSelector = document.getElementById('pdfPageSelector');
+              const totalPagesSpan = document.getElementById('totalPages');
+              const pageNumberInput = document.getElementById('pageNumber');
+              
+              pdfPageSelector.style.display = 'block';
+              totalPagesSpan.textContent = `/ ${currentPDF.numPages} 頁`;
+              pageNumberInput.max = currentPDF.numPages;
+              pageNumberInput.value = '1'; // 重設為第一頁
+              
+              // 預設顯示第一頁
+              await renderPDFPage();
+              
+              // 顯示操作提示
+              const drawInstruction = document.getElementById('drawInstruction');
+              drawInstruction.style.display = 'block';
+            } catch (error) {
+              console.error('PDF 載入失敗:', error);
+              alert('PDF 載入失敗，請確認檔案格式是否正確。');
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        } else {
+          // 處理圖片檔案
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            img = new Image();
+            img.onload = () => {
+              // 清除現有的點位和表格
+              points = [];
+              defectBody.innerHTML = "";
+              
+              // 獲取表格寬度
+              const tableWidth = document.getElementById('defectTable').offsetWidth;
+              const maxWidth = tableWidth * 0.8; // 設定最大寬度為表格寬度的0.8倍
+              
+              // 計算縮放比例
+              let scale = 1;
+              if (img.width > maxWidth) {
+                scale = maxWidth / img.width;
+              }
+              
+              // 設定畫布大小
+              canvas.width = img.width * scale;
+              canvas.height = img.height * scale;
+              
+              // 儲存原始平面圖
+              originalImage = e.target.result;
+              
+              // 繪製圖片
+              draw();
+              
+              // 顯示操作提示
+              const drawInstruction = document.getElementById('drawInstruction');
+              drawInstruction.style.display = 'block';
+              
+              // 隱藏 PDF 頁面選擇器
+              document.getElementById('pdfPageSelector').style.display = 'none';
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      } catch (error) {
+        console.error('檔案載入失敗:', error);
+        alert('檔案載入失敗，請重試。');
+      } finally {
+        document.body.removeChild(loadingMsg);
+      }
+    });
+
+    async function renderPDFPage() {
+      if (!currentPDF) return;
+      
+      const pageNumber = parseInt(document.getElementById('pageNumber').value);
+      if (pageNumber < 1 || pageNumber > currentPDF.numPages) {
+        alert('請輸入有效的頁碼');
+        return;
+      }
+
+      try {
+        // 顯示載入中訊息
+        const loadingMsg = document.createElement('div');
+        loadingMsg.style.position = 'fixed';
+        loadingMsg.style.top = '50%';
+        loadingMsg.style.left = '50%';
+        loadingMsg.style.transform = 'translate(-50%, -50%)';
+        loadingMsg.style.padding = '20px 40px';
+        loadingMsg.style.background = 'rgba(0,0,0,0.8)';
+        loadingMsg.style.color = 'white';
+        loadingMsg.style.borderRadius = '8px';
+        loadingMsg.style.zIndex = '9999';
+        loadingMsg.textContent = '正在載入PDF頁面，請稍候...';
+        document.body.appendChild(loadingMsg);
+
+        // 取得指定頁面
+        const page = await currentPDF.getPage(pageNumber);
+        
+        // 獲取表格寬度
+        const tableWidth = document.getElementById('defectTable').offsetWidth;
+        const maxWidth = tableWidth * 0.8; // 設定最大寬度為表格寬度的0.8倍
+        
+        // 計算適當的縮放比例
+        const viewport = page.getViewport({scale: 1.0}); // 先取得原始尺寸
+        let scale = 1.0;
+        if (viewport.width > maxWidth) {
+          scale = maxWidth / viewport.width;
+        }
+        
+        // 使用計算出的縮放比例重新取得 viewport
+        const scaledViewport = page.getViewport({scale: scale});
+        
+        // 設定 canvas 大小
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
+        
+        // 清除現有的點位和表格
+        points = [];
+        defectBody.innerHTML = "";
+        
+        // 渲染 PDF 頁面到 canvas
+        const renderContext = {
+          canvasContext: ctx,
+          viewport: scaledViewport
+        };
+        
+        await page.render(renderContext).promise;
+        
+        // 儲存當前頁面為原始圖片
+        originalImage = canvas.toDataURL();
+        
+        // 重新繪製（包含任何點位標記）
+        draw();
+
+        document.body.removeChild(loadingMsg);
+      } catch (error) {
+        console.error('PDF 頁面渲染失敗:', error);
+        alert('PDF 頁面渲染失敗，請重試。');
+        if (document.body.contains(loadingMsg)) {
+          document.body.removeChild(loadingMsg);
+        }
+      }
+    }
+
+    canvas.addEventListener("mousedown", function(e) {
+      if (!img.src && !currentPDF) {
+        alert('請先上傳平面圖');
+        return;
+      }
+      
+      const rect = canvas.getBoundingClientRect();
+      startPoint = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+      isDragging = true;
+      currentPoint = null;
+    });
+
+    // 新增相機功能
+    async function openCamera(pointId) {
+      try {
+        const video = document.createElement('video');
+        const cameraContainer = document.createElement('div');
+        const captureButton = document.createElement('button');
+        const closeButton = document.createElement('button');
+        
+        // 設置容器樣式
+        cameraContainer.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: black;
+          padding: 20px;
+          border-radius: 10px;
+          z-index: 1000;
+        `;
+        
+        // 設置視訊元素樣式
+        video.style.cssText = `
+          max-width: 100%;
+          max-height: 70vh;
+          margin-bottom: 10px;
+        `;
+        
+        // 設置按鈕樣式
+        captureButton.textContent = '拍照';
+        captureButton.style.cssText = `
+          padding: 10px 20px;
+          margin: 0 10px;
+          background: #4CAF50;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+        `;
+        
+        closeButton.textContent = '關閉';
+        closeButton.style.cssText = `
+          padding: 10px 20px;
+          margin: 0 10px;
+          background: #f44336;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+        `;
+        
+        // 添加元素到容器
+        cameraContainer.appendChild(video);
+        cameraContainer.appendChild(captureButton);
+        cameraContainer.appendChild(closeButton);
+        
+        // 添加遮罩層
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.5);
+          z-index: 999;
+        `;
+        
+        document.body.appendChild(overlay);
+        document.body.appendChild(cameraContainer);
+        
+        // 獲取攝像頭串流
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' }, 
+          audio: false 
+        });
+        video.srcObject = stream;
+        await video.play();
+        
+        // 拍照按鈕事件
+        captureButton.onclick = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext('2d').drawImage(video, 0, 0);
+          
+          // 儲存照片
+          pointPhotos[pointId] = canvas.toDataURL('image/jpeg');
+          
+          // 清理相機
+          stream.getTracks().forEach(track => track.stop());
+          document.body.removeChild(overlay);
+          document.body.removeChild(cameraContainer);
+          
+          // 顯示預覽
+          showPhotoPreview(pointId);
+        };
+        
+        // 關閉按鈕事件
+        closeButton.onclick = () => {
+          stream.getTracks().forEach(track => track.stop());
+          document.body.removeChild(overlay);
+          document.body.removeChild(cameraContainer);
+          
+          // 如果沒有拍照，則開啟檔案選擇
+          document.getElementById('photoUploader').click();
+        };
+        
+      } catch (error) {
+        console.error('相機啟動失敗:', error);
+        alert('無法啟動相機，請改用檔案上傳。');
+        document.getElementById('photoUploader').click();
+      }
+    }
+
+    // 添加設備檢測函數
+    function isMobileDevice() {
+      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+      return mobileRegex.test(navigator.userAgent) || 
+             ('maxTouchPoints' in navigator && navigator.maxTouchPoints > 0);
+    }
+
+    canvas.addEventListener("mouseup", function(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      
+      const rect = canvas.getBoundingClientRect();
+      const endX = e.clientX - rect.left;
+      const endY = e.clientY - rect.top;
+      
+      // 計算箭頭方向
+      const dx = endX - startPoint.x;
+      const dy = endY - startPoint.y;
+      
+      // 只有當拖曳距離大於5像素時才建立點位
+      if (Math.sqrt(dx * dx + dy * dy) > 5) {
+        const pointCount = points.length + 1;
+        const id = "點" + pointCount;
+        points.push({
+          id,
+          x: startPoint.x,
+          y: startPoint.y,
+          dx: dx,
+          dy: dy
+        });
+        
+        addTableRow(id);
+        draw();
+        
+        // 修正照片上傳觸發邏輯
+        const photoUploader = document.getElementById('photoUploader');
+        if (!photoUploader) {
+          console.error('找不到照片上傳元素');
+          return;
+        }
+        
+        photoUploader.dataset.pointId = id;
+        
+        // 檢查是否為移動設備且支援相機
+        if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          // 移動設備：提供選擇拍照或上傳
+          const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
+          if (choice) {
+            openCamera(id);
+          } else {
+            photoUploader.click();
+          }
+        } else {
+          // PC設備：直接開啟檔案選擇
+          photoUploader.click();
+        }
+      } else {
+        // 如果拖曳距離太短，重新繪製以清除預覽
+        draw();
+      }
+    });
+
+    function drawGuideLines(x, y) {
+      ctx.setLineDash([5, 5]); // 設置虛線樣式
+      ctx.beginPath();
+      // 繪製水平輔助線
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      // 繪製垂直輔助線
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.setLineDash([]); // 重置為實線
+    }
+
+    function drawArrow(fromX, fromY, toX, toY, isHighlighted) {
+      const headlen = 10;
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const angle = Math.atan2(dy, dx);
+      
+      // 使用自定義顏色
+      ctx.strokeStyle = isHighlighted ? highlightArrowColor : defaultArrowColor;
+      ctx.lineWidth = 2;
+      
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+      ctx.stroke();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      points.forEach(pt => {
+        // 判斷亮顯狀態：單點亮顯 > 篩選亮顯 > 預設顏色
+        const isHighlighted = pt.singleHighlight || pt.isHighlighted;
+        const pointColor = isHighlighted ? highlightArrowColor : defaultArrowColor;
+
+        if (isHighlighted) {
+          drawGuideLines(pt.x, pt.y);
+        }
+        
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = pointColor;
+        ctx.fill();
+        
+        ctx.fillStyle = pointColor;
+        ctx.font = "14px sans-serif";
+        const pointNumber = pt.id.replace("點", "");
+        ctx.fillText(pointNumber, pt.x - 3, pt.y + 20);
+        
+        drawArrow(pt.x, pt.y, pt.x + pt.dx, pt.y + pt.dy, isHighlighted);
+      });
+    }
+
+    function addTableRow(id) {
+      const row = document.createElement("tr");
+      const pointNumber = id.replace("點", "");
+      row.innerHTML = `
+        <td class="clickable" 
+            onclick="highlightPoint('${id}')"
+            ondblclick="showPointPhoto('${id}')">${pointNumber}</td>
+        <td><input type="text"></td>
+        <td></td>
+        <td></td>
+        <td class="status" onclick="cycleStatus(this)">未修繕</td>
+        <td>
+          <button onclick="toggleEdit(this)">編輯</button>
+          <button onclick="deleteRow(this)">刪除</button>
+        </td>`;
+      defectBody.appendChild(row);
+      updateVendorFilter();
+      updateSummaryTable();
+      updateDefectCount(); // 新增：更新缺失數量
+      updateFooter(); // 新增：更新頁碼
+    }
+
+    function cycleStatus(td) {
+      const current = td.textContent;
+      const idx = statusCycle.indexOf(current);
+      td.textContent = statusCycle[(idx + 1) % statusCycle.length];
+      updateSummaryTable();
+    }
+
+    function highlightPoint(id) {
+      // 先清除所有點位的單點亮顯狀態
+      points.forEach(pt => {
+        if (pt.id === highlightedId) {
+          pt.singleHighlight = false;
+        }
+      });
+      
+      // 設置新的亮顯點位
+      highlightedId = id;
+      const point = points.find(p => p.id === id);
+      if (point) {
+        point.singleHighlight = true;
+      }
+      
+      draw();
+    }
+
+    function showPointPhoto(id) {
+      console.log('嘗試顯示照片:', id);
+      console.log('可用的照片:', Object.keys(pointPhotos));
+      
+      if (pointPhotos[id]) {
+        console.log('找到照片，正在顯示');
+        showPhotoPreview(id);
+      } else {
+        console.log('找不到對應的照片');
+      }
+    }
+
+    function toggleEdit(btn) {
+      const row = btn.closest("tr");
+      const isEditing = btn.textContent === "編輯";
+      const targetCells = [1, 2, 3]; // 缺失說明、類別、廠商
+      targetCells.forEach(i => {
+        const cell = row.cells[i];
+        if (isEditing) {
+          const currentValue = cell.textContent;
+          cell.innerHTML = `<input type='text' value='${currentValue}' />`;
+        } else {
+          const newValue = cell.querySelector("input").value;
+          cell.textContent = newValue;
+        }
+      });
+      btn.textContent = isEditing ? "儲存" : "編輯";
+      if (!isEditing) {
+        updateVendorFilter();
+        updateSummaryTable();
+      }
+    }
+
+    function deleteRow(btn) {
+      const row = btn.closest("tr");
+      const index = row.rowIndex - 1; // exclude header
+      document.getElementById("defectTable").deleteRow(row.rowIndex);
+      points.splice(index, 1);
+      reindexPoints();
+      updateVendorFilter();
+      updateSummaryTable();
+      updateDefectCount(); // 新增：更新缺失數量
+      updateFooter(); // 新增：更新頁碼
+    }
+
+    // 重新編號點位時同步更新缺失數量
+    function reindexPoints() {
+      const table = document.getElementById("defectTable").tBodies[0];
+      for (let i = 0; i < table.rows.length; i++) {
+        const newId = "點" + (i + 1); // 簡化點位編號格式
+        table.rows[i].cells[0].textContent = (i + 1).toString(); // 表格中只顯示數字
+        if (points[i]) {
+          points[i].id = newId;
+        }
+      }
+      draw();
+      updateDefectCount(); // 更新缺失數量
+    }
+
+    async function exportAllData() {
+      if (!points.length && !customKeywordMap.length) {
+        alert('目前沒有任何資料可供匯出。');
+        return;
+      }
+
+      try {
+        const processingMsg = document.createElement('div');
+        processingMsg.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          padding: 20px 40px;
+          background: rgba(0,0,0,0.8);
+          color: white;
+          border-radius: 8px;
+          z-index: 9999;
+        `;
+        processingMsg.textContent = '正在處理資料，請稍候...';
+        document.body.appendChild(processingMsg);
+
+        const zip = new JSZip();
+        const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
+        const title = document.getElementById('pageTitle').value || '未命名';
+        
+        // 1. 匯出原始平面圖
+        if (originalImage) {
+          zip.file("原始平面圖.png", originalImage.split(',')[1], {base64: true});
+        }
+
+        // 2. 匯出目前的平面圖（含標記）
+        const canvasBlob = await new Promise(resolve => canvas.toBlob(resolve));
+        zip.file("標記平面圖.png", canvasBlob);
+
+        // 3. 匯出缺失表格資料（包含照片關聯資訊）
+        const defectData = {
+          points: points,
+          tableData: Array.from(defectBody.rows).map(row => {
+            const pointId = row.cells[0].textContent;
+            return {
+              id: pointId,
+              description: row.cells[1].querySelector('input')?.value || row.cells[1].textContent,
+              category: row.cells[2].textContent,
+              vendor: row.cells[3].textContent,
+              status: row.cells[4].textContent,
+              hasPhoto: !!pointPhotos['點' + pointId]
+            };
+          })
+        };
+        zip.file("defect_data.json", JSON.stringify(defectData, null, 2));
+
+        // 4. 匯出關鍵字表格資料
+        zip.file("keyword_data.json", JSON.stringify(customKeywordMap, null, 2));
+
+        // 5. 匯出照片
+        const photoFolder = zip.folder("照片");
+        const processedPhotos = new Set();
+
+        for (const row of defectBody.rows) {
+          const pointId = '點' + row.cells[0].textContent;
+          if (pointPhotos[pointId] && !processedPhotos.has(pointId)) {
+            const photoFileName = `${currentDate}-${title}-點位${row.cells[0].textContent}.jpg`;
+            const base64Data = pointPhotos[pointId].split(',')[1];
+            photoFolder.file(photoFileName, base64Data, {base64: true});
+            processedPhotos.add(pointId);
+          }
+        }
+
+        // 6. 建立 Excel 工作簿
+        const wb = XLSX.utils.book_new();
+        
+        // 缺失資料工作表
+        const defectSheet = XLSX.utils.aoa_to_sheet([
+          ['點位編號', '缺失說明', '缺失類別', '廠商', '修繕進度', '照片狀態', '座標X', '座標Y'],
+          ...defectData.tableData.map((row, index) => {
+            const point = points[index];
+            return [
+              row.id,
+              row.description,
+              row.category,
+              row.vendor,
+              row.status,
+              row.hasPhoto ? '有' : '無',
+              point ? Math.round(point.x) : '',
+              point ? Math.round(point.y) : ''
+            ];
+          })
+        ]);
+
+        // 設定欄寬
+        const defectColWidths = [
+          { wch: 10 },  // 點位編號
+          { wch: 40 },  // 缺失說明
+          { wch: 15 },  // 缺失類別
+          { wch: 15 },  // 廠商
+          { wch: 12 },  // 修繕進度
+          { wch: 10 },  // 照片狀態
+          { wch: 10 },  // 座標X
+          { wch: 10 }   // 座標Y
+        ];
+        defectSheet['!cols'] = defectColWidths;
+
+        // 關鍵字資料工作表
+        const keywordSheet = XLSX.utils.aoa_to_sheet([
+          ['關鍵字', '缺失類別', '廠商'],
+          ...customKeywordMap.map(item => [
+            item.keyword,
+            item.category,
+            item.vendor
+          ])
+        ]);
+
+        // 設定欄寬
+        const keywordColWidths = [
+          { wch: 20 },  // 關鍵字
+          { wch: 20 },  // 缺失類別
+          { wch: 20 }   // 廠商
+        ];
+        keywordSheet['!cols'] = keywordColWidths;
+
+        // 廠商統計工作表
+        const vendorStats = {};
+        Array.from(defectBody.rows).forEach(row => {
+          const vendor = row.cells[3].textContent || '未指定';
+          const status = row.cells[4].textContent;
+          
+          if (!vendorStats[vendor]) {
+            vendorStats[vendor] = {
+              total: 0,
+              '未修繕': 0,
+              '已完成修繕': 0,
+              '已檢查': 0
+            };
+          }
+          vendorStats[vendor].total++;
+          vendorStats[vendor][status]++;
+        });
+
+        const statsSheet = XLSX.utils.aoa_to_sheet([
+          ['廠商名稱', '總缺失數', '未修繕', '已完成修繕', '已檢查', '完成率'],
+          ...Object.entries(vendorStats).map(([vendor, stats]) => {
+            const completionRate = ((stats['已完成修繕'] + stats['已檢查']) / stats.total * 100).toFixed(1) + '%';
+            return [
+              vendor,
+              stats.total,
+              stats['未修繕'],
+              stats['已完成修繕'],
+              stats['已檢查'],
+              completionRate
+            ];
+          })
+        ]);
+
+        // 設定欄寬
+        const statsColWidths = [
+          { wch: 20 },  // 廠商名稱
+          { wch: 12 },  // 總缺失數
+          { wch: 12 },  // 未修繕
+          { wch: 12 },  // 已完成修繕
+          { wch: 12 },  // 已檢查
+          { wch: 12 }   // 完成率
+        ];
+        statsSheet['!cols'] = statsColWidths;
+
+        // 將工作表加入工作簿
+        XLSX.utils.book_append_sheet(wb, defectSheet, "缺失清單");
+        XLSX.utils.book_append_sheet(wb, keywordSheet, "關鍵字設定");
+        XLSX.utils.book_append_sheet(wb, statsSheet, "廠商統計");
+
+        // 將 Excel 檔案加入 ZIP
+        const excelBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+        zip.file(`${currentDate}-${title}-缺失紀錄.xlsx`, excelBuffer);
+
+        // 生成並下載 ZIP 檔案
+        const zipBlob = await zip.generateAsync({type: "blob"});
+        const exportFileName = `${currentDate}-${title}缺失.zip`;
+        saveAs(zipBlob, exportFileName);
+
+        document.body.removeChild(processingMsg);
+        alert(`資料匯出完成！\n共匯出 ${processedPhotos.size} 張照片。`);
+      } catch (error) {
+        console.error('匯出失敗:', error);
+        alert('匯出過程發生錯誤，請重試。');
+      }
+    }
+
+    function showPhotoPreview(pointId) {
+      const photo = pointPhotos[pointId];
+      if (!photo) {
+        console.log('無法顯示照片預覽，找不到照片:', pointId);
+        return;
+      }
+
+      console.log('顯示照片預覽:', pointId);
+      const preview = document.getElementById('photoPreview');
+      const container = document.getElementById('photoPreviewContainer');
+      const overlay = document.getElementById('overlay');
+      
+      preview.src = photo;
+      container.style.display = 'block';
+      overlay.style.display = 'block';
+    }
+
+    function closePhotoPreview() {
+      const container = document.getElementById('photoPreviewContainer');
+      const overlay = document.getElementById('overlay');
+      container.style.display = 'none';
+      overlay.style.display = 'none';
+    }
+
+    // 添加關閉預覽的事件監聽
+    document.getElementById('closePreview').addEventListener('click', closePhotoPreview);
+    document.getElementById('overlay').addEventListener('click', closePhotoPreview);
+
+    // 確保照片上傳處理程序正確綁定
+    document.getElementById('photoUploader').addEventListener("change", function() {
+      const file = this.files[0];
+      const id = this.dataset.pointId;
+      if (file && id) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          pointPhotos[id] = e.target.result;
+          // 立即顯示預覽
+          showPhotoPreview(id);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    async function importData() {
+      document.getElementById('importFileInput').click();
+    }
+
+    document.getElementById('importFileInput').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        const processingMsg = document.createElement('div');
+        processingMsg.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          padding: 20px 40px;
+          background: rgba(0,0,0,0.8);
+          color: white;
+          border-radius: 8px;
+          z-index: 9999;
+        `;
+        processingMsg.textContent = '正在匯入資料，請稍候...';
+        document.body.appendChild(processingMsg);
+
+        const zip = await JSZip.loadAsync(file);
+        
+        // 1. 載入原始平面圖
+        const originalImageFile = zip.file("原始平面圖.png");
+        if (originalImageFile) {
+          const imageData = await originalImageFile.async("base64");
+          originalImage = "data:image/png;base64," + imageData;
+          img = new Image();
+          img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            draw();
+          };
+          img.src = originalImage;
+        }
+
+        // 2. 先載入照片資料
+        pointPhotos = {};
+        const photoFolder = zip.folder("照片");
+        if (photoFolder) {
+          const photoFiles = await photoFolder.files;
+          for (const filename in photoFiles) {
+            if (filename.endsWith('.jpg')) {
+              let pointId;
+              if (filename.includes('-點位')) {
+                pointId = '點' + filename.split('-點位')[1].replace('.jpg', '');
+              } else {
+                pointId = filename.replace('.jpg', '');
+              }
+              
+              try {
+                const photoData = await photoFiles[filename].async("base64");
+                pointPhotos[pointId] = "data:image/jpeg;base64," + photoData;
+                console.log(`成功載入照片: ${filename} -> ${pointId}`);
+              } catch (error) {
+                console.error(`載入照片失敗: ${filename}`, error);
+              }
+            }
+          }
+        }
+
+        // 3. 載入缺失資料
+        const defectDataFile = zip.file("defect_data.json");
+        if (defectDataFile) {
+          const defectDataText = await defectDataFile.async("text");
+          const defectData = JSON.parse(defectDataText);
+          points = defectData.points;
+          
+          // 清空並重建缺失表格
+          defectBody.innerHTML = "";
+          defectData.tableData.forEach(row => {
+            const tr = document.createElement("tr");
+            const pointId = '點' + row.id;
+            tr.innerHTML = `
+              <td class="clickable" 
+                  onclick="highlightPoint('${pointId}')"
+                  ondblclick="showPointPhoto('${pointId}')">${row.id}</td>
+              <td><input type="text" value="${row.description || ''}"></td>
+              <td>${row.category || ''}</td>
+              <td>${row.vendor || ''}</td>
+              <td class="status" onclick="cycleStatus(this)">${row.status || '未修繕'}</td>
+              <td>
+                <button onclick="toggleEdit(this)">編輯</button>
+                <button onclick="deleteRow(this)">刪除</button>
+              </td>`;
+            defectBody.appendChild(tr);
+          });
+        }
+
+        // 4. 載入關鍵字資料
+        const keywordDataFile = zip.file("keyword_data.json");
+        if (keywordDataFile) {
+          const keywordDataText = await keywordDataFile.async("text");
+          customKeywordMap = JSON.parse(keywordDataText);
+          updateKeywordTable();
+        }
+
+        document.body.removeChild(processingMsg);
+        draw();
+        updateDefectCount(); // 添加：更新缺失數量
+        updateVendorFilter();
+        updateSummaryTable();
+        updateFooter();
+        
+        const photoCount = Object.keys(pointPhotos).length;
+        console.log('照片載入狀態:', pointPhotos);
+        alert(`資料匯入完成！\n已載入 ${photoCount} 張照片。`);
+        
+      } catch (error) {
+        console.error('匯入失敗:', error);
+        alert('匯入過程發生錯誤，請重試。');
+        if (document.body.contains(processingMsg)) {
+          document.body.removeChild(processingMsg);
+        }
+      }
+      
+      this.value = '';
+      updateVendorFilter();
+      updateSummaryTable();
+    });
+
+    // 在其他 script 內容之前添加設定相關函數
+    function toggleSettings() {
+      const container = document.getElementById('colorPickerContainer');
+      const settingsBtn = document.querySelector('.settings-btn');
+      const isVisible = container.style.display === 'block';
+      
+      container.style.display = isVisible ? 'none' : 'block';
+      
+      // 如果開啟設定，停止齒輪旋轉
+      if (!isVisible) {
+        settingsBtn.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    // 點擊外部關閉設定面板
+    document.addEventListener('click', function(event) {
+      const container = document.getElementById('colorPickerContainer');
+      const settingsBtn = document.querySelector('.settings-btn');
+      
+      if (!container.contains(event.target) && 
+          !settingsBtn.contains(event.target) && 
+          container.style.display === 'block') {
+        toggleSettings();
+      }
+    });
+
+    // 載入儲存的顏色設定
+    function loadColorSettings() {
+      const savedDefaultColor = localStorage.getItem('defaultArrowColor');
+      const savedHighlightColor = localStorage.getItem('highlightArrowColor');
+      
+      if (savedDefaultColor) {
+        document.getElementById('defaultColor').value = savedDefaultColor;
+        defaultArrowColor = savedDefaultColor;
+      }
+      
+      if (savedHighlightColor) {
+        document.getElementById('highlightColor').value = savedHighlightColor;
+        highlightArrowColor = savedHighlightColor;
+      }
+    }
+
+    // 更新廠商篩選選項
+    function updateVendorFilter() {
+      const vendorFilter = document.getElementById('vendorFilter');
+      const vendors = new Set();
+      
+      Array.from(defectBody.rows).forEach(row => {
+        const vendor = row.cells[3].textContent;
+        if (vendor) vendors.add(vendor);
+      });
+
+      // 保存當前選擇的值
+      const currentValue = vendorFilter.value;
+      
+      // 清空並重建選項
+      vendorFilter.innerHTML = '<option value="">全部廠商</option>';
+      Array.from(vendors).sort().forEach(vendor => {
+        const option = document.createElement('option');
+        option.value = vendor;
+        option.textContent = vendor;
+        vendorFilter.appendChild(option);
+      });
+
+      // 恢復先前的選擇
+      if (currentValue) vendorFilter.value = currentValue;
+    }
+
+    // 排序功能
+    let currentSortColumn = -1;
+    let isAscending = true;
+
+    function sortTable(columnIndex) {
+      const table = document.getElementById('defectTable');
+      const headers = table.getElementsByTagName('th');
+      
+      // 更新排序指示器
+      if (currentSortColumn >= 0) {
+        headers[currentSortColumn].classList.remove('asc', 'desc');
+      }
+      
+      if (currentSortColumn === columnIndex) {
+        isAscending = !isAscending;
+      } else {
+        currentSortColumn = columnIndex;
+        isAscending = true;
+      }
+      
+      headers[columnIndex].classList.add(isAscending ? 'asc' : 'desc');
+
+      const rows = Array.from(defectBody.rows);
+      rows.sort((a, b) => {
+        let aValue = a.cells[columnIndex].textContent;
+        let bValue = b.cells[columnIndex].textContent;
+        
+        // 點位編號特殊處理
+        if (columnIndex === 0) {
+          aValue = parseInt(aValue);
+          bValue = parseInt(bValue);
+        }
+        
+        if (aValue < bValue) return isAscending ? -1 : 1;
+        if (aValue > bValue) return isAscending ? 1 : -1;
+        return 0;
+      });
+
+      // 重新排列表格行並同步更新 points 陣列
+      const newPoints = [];
+      rows.forEach(row => {
+        defectBody.appendChild(row);
+        const pointId = '點' + row.cells[0].textContent;
+        const point = points.find(p => p.id === pointId);
+        if (point) {
+          newPoints.push(point);
+        }
+      });
+      
+      // 更新 points 陣列順序
+      points = newPoints;
+      
+      // 更新平面圖
+      applyFilters();
+    }
+
+    // 篩選功能
+    function applyFilters() {
+      const vendorFilter = document.getElementById('vendorFilter').value;
+      const statusFilter = document.getElementById('statusFilter').value;
+      
+      Array.from(defectBody.rows).forEach(row => {
+        const vendor = row.cells[3].textContent;
+        const status = row.cells[4].textContent;
+        const pointId = '點' + row.cells[0].textContent;
+        
+        const matchesVendor = !vendorFilter || vendor === vendorFilter;
+        const matchesStatus = !statusFilter || status === statusFilter;
+        const shouldShow = matchesVendor && matchesStatus;
+        
+        row.style.display = shouldShow ? '' : 'none';
+        
+        // 找到對應的點位並更新其亮顯狀態
+        const point = points.find(p => p.id === pointId);
+        if (point) {
+          point.isHighlighted = shouldShow && matchesVendor;
+        }
+      });
+      
+      draw();
+    }
+
+    // 重置篩選
+    function resetFilters() {
+      document.getElementById('vendorFilter').value = '';
+      document.getElementById('statusFilter').value = '';
+      
+      // 重置所有點位的亮顯狀態
+      points.forEach(point => {
+        point.isHighlighted = false;
+        point.singleHighlight = false;
+      });
+      highlightedId = null;
+      
+      // 顯示所有行
+      Array.from(defectBody.rows).forEach(row => {
+        row.style.display = '';
+      });
+      
+      draw();
+    }
+
+    // 更新統計表格
+    function updateSummaryTable() {
+      const summaryBody = document.getElementById('summaryBody');
+      const vendorStats = {};
+
+      // 收集數據
+      Array.from(defectBody.rows).forEach(row => {
+        const vendor = row.cells[3].textContent || '未指定';
+        const status = row.cells[4].textContent;
+
+        if (!vendorStats[vendor]) {
+          vendorStats[vendor] = {
+            total: 0,
+            '未修繕': 0,
+            '已完成修繕': 0,
+            '已檢查': 0
+          };
+        }
+
+        vendorStats[vendor].total++;
+        vendorStats[vendor][status]++;
+      });
+
+      // 更新表格
+      summaryBody.innerHTML = '';
+      Object.entries(vendorStats).forEach(([vendor, stats]) => {
+        const completionRate = ((stats['已完成修繕'] + stats['已檢查']) / stats.total * 100).toFixed(1);
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${vendor}</td>
+          <td>${stats.total}</td>
+          <td class="status-cell not-fixed">${stats['未修繕']}</td>
+          <td class="status-cell fixed">${stats['已完成修繕']}</td>
+          <td class="status-cell checked">${stats['已檢查']}</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${completionRate}%"></div>
+            </div>
+            ${completionRate}%
+          </td>
+        `;
+        summaryBody.appendChild(row);
+      });
+    }
+
+    // 簽名相關函數
+    function initializeSignatures() {
+      const canvasIds = ['ownerSignature', 'clientSignature', 'constructorSignature'];
+      canvasIds.forEach(id => {
+        const canvas = document.getElementById(id);
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // 觸控支援
+        canvas.addEventListener('touchstart', handleTouchStart);
+        canvas.addEventListener('touchmove', handleTouchMove);
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function startDrawing(e) {
+          isDrawing = true;
+          [lastX, lastY] = getCoordinates(e);
+        }
+
+        function draw(e) {
+          if (!isDrawing) return;
+          e.preventDefault();
+
+          const [currentX, currentY] = getCoordinates(e);
+          ctx.beginPath();
+          ctx.moveTo(lastX, lastY);
+          ctx.lineTo(currentX, currentY);
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 2;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+
+          [lastX, lastY] = [currentX, currentY];
+        }
+
+        function stopDrawing() {
+          isDrawing = false;
+        }
+
+        function getCoordinates(e) {
+          const rect = canvas.getBoundingClientRect();
+          return [
+            (e.clientX || e.touches[0].clientX) - rect.left,
+            (e.clientY || e.touches[0].clientY) - rect.top
+          ];
+        }
+
+        function handleTouchStart(e) {
+          e.preventDefault();
+          startDrawing(e.touches[0]);
+        }
+
+        function handleTouchMove(e) {
+          e.preventDefault();
+          draw(e.touches[0]);
+        }
+      });
+    }
+
+    function clearSignature(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // 更新列印頁碼和標題
+    function updatePrintFooter() {
+      const title = document.getElementById('pageTitle').value;
+      document.getElementById('printFooter').textContent = title;
+      
+      // 計算總頁數（假設每頁可容納25行）
+      const rowsPerPage = 25;
+      const totalRows = document.getElementById('defectBody').rows.length;
+      const totalPages = Math.ceil(totalRows / rowsPerPage);
+      
+      // 更新頁碼
+      document.getElementById('pageNumber').textContent = `第 1 頁，共 ${totalPages} 頁`;
+    }
+
+    // 更新頁尾信息
+    function updateFooter() {
+      const title = document.getElementById('pageTitle').value;
+      document.getElementById('footerTitle').textContent = title;
+      
+      // 計算總頁數（假設每頁可容納25行）
+      const rowsPerPage = 25;
+      const totalRows = document.getElementById('defectBody').rows.length;
+      const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+      
+      document.getElementById('footerPage').textContent = `第 1 頁，共 ${totalPages} 頁`;
+    }
+
+    // 在頁面載入時初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      updateDate();
+      loadTitle();
+      updateVendorFilter();
+      updateSummaryTable();
+      initializeSignatures();
+      updateFooter();
+    });
+
+    // 在標題變更時更新頁尾
+    document.getElementById('pageTitle').addEventListener('input', function() {
+      saveTitle();
+      updateFooter();
+    });
+
+    // 列印處理函數
+    function handlePrint() {
+      // 更新頁尾信息
+      updateFooter();
+      
+      // 執行列印
+      window.print();
+    }
+  </script>
+</body>
+</html>
