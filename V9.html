@@ -21,15 +21,11 @@
       display: flex;
       justify-content: center;
       margin: 20px 0 10px 0;
-      width: 100%;  /* 確保容器寬度為100% */
-      overflow: hidden;  /* 防止內容溢出 */
     }
     
     canvas { 
       border: 1px solid #ccc; 
-      display: block;
-      max-width: 80%;  /* 確保canvas不會超出容器 */
-      height: auto;  /* 保持寬高比 */
+      display: block; 
     }
     
     table { 
@@ -1270,6 +1266,9 @@
     let startPoint = null;
     let currentPoint = null;
     let originalImage = null;
+    let scaleFactor = 1; // 新增：用於追蹤圖片縮放比例
+    let originalWidth = 0; // 新增：儲存原始圖片寬度
+    let originalHeight = 0; // 新增：儲存原始圖片高度
 
     // 添加顏色變數
     let defaultArrowColor = "#008000"; // 綠色
@@ -1367,6 +1366,36 @@
       }
     }
 
+    // 新增：計算表格寬度
+    function getTableWidth() {
+      const table = document.getElementById('defectTable');
+      return table.offsetWidth;
+    }
+
+    // 新增：計算適當的縮放比例
+    function calculateScaleFactor(imageWidth) {
+      const tableWidth = getTableWidth();
+      const targetWidth = tableWidth * 0.8;
+      return imageWidth > targetWidth ? targetWidth / imageWidth : 1;
+    }
+
+    // 新增：轉換座標（考慮縮放）
+    function transformCoordinates(x, y) {
+      return {
+        x: x / scaleFactor,
+        y: y / scaleFactor
+      };
+    }
+
+    // 新增：反向轉換座標（考慮縮放）
+    function reverseTransformCoordinates(x, y) {
+      return {
+        x: x * scaleFactor,
+        y: y * scaleFactor
+      };
+    }
+
+    // 修改：圖片載入處理
     imageUploader.addEventListener("change", async function () {
       const file = this.files[0];
       if (!file) return;
@@ -1428,19 +1457,16 @@
               points = [];
               defectBody.innerHTML = "";
               
-              // 獲取表格寬度
-              const tableWidth = document.getElementById('defectTable').offsetWidth;
-              const maxWidth = tableWidth * 0.8; // 設定最大寬度為表格寬度的0.8倍
+              // 儲存原始尺寸
+              originalWidth = img.width;
+              originalHeight = img.height;
               
               // 計算縮放比例
-              let scale = 1;
-              if (img.width > maxWidth) {
-                scale = maxWidth / img.width;
-              }
+              scaleFactor = calculateScaleFactor(img.width);
               
-              // 設定畫布大小
-              canvas.width = img.width * scale;
-              canvas.height = img.height * scale;
+              // 設定畫布大小（使用縮放後的尺寸）
+              canvas.width = img.width * scaleFactor;
+              canvas.height = img.height * scaleFactor;
               
               // 儲存原始平面圖
               originalImage = e.target.result;
@@ -1494,23 +1520,12 @@
         // 取得指定頁面
         const page = await currentPDF.getPage(pageNumber);
         
-        // 獲取表格寬度
-        const tableWidth = document.getElementById('defectTable').offsetWidth;
-        const maxWidth = tableWidth * 0.8; // 設定最大寬度為表格寬度的0.8倍
-        
-        // 計算適當的縮放比例
-        const viewport = page.getViewport({scale: 1.0}); // 先取得原始尺寸
-        let scale = 1.0;
-        if (viewport.width > maxWidth) {
-          scale = maxWidth / viewport.width;
-        }
-        
-        // 使用計算出的縮放比例重新取得 viewport
-        const scaledViewport = page.getViewport({scale: scale});
+        // 設定適當的縮放比例
+        const viewport = page.getViewport({scale: 1.5});
         
         // 設定 canvas 大小
-        canvas.width = scaledViewport.width;
-        canvas.height = scaledViewport.height;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
         
         // 清除現有的點位和表格
         points = [];
@@ -1519,7 +1534,7 @@
         // 渲染 PDF 頁面到 canvas
         const renderContext = {
           canvasContext: ctx,
-          viewport: scaledViewport
+          viewport: viewport
         };
         
         await page.render(renderContext).promise;
@@ -1547,10 +1562,16 @@
       }
       
       const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // 轉換為原始座標
+      const originalCoords = transformCoordinates(x, y);
       startPoint = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        x: originalCoords.x,
+        y: originalCoords.y
       };
+      
       isDragging = true;
       currentPoint = null;
     });
@@ -1684,9 +1705,12 @@
       const endX = e.clientX - rect.left;
       const endY = e.clientY - rect.top;
       
-      // 計算箭頭方向
-      const dx = endX - startPoint.x;
-      const dy = endY - startPoint.y;
+      // 轉換為原始座標
+      const originalEndCoords = transformCoordinates(endX, endY);
+      
+      // 計算箭頭方向（使用原始座標）
+      const dx = originalEndCoords.x - startPoint.x;
+      const dy = originalEndCoords.y - startPoint.y;
       
       // 只有當拖曳距離大於5像素時才建立點位
       if (Math.sqrt(dx * dx + dy * dy) > 5) {
@@ -1767,27 +1791,44 @@
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
+      
+      // 繪製縮放後的圖片
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // 繪製點位和箭頭（使用原始座標）
       points.forEach(pt => {
-        // 判斷亮顯狀態：單點亮顯 > 篩選亮顯 > 預設顏色
         const isHighlighted = pt.singleHighlight || pt.isHighlighted;
         const pointColor = isHighlighted ? highlightArrowColor : defaultArrowColor;
 
         if (isHighlighted) {
-          drawGuideLines(pt.x, pt.y);
+          const transformedPoint = reverseTransformCoordinates(pt.x, pt.y);
+          drawGuideLines(transformedPoint.x, transformedPoint.y);
         }
         
+        // 轉換座標以繪製
+        const transformedPoint = reverseTransformCoordinates(pt.x, pt.y);
+        const transformedEndPoint = reverseTransformCoordinates(
+          pt.x + pt.dx,
+          pt.y + pt.dy
+        );
+        
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+        ctx.arc(transformedPoint.x, transformedPoint.y, 5, 0, Math.PI * 2);
         ctx.fillStyle = pointColor;
         ctx.fill();
         
         ctx.fillStyle = pointColor;
         ctx.font = "14px sans-serif";
         const pointNumber = pt.id.replace("點", "");
-        ctx.fillText(pointNumber, pt.x - 3, pt.y + 20);
+        ctx.fillText(pointNumber, transformedPoint.x - 3, transformedPoint.y + 20);
         
-        drawArrow(pt.x, pt.y, pt.x + pt.dx, pt.y + pt.dy, isHighlighted);
+        drawArrow(
+          transformedPoint.x,
+          transformedPoint.y,
+          transformedEndPoint.x,
+          transformedEndPoint.y,
+          isHighlighted
+        );
       });
     }
 
@@ -1934,7 +1975,14 @@
 
         // 3. 匯出缺失表格資料（包含照片關聯資訊）
         const defectData = {
-          points: points,
+          points: points.map(point => ({
+            ...point,
+            // 確保匯出的是原始座標
+            x: point.x,
+            y: point.y,
+            dx: point.dx,
+            dy: point.dy
+          })),
           tableData: Array.from(defectBody.rows).map(row => {
             const pointId = row.cells[0].textContent;
             return {
@@ -2197,6 +2245,8 @@
         if (defectDataFile) {
           const defectDataText = await defectDataFile.async("text");
           const defectData = JSON.parse(defectDataText);
+          
+          // 直接使用匯入的原始座標
           points = defectData.points;
           
           // 清空並重建缺失表格
