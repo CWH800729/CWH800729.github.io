@@ -1269,6 +1269,7 @@
     let scaleFactor = 1; // 新增：用於追蹤圖片縮放比例
     let originalWidth = 0; // 新增：儲存原始圖片寬度
     let originalHeight = 0; // 新增：儲存原始圖片高度
+    let isTouchDevice = false; // 新增：標記是否為觸控設備
 
     // 添加顏色變數
     let defaultArrowColor = "#008000"; // 綠色
@@ -1555,18 +1556,55 @@
       }
     }
 
-    canvas.addEventListener("mousedown", function(e) {
+    // 新增：檢測是否為觸控設備
+    function detectTouchDevice() {
+      isTouchDevice = 'ontouchstart' in window || 
+                     navigator.maxTouchPoints > 0 || 
+                     navigator.msMaxTouchPoints > 0;
+    }
+
+    // 新增：獲取觸控或滑鼠座標
+    function getEventCoordinates(e) {
+      const rect = canvas.getBoundingClientRect();
+      let x, y;
+      
+      if (isTouchDevice && e.touches) {
+        x = e.touches[0].clientX - rect.left;
+        y = e.touches[0].clientY - rect.top;
+      } else {
+        x = e.clientX - rect.left;
+        y = e.clientY - rect.top;
+      }
+      
+      return { x, y };
+    }
+
+    // 修改：初始化時檢測設備類型
+    document.addEventListener('DOMContentLoaded', function() {
+      detectTouchDevice();
+      updateDate();
+      loadTitle();
+      updateVendorFilter();
+      updateSummaryTable();
+      initializeSignatures();
+      updateFooter();
+    });
+
+    // 修改：移除原有的滑鼠事件監聽器，改用統一的事件處理
+    canvas.removeEventListener("mousedown", null);
+    canvas.removeEventListener("mouseup", null);
+
+    // 新增：統一的事件處理函數
+    function handleStart(e) {
+      e.preventDefault(); // 防止觸控事件的預設行為
       if (!img.src && !currentPDF) {
         alert('請先上傳平面圖');
         return;
       }
       
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const coords = getEventCoordinates(e);
+      const originalCoords = transformCoordinates(coords.x, coords.y);
       
-      // 轉換為原始座標
-      const originalCoords = transformCoordinates(x, y);
       startPoint = {
         x: originalCoords.x,
         y: originalCoords.y
@@ -1574,139 +1612,48 @@
       
       isDragging = true;
       currentPoint = null;
-    });
+    }
 
-    // 新增相機功能
-    async function openCamera(pointId) {
-      try {
-        const video = document.createElement('video');
-        const cameraContainer = document.createElement('div');
-        const captureButton = document.createElement('button');
-        const closeButton = document.createElement('button');
+    function handleMove(e) {
+      if (!isDragging) return;
+      e.preventDefault();
+      
+      const coords = getEventCoordinates(e);
+      const originalCoords = transformCoordinates(coords.x, coords.y);
+      
+      // 更新當前點位用於預覽
+      currentPoint = {
+        x: originalCoords.x,
+        y: originalCoords.y
+      };
+      
+      // 重新繪製以顯示預覽
+      draw();
+      
+      // 繪製預覽箭頭
+      if (startPoint && currentPoint) {
+        const transformedStart = reverseTransformCoordinates(startPoint.x, startPoint.y);
+        const transformedCurrent = reverseTransformCoordinates(currentPoint.x, currentPoint.y);
         
-        // 設置容器樣式
-        cameraContainer.style.cssText = `
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: black;
-          padding: 20px;
-          border-radius: 10px;
-          z-index: 1000;
-        `;
-        
-        // 設置視訊元素樣式
-        video.style.cssText = `
-          max-width: 100%;
-          max-height: 70vh;
-          margin-bottom: 10px;
-        `;
-        
-        // 設置按鈕樣式
-        captureButton.textContent = '拍照';
-        captureButton.style.cssText = `
-          padding: 10px 20px;
-          margin: 0 10px;
-          background: #4CAF50;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        `;
-        
-        closeButton.textContent = '關閉';
-        closeButton.style.cssText = `
-          padding: 10px 20px;
-          margin: 0 10px;
-          background: #f44336;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        `;
-        
-        // 添加元素到容器
-        cameraContainer.appendChild(video);
-        cameraContainer.appendChild(captureButton);
-        cameraContainer.appendChild(closeButton);
-        
-        // 添加遮罩層
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0,0,0,0.5);
-          z-index: 999;
-        `;
-        
-        document.body.appendChild(overlay);
-        document.body.appendChild(cameraContainer);
-        
-        // 獲取攝像頭串流
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' }, 
-          audio: false 
-        });
-        video.srcObject = stream;
-        await video.play();
-        
-        // 拍照按鈕事件
-        captureButton.onclick = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          canvas.getContext('2d').drawImage(video, 0, 0);
-          
-          // 儲存照片
-          pointPhotos[pointId] = canvas.toDataURL('image/jpeg');
-          
-          // 清理相機
-          stream.getTracks().forEach(track => track.stop());
-          document.body.removeChild(overlay);
-          document.body.removeChild(cameraContainer);
-          
-          // 顯示預覽
-          showPhotoPreview(pointId);
-        };
-        
-        // 關閉按鈕事件
-        closeButton.onclick = () => {
-          stream.getTracks().forEach(track => track.stop());
-          document.body.removeChild(overlay);
-          document.body.removeChild(cameraContainer);
-          
-          // 如果沒有拍照，則開啟檔案選擇
-          document.getElementById('photoUploader').click();
-        };
-        
-      } catch (error) {
-        console.error('相機啟動失敗:', error);
-        alert('無法啟動相機，請改用檔案上傳。');
-        document.getElementById('photoUploader').click();
+        ctx.beginPath();
+        ctx.setLineDash([5, 5]);
+        drawArrow(
+          transformedStart.x,
+          transformedStart.y,
+          transformedCurrent.x,
+          transformedCurrent.y,
+          false
+        );
+        ctx.setLineDash([]);
       }
     }
 
-    // 添加設備檢測函數
-    function isMobileDevice() {
-      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-      return mobileRegex.test(navigator.userAgent) || 
-             ('maxTouchPoints' in navigator && navigator.maxTouchPoints > 0);
-    }
-
-    canvas.addEventListener("mouseup", function(e) {
+    function handleEnd(e) {
       if (!isDragging) return;
-      isDragging = false;
+      e.preventDefault();
       
-      const rect = canvas.getBoundingClientRect();
-      const endX = e.clientX - rect.left;
-      const endY = e.clientY - rect.top;
-      
-      // 轉換為原始座標
-      const originalEndCoords = transformCoordinates(endX, endY);
+      const coords = getEventCoordinates(e);
+      const originalEndCoords = transformCoordinates(coords.x, coords.y);
       
       // 計算箭頭方向（使用原始座標）
       const dx = originalEndCoords.x - startPoint.x;
@@ -1727,7 +1674,7 @@
         addTableRow(id);
         draw();
         
-        // 修正照片上傳觸發邏輯
+        // 處理照片上傳
         const photoUploader = document.getElementById('photoUploader');
         if (!photoUploader) {
           console.error('找不到照片上傳元素');
@@ -1736,9 +1683,7 @@
         
         photoUploader.dataset.pointId = id;
         
-        // 檢查是否為移動設備且支援相機
         if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          // 移動設備：提供選擇拍照或上傳
           const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
           if (choice) {
             openCamera(id);
@@ -1746,56 +1691,40 @@
             photoUploader.click();
           }
         } else {
-          // PC設備：直接開啟檔案選擇
           photoUploader.click();
         }
-      } else {
-        // 如果拖曳距離太短，重新繪製以清除預覽
-        draw();
+      }
+      
+      isDragging = false;
+      currentPoint = null;
+      draw();
+    }
+
+    // 添加事件監聽器（同時支援滑鼠和觸控）
+    canvas.addEventListener("mousedown", handleStart);
+    canvas.addEventListener("touchstart", handleStart, { passive: false });
+    
+    canvas.addEventListener("mousemove", handleMove);
+    canvas.addEventListener("touchmove", handleMove, { passive: false });
+    
+    canvas.addEventListener("mouseup", handleEnd);
+    canvas.addEventListener("touchend", handleEnd, { passive: false });
+    
+    // 處理滑鼠離開畫布的情況
+    canvas.addEventListener("mouseleave", function(e) {
+      if (isDragging) {
+        handleEnd(e);
       }
     });
 
-    function drawGuideLines(x, y) {
-      ctx.setLineDash([5, 5]); // 設置虛線樣式
-      ctx.beginPath();
-      // 繪製水平輔助線
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      // 繪製垂直輔助線
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.setLineDash([]); // 重置為實線
-    }
-
-    function drawArrow(fromX, fromY, toX, toY, isHighlighted) {
-      const headlen = 10;
-      const dx = toX - fromX;
-      const dy = toY - fromY;
-      const angle = Math.atan2(dy, dx);
-      
-      // 使用自定義顏色
-      ctx.strokeStyle = isHighlighted ? highlightArrowColor : defaultArrowColor;
-      ctx.lineWidth = 2;
-      
-      ctx.beginPath();
-      ctx.moveTo(fromX, fromY);
-      ctx.lineTo(toX, toY);
-      ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
-      ctx.moveTo(toX, toY);
-      ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
-      ctx.stroke();
-    }
-
+    // 修改：draw 函數以支援預覽
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       // 繪製縮放後的圖片
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
-      // 繪製點位和箭頭（使用原始座標）
+      // 繪製點位和箭頭
       points.forEach(pt => {
         const isHighlighted = pt.singleHighlight || pt.isHighlighted;
         const pointColor = isHighlighted ? highlightArrowColor : defaultArrowColor;
@@ -1805,7 +1734,6 @@
           drawGuideLines(transformedPoint.x, transformedPoint.y);
         }
         
-        // 轉換座標以繪製
         const transformedPoint = reverseTransformCoordinates(pt.x, pt.y);
         const transformedEndPoint = reverseTransformCoordinates(
           pt.x + pt.dx,
@@ -1830,6 +1758,23 @@
           isHighlighted
         );
       });
+      
+      // 繪製預覽箭頭（如果正在拖曳）
+      if (isDragging && startPoint && currentPoint) {
+        const transformedStart = reverseTransformCoordinates(startPoint.x, startPoint.y);
+        const transformedCurrent = reverseTransformCoordinates(currentPoint.x, currentPoint.y);
+        
+        ctx.beginPath();
+        ctx.setLineDash([5, 5]);
+        drawArrow(
+          transformedStart.x,
+          transformedStart.y,
+          transformedCurrent.x,
+          transformedCurrent.y,
+          false
+        );
+        ctx.setLineDash([]);
+      }
     }
 
     function addTableRow(id) {
@@ -2643,3 +2588,4 @@
   </script>
 </body>
 </html>
+
