@@ -769,25 +769,135 @@
     /* 列印樣式調整 */
     @media print {
       @page {
-        margin: 2cm;
+        size: A4;
+        margin: 1.5cm;
       }
 
       body {
         padding: 0;
+        margin: 0;
+        max-width: 100%;
       }
 
+      /* 強制分頁樣式 */
+      .page-break {
+        page-break-after: always;
+        break-after: page;
+      }
+
+      /* 平面圖頁面樣式 */
+      .floor-plan-page {
+        height: 100vh;
+        page-break-after: always;
+        break-after: page;
+        position: relative;
+      }
+
+      .page-header {
+        margin-bottom: 15px;
+      }
+
+      .title-input {
+        border: none;
+        font-size: 24pt;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 5px;
+      }
+
+      .date-display {
+        font-size: 14pt;
+      }
+
+      /* 調整平面圖容器 */
+      .canvas-container {
+        transform: scale(0.75);
+        transform-origin: top center;
+        margin: 0 auto;
+        max-width: 100%;
+        overflow: hidden;
+        height: calc(100vh - 200px); /* 預留簽名區域空間 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* 調整平面圖透明度 */
+      #floorCanvas {
+        opacity: 0.7; /* 平面圖淡化30% */
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      /* 簽名區域樣式 */
+      .signature-container {
+        position: fixed;
+        bottom: 1cm;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        background-color: white;
+        border-top: 1px solid #ccc;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .signature-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 0;
+      }
+
+      .signature-box {
+        flex: 1;
+        min-width: 200px;
+        max-width: calc(33.33% - 10px);
+        margin: 0;
+      }
+
+      .signature-canvas {
+        width: 100%;
+        height: 120px;
+        border: 1px solid #000;
+      }
+
+      /* 表格頁面樣式 */
+      .table-page {
+        min-height: 100vh;
+        position: relative;
+        padding-bottom: 200px; /* 為簽名區域預留空間 */
+      }
+
+      /* 隱藏不需要的元素 */
+      .print-button-container,
       .action-buttons,
       .filter-container,
       #keywordTable,
       #toggleKeywordBtn,
       .settings-btn,
       #drawInstruction,
-      button,
+      button:not(.signature-canvas),
       input[type="file"],
       .summary-container {
         display: none !important;
       }
 
+      /* 調整表格樣式 */
+      #defectTable {
+        font-size: 10pt;
+        margin: 15px 0;
+        width: 100%;
+      }
+
+      #defectTable th,
+      #defectTable td {
+        padding: 4px;
+        height: auto;
+        min-height: auto;
+      }
+
+      /* 移除不需要的列 */
       #defectTable th:nth-child(3),
       #defectTable th:nth-child(4),
       #defectTable th:nth-child(5),
@@ -799,26 +909,46 @@
         display: none;
       }
 
-      .signature-container {
-        page-break-inside: avoid;
+      /* 調整剩餘列的寬度 */
+      #defectTable th:nth-child(1),
+      #defectTable td:nth-child(1) {
+        width: 15%;
+      }
+
+      #defectTable th:nth-child(2),
+      #defectTable td:nth-child(2) {
+        width: 85%;
+      }
+
+      /* 頁尾樣式 */
+      .page-footer {
+        display: block;
+        position: fixed;
+        bottom: 1cm;
+        width: 100%;
+      }
+
+      /* 作者資訊樣式 */
+      .author-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        border-top: 1px solid #ccc;
         background-color: white;
-        box-shadow: none;
+        font-size: 10pt;
       }
 
-      .signature-buttons {
-        display: none;
+      /* 移除元素間的多餘空白 */
+      * {
+        margin-bottom: 0;
       }
 
-      .print-footer {
-        display: block;
-      }
-
-      .page-number {
-        display: block;
-      }
-
-      .signature-canvas {
-        border: 1px solid #000;
+      /* 確保箭頭清晰可見 */
+      canvas {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
       }
     }
 
@@ -2916,6 +3046,67 @@
           ];
         }
       });
+    }
+
+    // 添加簽名同步功能
+    function syncSignatures() {
+      const signatures = ['owner', 'client', 'constructor'];
+      signatures.forEach(type => {
+        const canvas1 = document.getElementById(`${type}Signature`);
+        const canvas2 = document.getElementById(`${type}Signature2`);
+        const ctx1 = canvas1.getContext('2d');
+        const ctx2 = canvas2.getContext('2d');
+        
+        // 同步簽名內容
+        canvas2.width = canvas1.width;
+        canvas2.height = canvas1.height;
+        ctx2.drawImage(canvas1, 0, 0);
+      });
+    }
+
+    // 修改原有的簽名相關函數
+    function initializeSignatures() {
+      const canvasIds = [
+        'ownerSignature', 'clientSignature', 'constructorSignature',
+        'ownerSignature2', 'clientSignature2', 'constructorSignature2'
+      ];
+      
+      canvasIds.forEach(id => {
+        const canvas = document.getElementById(id);
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // ... 原有的簽名事件處理程式 ...
+
+        // 在簽名完成時同步
+        canvas.addEventListener('mouseup', () => {
+          if (isDrawing) {
+            syncSignatures();
+          }
+        });
+        canvas.addEventListener('touchend', () => {
+          if (isDrawing) {
+            syncSignatures();
+          }
+        });
+      });
+    }
+
+    // 修改清除簽名函數
+    function clearSignature(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // 同步清除另一個簽名
+      const otherId = canvasId.replace('Signature', 'Signature2');
+      const otherCanvas = document.getElementById(otherId);
+      if (otherCanvas) {
+        const otherCtx = otherCanvas.getContext('2d');
+        otherCtx.clearRect(0, 0, otherCanvas.width, otherCanvas.height);
+      }
     }
   </script>
 </body>
