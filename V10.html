@@ -2656,29 +2656,58 @@
       
       canvasIds.forEach(id => {
         const canvas = document.getElementById(id);
+        if (!canvas) {
+          console.error(`找不到簽名畫布: ${id}`);
+          return;
+        }
+
         const ctx = canvas.getContext('2d');
         let isDrawing = false;
         let lastX = 0;
         let lastY = 0;
 
-        // 滑鼠事件
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
+        // 設定畫布樣式
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
 
-        // 觸控事件
-        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        // 滑鼠事件處理
+        function handleMouseDown(e) {
+          isDrawing = true;
+          const rect = canvas.getBoundingClientRect();
+          lastX = e.clientX - rect.left;
+          lastY = e.clientY - rect.top;
+        }
 
+        function handleMouseMove(e) {
+          if (!isDrawing) return;
+          
+          const rect = canvas.getBoundingClientRect();
+          const currentX = e.clientX - rect.left;
+          const currentY = e.clientY - rect.top;
+          
+          ctx.beginPath();
+          ctx.moveTo(lastX, lastY);
+          ctx.lineTo(currentX, currentY);
+          ctx.stroke();
+          
+          lastX = currentX;
+          lastY = currentY;
+        }
+
+        function handleMouseUp() {
+          isDrawing = false;
+        }
+
+        // 觸控事件處理
         function handleTouchStart(e) {
           e.preventDefault();
-          isDrawing = true;
           const touch = e.touches[0];
           const rect = canvas.getBoundingClientRect();
           lastX = touch.clientX - rect.left;
           lastY = touch.clientY - rect.top;
+          isDrawing = true;
         }
 
         function handleTouchMove(e) {
@@ -2690,7 +2719,11 @@
           const currentX = touch.clientX - rect.left;
           const currentY = touch.clientY - rect.top;
           
-          drawLine(lastX, lastY, currentX, currentY);
+          ctx.beginPath();
+          ctx.moveTo(lastX, lastY);
+          ctx.lineTo(currentX, currentY);
+          ctx.stroke();
+          
           lastX = currentX;
           lastY = currentY;
         }
@@ -2700,49 +2733,35 @@
           isDrawing = false;
         }
 
-        function startDrawing(e) {
-          isDrawing = true;
-          [lastX, lastY] = getCoordinates(e);
-        }
+        // 綁定滑鼠事件
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseout', handleMouseUp);
 
-        function draw(e) {
-          if (!isDrawing) return;
-          e.preventDefault();
-
-          const [currentX, currentY] = getCoordinates(e);
-          drawLine(lastX, lastY, currentX, currentY);
-          [lastX, lastY] = [currentX, currentY];
-        }
-
-        function drawLine(x1, y1, x2, y2) {
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.strokeStyle = '#000';
-          ctx.lineWidth = 2;
-          ctx.lineCap = 'round';
-          ctx.stroke();
-        }
-
-        function stopDrawing() {
-          isDrawing = false;
-        }
-
-        function getCoordinates(e) {
-          const rect = canvas.getBoundingClientRect();
-          return [
-            e.clientX - rect.left,
-            e.clientY - rect.top
-          ];
-        }
+        // 綁定觸控事件
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
       });
     }
 
     function clearSignature(canvasId) {
       const canvas = document.getElementById(canvasId);
+      if (!canvas) {
+        console.error(`找不到簽名畫布: ${canvasId}`);
+        return;
+      }
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
+
+    // 確保在頁面載入完成後初始化簽名功能
+    document.addEventListener('DOMContentLoaded', function() {
+      // 其他初始化程式碼...
+      initializeSignatures();
+    });
 
     // 更新列印頁碼和標題
     function updatePrintFooter() {
