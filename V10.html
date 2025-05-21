@@ -1036,6 +1036,120 @@
         background-color: white;
       }
     }
+
+    /* 修改設定面板樣式 */
+    .color-picker-container {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+      width: 400px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .settings-tab {
+      display: none;
+      margin-top: 15px;
+    }
+
+    .settings-tab.active {
+      display: block;
+    }
+
+    .settings-tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 15px;
+    }
+
+    .settings-tab-button {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .settings-tab-button.active {
+      color: #4CAF50;
+      border-bottom: 2px solid #4CAF50;
+    }
+
+    .signature-container {
+      display: none;  /* 預設隱藏簽名區域 */
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .signature-row {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .signature-box {
+      margin: 0;
+    }
+
+    .signature-canvas {
+      width: 100%;
+      height: 120px;
+      border: 1px solid #ccc;
+      background: white;
+      cursor: crosshair;
+    }
+
+    .signature-label {
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    .signature-buttons {
+      margin-top: 5px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .signature-buttons button {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+
+    /* 列印時顯示簽名區域 */
+    @media print {
+      .signature-container {
+        display: block !important;
+        position: fixed;
+        bottom: 1cm;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid #ccc;
+        padding: 10px;
+        margin: 0;
+      }
+
+      .signature-row {
+        flex-direction: row;
+        justify-content: space-between;
+      }
+
+      .signature-box {
+        flex: 1;
+        min-width: 200px;
+        max-width: calc(33.33% - 10px);
+      }
+    }
   </style>
 </head>
 <body>
@@ -1076,16 +1190,52 @@
 
   <div class="color-picker-container" id="colorPickerContainer">
     <div class="color-picker-header">
-      <h3>箭頭顏色設定</h3>
+      <h3>設定面板</h3>
       <button class="color-picker-close" onclick="toggleSettings()">×</button>
     </div>
-    <div class="color-picker-group">
-      <label>預設箭頭顏色：</label>
-      <input type="color" id="defaultColor" value="#008000" onchange="updateColors()">
+    
+    <div class="settings-tabs">
+      <button class="settings-tab-button active" onclick="switchSettingsTab('colors')">箭頭顏色</button>
+      <button class="settings-tab-button" onclick="switchSettingsTab('signatures')">簽名設定</button>
     </div>
-    <div class="color-picker-group">
-      <label>亮顯箭頭顏色：</label>
-      <input type="color" id="highlightColor" value="#ff0000" onchange="updateColors()">
+
+    <div id="colorsTab" class="settings-tab active">
+      <div class="color-picker-group">
+        <label>預設箭頭顏色：</label>
+        <input type="color" id="defaultColor" value="#008000" onchange="updateColors()">
+      </div>
+      <div class="color-picker-group">
+        <label>亮顯箭頭顏色：</label>
+        <input type="color" id="highlightColor" value="#ff0000" onchange="updateColors()">
+      </div>
+    </div>
+
+    <div id="signaturesTab" class="settings-tab">
+      <div class="signature-container">
+        <div class="signature-row">
+          <div class="signature-box">
+            <div class="signature-label">業主簽名</div>
+            <canvas class="signature-canvas" id="ownerSignature" width="300" height="150"></canvas>
+            <div class="signature-buttons">
+              <button onclick="clearSignature('ownerSignature')">清除</button>
+            </div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-label">客戶簽名</div>
+            <canvas class="signature-canvas" id="clientSignature" width="300" height="150"></canvas>
+            <div class="signature-buttons">
+              <button onclick="clearSignature('clientSignature')">清除</button>
+            </div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-label">營造廠簽名</div>
+            <canvas class="signature-canvas" id="constructorSignature" width="300" height="150"></canvas>
+            <div class="signature-buttons">
+              <button onclick="clearSignature('constructorSignature')">清除</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1140,33 +1290,6 @@
     </thead>
     <tbody id="defectBody"></tbody>
   </table>
-
-  <!-- 在統計表格前添加簽名區域 -->
-  <div class="signature-container">
-    <div class="signature-row">
-      <div class="signature-box">
-        <div class="signature-label">業主簽名</div>
-        <canvas class="signature-canvas" id="ownerSignature" width="300" height="150"></canvas>
-        <div class="signature-buttons">
-          <button onclick="clearSignature('ownerSignature')">清除</button>
-        </div>
-      </div>
-      <div class="signature-box">
-        <div class="signature-label">客戶簽名</div>
-        <canvas class="signature-canvas" id="clientSignature" width="300" height="150"></canvas>
-        <div class="signature-buttons">
-          <button onclick="clearSignature('clientSignature')">清除</button>
-        </div>
-      </div>
-      <div class="signature-box">
-        <div class="signature-label">營造廠簽名</div>
-        <canvas class="signature-canvas" id="constructorSignature" width="300" height="150"></canvas>
-        <div class="signature-buttons">
-          <button onclick="clearSignature('constructorSignature')">清除</button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- 添加頁碼和標題 -->
   <div class="print-footer" id="printFooter"></div>
@@ -2733,13 +2856,21 @@
           isDrawing = false;
         }
 
-        // 綁定滑鼠事件
+        // 移除舊的事件監聽器
+        canvas.removeEventListener('mousedown', handleMouseDown);
+        canvas.removeEventListener('mousemove', handleMouseMove);
+        canvas.removeEventListener('mouseup', handleMouseUp);
+        canvas.removeEventListener('mouseout', handleMouseUp);
+        canvas.removeEventListener('touchstart', handleTouchStart);
+        canvas.removeEventListener('touchmove', handleTouchMove);
+        canvas.removeEventListener('touchend', handleTouchEnd);
+        canvas.removeEventListener('touchcancel', handleTouchEnd);
+
+        // 綁定新的事件監聽器
         canvas.addEventListener('mousedown', handleMouseDown);
         canvas.addEventListener('mousemove', handleMouseMove);
         canvas.addEventListener('mouseup', handleMouseUp);
         canvas.addEventListener('mouseout', handleMouseUp);
-
-        // 綁定觸控事件
         canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
         canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
@@ -2811,8 +2942,21 @@
       // 更新頁尾信息
       updateFooter();
       
+      // 確保簽名區域在列印時可見
+      const signatureContainer = document.querySelector('.signature-container');
+      if (signatureContainer) {
+        signatureContainer.style.display = 'block';
+      }
+      
       // 執行列印
       window.print();
+      
+      // 列印完成後隱藏簽名區域
+      setTimeout(() => {
+        if (signatureContainer) {
+          signatureContainer.style.display = 'none';
+        }
+      }, 1000);
     }
 
     // 修改平面圖的觸控事件處理
@@ -3061,6 +3205,26 @@
       if (otherCanvas) {
         const otherCtx = otherCanvas.getContext('2d');
         otherCtx.clearRect(0, 0, otherCanvas.width, otherCanvas.height);
+      }
+    }
+
+    // 切換設定面板標籤
+    function switchSettingsTab(tabName) {
+      // 更新按鈕狀態
+      document.querySelectorAll('.settings-tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`.settings-tab-button[onclick="switchSettingsTab('${tabName}')"]`).classList.add('active');
+
+      // 更新標籤內容
+      document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.getElementById(`${tabName}Tab`).classList.add('active');
+
+      // 如果是簽名標籤，初始化簽名功能
+      if (tabName === 'signatures') {
+        initializeSignatures();
       }
     }
   </script>
