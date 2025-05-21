@@ -707,11 +707,61 @@
 
     /* 簽名區域樣式 */
     .signature-container {
-      margin: 30px 0;
-      padding: 20px;
-      background-color: #f8f9fa;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: block;
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .signature-container.print-only {
+      display: none;  /* 預設隱藏列印用的簽名區域 */
+    }
+
+    @media print {
+      .signature-container.print-only {
+        display: block !important;  /* 列印時顯示 */
+        position: fixed;
+        bottom: 1cm;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid #ccc;
+        padding: 10px;
+        margin: 0;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .signature-container:not(.print-only) {
+        display: none !important;  /* 列印時隱藏編輯用的簽名區域 */
+      }
+
+      .signature-row {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
+      }
+
+      .signature-box {
+        flex: 1;
+        min-width: 200px;
+        max-width: calc(33.33% - 10px);
+        margin-bottom: 10px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .signature-label-input,
+      .add-signature-button,
+      .remove-signature-button {
+        display: none;
+      }
+
+      /* 確保簽名區域在每頁底部 */
+      @page {
+        margin-bottom: 8cm;  /* 為簽名區域預留空間 */
+      }
     }
 
     .signature-row {
@@ -1083,8 +1133,9 @@
       border-bottom: 2px solid #4CAF50;
     }
 
+    /* 修改簽名設定面板樣式 */
     .signature-container {
-      display: none;  /* 預設隱藏簽名區域 */
+      display: block;  /* 改為預設顯示 */
       margin-top: 20px;
       padding: 15px;
       background: #f8f9fa;
@@ -1099,6 +1150,25 @@
 
     .signature-box {
       margin: 0;
+      padding: 10px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .signature-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .signature-label-input {
+      width: 200px;
+      padding: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
     }
 
     .signature-canvas {
@@ -1109,13 +1179,8 @@
       cursor: crosshair;
     }
 
-    .signature-label {
-      margin-bottom: 5px;
-      font-weight: bold;
-    }
-
     .signature-buttons {
-      margin-top: 5px;
+      margin-top: 10px;
       display: flex;
       gap: 10px;
     }
@@ -1123,6 +1188,35 @@
     .signature-buttons button {
       padding: 5px 10px;
       font-size: 12px;
+    }
+
+    .add-signature-button {
+      margin-top: 15px;
+      padding: 8px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .add-signature-button:hover {
+      background-color: #45a049;
+    }
+
+    .remove-signature-button {
+      background-color: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .remove-signature-button:hover {
+      background-color: #da190b;
     }
 
     /* 列印時顯示簽名區域 */
@@ -1141,6 +1235,7 @@
 
       .signature-row {
         flex-direction: row;
+        flex-wrap: wrap;
         justify-content: space-between;
       }
 
@@ -1148,6 +1243,13 @@
         flex: 1;
         min-width: 200px;
         max-width: calc(33.33% - 10px);
+        margin-bottom: 10px;
+      }
+
+      .signature-label-input,
+      .add-signature-button,
+      .remove-signature-button {
+        display: none;
       }
     }
   </style>
@@ -1211,30 +1313,14 @@
     </div>
 
     <div id="signaturesTab" class="settings-tab">
+      <!-- 編輯用的簽名區域 -->
       <div class="signature-container">
-        <div class="signature-row">
-          <div class="signature-box">
-            <div class="signature-label">業主簽名</div>
-            <canvas class="signature-canvas" id="ownerSignature" width="300" height="150"></canvas>
-            <div class="signature-buttons">
-              <button onclick="clearSignature('ownerSignature')">清除</button>
-            </div>
-          </div>
-          <div class="signature-box">
-            <div class="signature-label">客戶簽名</div>
-            <canvas class="signature-canvas" id="clientSignature" width="300" height="150"></canvas>
-            <div class="signature-buttons">
-              <button onclick="clearSignature('clientSignature')">清除</button>
-            </div>
-          </div>
-          <div class="signature-box">
-            <div class="signature-label">營造廠簽名</div>
-            <canvas class="signature-canvas" id="constructorSignature" width="300" height="150"></canvas>
-            <div class="signature-buttons">
-              <button onclick="clearSignature('constructorSignature')">清除</button>
-            </div>
-          </div>
+        <div class="signature-row" id="signatureRow">
+          <!-- 簽名欄位將動態添加在這裡 -->
         </div>
+        <button class="add-signature-button" onclick="addSignatureField()">
+          <i class="fas fa-plus"></i> 新增簽名欄位
+        </button>
       </div>
     </div>
   </div>
@@ -3226,6 +3312,164 @@
       if (tabName === 'signatures') {
         initializeSignatures();
       }
+    }
+
+    // 簽名欄位計數器
+    let signatureCounter = 0;
+
+    // 新增簽名欄位
+    function addSignatureField() {
+      const signatureRow = document.getElementById('signatureRow');
+      const signatureId = `signature_${signatureCounter++}`;
+      
+      const signatureBox = document.createElement('div');
+      signatureBox.className = 'signature-box';
+      signatureBox.innerHTML = `
+        <div class="signature-header">
+          <input type="text" 
+                 class="signature-label-input" 
+                 placeholder="請輸入簽名者職稱（例如：業主、監工等）"
+                 onchange="updateSignatureLabel(this)">
+          <button class="remove-signature-button" onclick="removeSignatureField(this)">
+            <i class="fas fa-times"></i> 移除
+          </button>
+        </div>
+        <canvas class="signature-canvas" 
+                id="${signatureId}" 
+                width="300" 
+                height="150"></canvas>
+        <div class="signature-buttons">
+          <button onclick="clearSignature('${signatureId}')">清除簽名</button>
+        </div>
+      `;
+      
+      signatureRow.appendChild(signatureBox);
+      initializeSignatureCanvas(signatureId);
+    }
+
+    // 移除簽名欄位
+    function removeSignatureField(button) {
+      const signatureBox = button.closest('.signature-box');
+      signatureBox.remove();
+    }
+
+    // 更新簽名標籤
+    function updateSignatureLabel(input) {
+      const signatureBox = input.closest('.signature-box');
+      const label = input.value || '未命名簽名';
+      signatureBox.dataset.label = label;
+    }
+
+    // 初始化單個簽名畫布
+    function initializeSignatureCanvas(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) {
+        console.error(`找不到簽名畫布: ${canvasId}`);
+        return;
+      }
+
+      const ctx = canvas.getContext('2d');
+      let isDrawing = false;
+      let lastX = 0;
+      let lastY = 0;
+
+      // 設定畫布樣式
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // 滑鼠事件處理
+      function handleMouseDown(e) {
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        lastX = e.clientX - rect.left;
+        lastY = e.clientY - rect.top;
+      }
+
+      function handleMouseMove(e) {
+        if (!isDrawing) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+        
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(currentX, currentY);
+        ctx.stroke();
+        
+        lastX = currentX;
+        lastY = currentY;
+      }
+
+      function handleMouseUp() {
+        isDrawing = false;
+      }
+
+      // 觸控事件處理
+      function handleTouchStart(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        lastX = touch.clientX - rect.left;
+        lastY = touch.clientY - rect.top;
+        isDrawing = true;
+      }
+
+      function handleTouchMove(e) {
+        e.preventDefault();
+        if (!isDrawing) return;
+        
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const currentX = touch.clientX - rect.left;
+        const currentY = touch.clientY - rect.top;
+        
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(currentX, currentY);
+        ctx.stroke();
+        
+        lastX = currentX;
+        lastY = currentY;
+      }
+
+      function handleTouchEnd(e) {
+        e.preventDefault();
+        isDrawing = false;
+      }
+
+      // 移除舊的事件監聽器
+      canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('mouseout', handleMouseUp);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+      canvas.removeEventListener('touchcancel', handleTouchEnd);
+
+      // 綁定新的事件監聽器
+      canvas.addEventListener('mousedown', handleMouseDown);
+      canvas.addEventListener('mousemove', handleMouseMove);
+      canvas.addEventListener('mouseup', handleMouseUp);
+      canvas.addEventListener('mouseout', handleMouseUp);
+      canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+      canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+      canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+      canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+    }
+
+    // 修改簽名初始化函數
+    function initializeSignatures() {
+      // 清空現有的簽名欄位
+      const signatureRow = document.getElementById('signatureRow');
+      signatureRow.innerHTML = '';
+      signatureCounter = 0;
+
+      // 添加一個預設的簽名欄位
+      addSignatureField();
     }
   </script>
 </body>
