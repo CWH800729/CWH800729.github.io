@@ -2641,7 +2641,106 @@
         // 觸控支援
         canvas.addEventListener('touchstart', handleTouchStart);
         canvas.addEventListener('touchmove', handleTouchMove);
-        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchend', handleTouchEnd);
+
+        function handleTouchStart(e) {
+          e.preventDefault(); // 防止頁面滾動
+          if (!img.src && !currentPDF) {
+            alert('請先上傳平面圖');
+            return;
+          }
+          
+          const rect = canvas.getBoundingClientRect();
+          const touch = e.touches[0];
+          const x = touch.clientX - rect.left;
+          const y = touch.clientY - rect.top;
+          
+          // 轉換為原始座標
+          const originalCoords = transformCoordinates(x, y);
+          startPoint = {
+            x: originalCoords.x,
+            y: originalCoords.y
+          };
+          
+          isDragging = true;
+          currentPoint = null;
+        }
+
+        function handleTouchMove(e) {
+          e.preventDefault(); // 防止頁面滾動
+          if (!isDragging) return;
+          
+          const rect = canvas.getBoundingClientRect();
+          const touch = e.touches[0];
+          const x = touch.clientX - rect.left;
+          const y = touch.clientY - rect.top;
+          
+          // 轉換為原始座標
+          const originalCoords = transformCoordinates(x, y);
+          previewEndPoint = {
+            x: originalCoords.x,
+            y: originalCoords.y
+          };
+          
+          draw(); // 重繪以更新預覽箭頭
+        }
+
+        function handleTouchEnd(e) {
+          e.preventDefault(); // 防止頁面滾動
+          if (!isDragging) return;
+          isDragging = false;
+          
+          if (!previewEndPoint) return;
+          
+          // 計算箭頭方向（使用原始座標）
+          const dx = previewEndPoint.x - startPoint.x;
+          const dy = previewEndPoint.y - startPoint.y;
+          
+          // 清除預覽終點
+          previewEndPoint = null;
+          
+          // 只有當拖曳距離大於5像素時才建立點位
+          if (Math.sqrt(dx * dx + dy * dy) > 5) {
+            const pointCount = points.length + 1;
+            const id = "點" + pointCount;
+            points.push({
+              id,
+              x: startPoint.x,
+              y: startPoint.y,
+              dx: dx,
+              dy: dy
+            });
+            
+            addTableRow(id);
+            draw();
+            
+            // 修正照片上傳觸發邏輯
+            const photoUploader = document.getElementById('photoUploader');
+            if (!photoUploader) {
+              console.error('找不到照片上傳元素');
+              return;
+            }
+            
+            photoUploader.dataset.pointId = id;
+            
+            // 檢查是否為移動設備且支援相機
+            if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+              // 移動設備：提供選擇拍照或上傳
+              const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
+              if (choice) {
+                openCamera(id);
+              } else {
+                photoUploader.click();
+              }
+            } else {
+              // PC設備：直接開啟檔案選擇
+              photoUploader.click();
+            }
+          } else {
+            // 如果拖曳距離太短，重新繪製以清除預覽
+            draw();
+          }
+        }
 
         function startDrawing(e) {
           isDrawing = true;
@@ -2674,16 +2773,6 @@
             (e.clientX || e.touches[0].clientX) - rect.left,
             (e.clientY || e.touches[0].clientY) - rect.top
           ];
-        }
-
-        function handleTouchStart(e) {
-          e.preventDefault();
-          startDrawing(e.touches[0]);
-        }
-
-        function handleTouchMove(e) {
-          e.preventDefault();
-          draw(e.touches[0]);
         }
       });
     }
