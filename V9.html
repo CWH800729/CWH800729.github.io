@@ -2062,24 +2062,77 @@
         processingMsg.textContent = '正在處理資料，請稍候...';
         document.body.appendChild(processingMsg);
 
-        const zip = new JSZip();
         const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
         const title = document.getElementById('pageTitle').value || '未命名';
+        const baseFileName = `${currentDate}-${title}`;
+
+        // 詢問匯出方式
+        const exportType = await new Promise((resolve) => {
+          const dialog = document.createElement('div');
+          dialog.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 10000;
+          `;
+          dialog.innerHTML = `
+            <h3 style="margin-top: 0;">選擇匯出方式</h3>
+            <button onclick="this.closest('div').dataset.choice='zip'" style="margin: 5px;">匯出為 ZIP 檔案</button>
+            <button onclick="this.closest('div').dataset.choice='folder'" style="margin: 5px;">匯出至資料夾</button>
+          `;
+          document.body.appendChild(dialog);
+
+          const buttons = dialog.getElementsByTagName('button');
+          Array.from(buttons).forEach(button => {
+            button.onclick = () => {
+              const choice = dialog.dataset.choice;
+              document.body.removeChild(dialog);
+              resolve(choice);
+            };
+          });
+        });
+
+        // 準備匯出資料
+        const exportData = {
+          version: "1.0",
+          exportDate: new Date().toISOString(),
+          title: title,
+          files: {
+            floorPlan: {
+              original: "原始平面圖.png",
+              marked: "標記平面圖.png"
+            },
+            data: {
+              defects: "defect_data.json",
+              keywords: "keyword_data.json",
+              excel: `${baseFileName}-缺失紀錄.xlsx`
+            },
+            photos: "照片/"
+          }
+        };
+
+        // 建立 ZIP 檔案
+        const zip = new JSZip();
         
         // 1. 匯出原始平面圖
         if (originalImage) {
-          zip.file("原始平面圖.png", originalImage.split(',')[1], {base64: true});
+          const imageData = originalImage.split(',')[1];
+          zip.file(exportData.files.floorPlan.original, imageData, {base64: true});
         }
 
         // 2. 匯出目前的平面圖（含標記）
         const canvasBlob = await new Promise(resolve => canvas.toBlob(resolve));
-        zip.file("標記平面圖.png", canvasBlob);
+        zip.file(exportData.files.floorPlan.marked, canvasBlob);
 
-        // 3. 匯出缺失表格資料（包含照片關聯資訊）
+        // 3. 匯出缺失表格資料
         const defectData = {
           points: points.map(point => ({
             ...point,
-            // 確保匯出的是原始座標
             x: point.x,
             y: point.y,
             dx: point.dx,
@@ -2097,19 +2150,19 @@
             };
           })
         };
-        zip.file("defect_data.json", JSON.stringify(defectData, null, 2));
+        zip.file(exportData.files.data.defects, JSON.stringify(defectData, null, 2));
 
         // 4. 匯出關鍵字表格資料
-        zip.file("keyword_data.json", JSON.stringify(customKeywordMap, null, 2));
+        zip.file(exportData.files.data.keywords, JSON.stringify(customKeywordMap, null, 2));
 
         // 5. 匯出照片
-        const photoFolder = zip.folder("照片");
+        const photoFolder = zip.folder(exportData.files.photos);
         const processedPhotos = new Set();
 
         for (const row of defectBody.rows) {
           const pointId = '點' + row.cells[0].textContent;
           if (pointPhotos[pointId] && !processedPhotos.has(pointId)) {
-            const photoFileName = `${currentDate}-${title}-點位${row.cells[0].textContent}.jpg`;
+            const photoFileName = `${baseFileName}-點位${row.cells[0].textContent}.jpg`;
             const base64Data = pointPhotos[pointId].split(',')[1];
             photoFolder.file(photoFileName, base64Data, {base64: true});
             processedPhotos.add(pointId);
@@ -2219,15 +2272,52 @@
 
         // 將 Excel 檔案加入 ZIP
         const excelBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-        zip.file(`${currentDate}-${title}-缺失紀錄.xlsx`, excelBuffer);
+        zip.file(exportData.files.data.excel, excelBuffer);
 
-        // 生成並下載 ZIP 檔案
-        const zipBlob = await zip.generateAsync({type: "blob"});
-        const exportFileName = `${currentDate}-${title}缺失.zip`;
-        saveAs(zipBlob, exportFileName);
+        // 7. 建立索引檔案
+        zip.file("index.json", JSON.stringify(exportData, null, 2));
+
+        if (exportType === 'zip') {
+          // 生成並下載 ZIP 檔案
+          const zipBlob = await zip.generateAsync({type: "blob"});
+          const exportFileName = `${baseFileName}-缺失.zip`;
+          saveAs(zipBlob, exportFileName);
+        } else {
+          // 匯出至資料夾
+          try {
+            // 使用 File System Access API
+            const dirHandle = await window.showDirectoryPicker({
+              mode: 'readwrite',
+              startIn: 'documents'
+            });
+
+            // 建立照片資料夾
+            const photoDirHandle = await dirHandle.getDirectoryHandle('照片', { create: true });
+
+            // 儲存所有檔案
+            for (const [filename, file] of Object.entries(zip.files)) {
+              if (file.dir) continue; // 跳過資料夾
+
+              const content = await file.async('blob');
+              const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+              const writable = await fileHandle.createWritable();
+              await writable.write(content);
+              await writable.close();
+            }
+
+            alert(`資料已成功匯出至資料夾！\n共匯出 ${processedPhotos.size} 張照片。`);
+          } catch (error) {
+            console.error('資料夾匯出失敗:', error);
+            alert('資料夾匯出失敗，請確認瀏覽器權限設定。\n將改為下載 ZIP 檔案。');
+            
+            // 如果資料夾匯出失敗，改為下載 ZIP
+            const zipBlob = await zip.generateAsync({type: "blob"});
+            const exportFileName = `${baseFileName}-缺失.zip`;
+            saveAs(zipBlob, exportFileName);
+          }
+        }
 
         document.body.removeChild(processingMsg);
-        alert(`資料匯出完成！\n共匯出 ${processedPhotos.size} 張照片。`);
       } catch (error) {
         console.error('匯出失敗:', error);
         alert('匯出過程發生錯誤，請重試。');
@@ -2278,134 +2368,148 @@
     });
 
     async function importData() {
-      document.getElementById('importFileInput').click();
-    }
-
-    document.getElementById('importFileInput').addEventListener('change', async function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
       try {
-        const processingMsg = document.createElement('div');
-        processingMsg.style.cssText = `
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          padding: 20px 40px;
-          background: rgba(0,0,0,0.8);
-          color: white;
-          border-radius: 8px;
-          z-index: 9999;
-        `;
-        processingMsg.textContent = '正在匯入資料，請稍候...';
-        document.body.appendChild(processingMsg);
+        // 詢問匯入方式
+        const importType = await new Promise((resolve) => {
+          const dialog = document.createElement('div');
+          dialog.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 10000;
+          `;
+          dialog.innerHTML = `
+            <h3 style="margin-top: 0;">選擇匯入方式</h3>
+            <button onclick="this.closest('div').dataset.choice='zip'" style="margin: 5px;">從 ZIP 檔案匯入</button>
+            <button onclick="this.closest('div').dataset.choice='folder'" style="margin: 5px;">從資料夾匯入</button>
+          `;
+          document.body.appendChild(dialog);
 
-        const zip = await JSZip.loadAsync(file);
-        
-        // 1. 載入原始平面圖
-        const originalImageFile = zip.file("原始平面圖.png");
-        if (originalImageFile) {
-          const imageData = await originalImageFile.async("base64");
-          originalImage = "data:image/png;base64," + imageData;
-          img = new Image();
-          img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            draw();
-          };
-          img.src = originalImage;
-        }
+          const buttons = dialog.getElementsByTagName('button');
+          Array.from(buttons).forEach(button => {
+            button.onclick = () => {
+              const choice = dialog.dataset.choice;
+              document.body.removeChild(dialog);
+              resolve(choice);
+            };
+          });
+        });
 
-        // 2. 先載入照片資料
-        pointPhotos = {};
-        const photoFolder = zip.folder("照片");
-        if (photoFolder) {
-          const photoFiles = await photoFolder.files;
-          for (const filename in photoFiles) {
-            if (filename.endsWith('.jpg')) {
-              let pointId;
-              if (filename.includes('-點位')) {
-                pointId = '點' + filename.split('-點位')[1].replace('.jpg', '');
-              } else {
-                pointId = filename.replace('.jpg', '');
-              }
-              
-              try {
-                const photoData = await photoFiles[filename].async("base64");
-                pointPhotos[pointId] = "data:image/jpeg;base64," + photoData;
-                console.log(`成功載入照片: ${filename} -> ${pointId}`);
-              } catch (error) {
-                console.error(`載入照片失敗: ${filename}`, error);
+        if (importType === 'zip') {
+          document.getElementById('importFileInput').click();
+        } else {
+          // 從資料夾匯入
+          try {
+            const dirHandle = await window.showDirectoryPicker({
+              mode: 'read',
+              startIn: 'documents'
+            });
+
+            // 讀取索引檔案
+            const indexFile = await dirHandle.getFileHandle('index.json');
+            const indexContent = await (await indexFile.getFile()).text();
+            const index = JSON.parse(indexContent);
+
+            const processingMsg = document.createElement('div');
+            processingMsg.style.cssText = `
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              padding: 20px 40px;
+              background: rgba(0,0,0,0.8);
+              color: white;
+              border-radius: 8px;
+              z-index: 9999;
+            `;
+            processingMsg.textContent = '正在匯入資料，請稍候...';
+            document.body.appendChild(processingMsg);
+
+            // 1. 載入原始平面圖
+            const originalImageFile = await dirHandle.getFileHandle(index.files.floorPlan.original);
+            const originalImageBlob = await (await originalImageFile.getFile()).blob();
+            originalImage = URL.createObjectURL(originalImageBlob);
+            img = new Image();
+            img.onload = () => {
+              canvas.width = img.width;
+              canvas.height = img.height;
+              draw();
+            };
+            img.src = originalImage;
+
+            // 2. 載入照片
+            pointPhotos = {};
+            const photoDirHandle = await dirHandle.getDirectoryHandle('照片');
+            for await (const entry of photoDirHandle.values()) {
+              if (entry.kind === 'file' && entry.name.endsWith('.jpg')) {
+                const file = await entry.getFile();
+                const pointId = '點' + entry.name.split('-點位')[1].replace('.jpg', '');
+                pointPhotos[pointId] = URL.createObjectURL(await file.blob());
               }
             }
+
+            // 3. 載入缺失資料
+            const defectDataFile = await dirHandle.getFileHandle(index.files.data.defects);
+            const defectDataText = await (await defectDataFile.getFile()).text();
+            const defectData = JSON.parse(defectDataText);
+            
+            points = defectData.points;
+            
+            // 清空並重建缺失表格
+            defectBody.innerHTML = "";
+            defectData.tableData.forEach(row => {
+              const tr = document.createElement("tr");
+              const pointId = '點' + row.id;
+              tr.innerHTML = `
+                <td class="clickable" 
+                    onclick="highlightPoint('${pointId}')"
+                    ondblclick="showPointPhoto('${pointId}')">${row.id}</td>
+                <td><input type="text" value="${row.description || ''}"></td>
+                <td>${row.category || ''}</td>
+                <td>${row.vendor || ''}</td>
+                <td class="status" onclick="cycleStatus(this)">${row.status || '未修繕'}</td>
+                <td>
+                  <button onclick="toggleEdit(this)">編輯</button>
+                  <button onclick="deleteRow(this)">刪除</button>
+                  <button onclick="changePhoto('${pointId}')" title="更換照片">
+                    <i class="fas fa-camera"></i>
+                  </button>
+                </td>`;
+              defectBody.appendChild(tr);
+            });
+
+            // 4. 載入關鍵字資料
+            const keywordDataFile = await dirHandle.getFileHandle(index.files.data.keywords);
+            const keywordDataText = await (await keywordDataFile.getFile()).text();
+            customKeywordMap = JSON.parse(keywordDataText);
+            updateKeywordTable();
+
+            document.body.removeChild(processingMsg);
+            draw();
+            updateDefectCount();
+            updateVendorFilter();
+            updateSummaryTable();
+            updateFooter();
+            
+            const photoCount = Object.keys(pointPhotos).length;
+            alert(`資料匯入完成！\n已載入 ${photoCount} 張照片。`);
+
+          } catch (error) {
+            console.error('資料夾匯入失敗:', error);
+            alert('資料夾匯入失敗，請確認資料夾結構是否正確。\n將改為從 ZIP 檔案匯入。');
+            document.getElementById('importFileInput').click();
           }
         }
-
-        // 3. 載入缺失資料
-        const defectDataFile = zip.file("defect_data.json");
-        if (defectDataFile) {
-          const defectDataText = await defectDataFile.async("text");
-          const defectData = JSON.parse(defectDataText);
-          
-          // 直接使用匯入的原始座標
-          points = defectData.points;
-          
-          // 清空並重建缺失表格
-          defectBody.innerHTML = "";
-          defectData.tableData.forEach(row => {
-            const tr = document.createElement("tr");
-            const pointId = '點' + row.id;
-            tr.innerHTML = `
-              <td class="clickable" 
-                  onclick="highlightPoint('${pointId}')"
-                  ondblclick="showPointPhoto('${pointId}')">${row.id}</td>
-            <td><input type="text" value="${row.description || ''}"></td>
-            <td>${row.category || ''}</td>
-            <td>${row.vendor || ''}</td>
-            <td class="status" onclick="cycleStatus(this)">${row.status || '未修繕'}</td>
-            <td>
-              <button onclick="toggleEdit(this)">編輯</button>
-              <button onclick="deleteRow(this)">刪除</button>
-              <button onclick="changePhoto('${pointId}')" title="更換照片">
-                <i class="fas fa-camera"></i>
-              </button>
-            </td>`;
-            defectBody.appendChild(tr);
-          });
-        }
-
-        // 4. 載入關鍵字資料
-        const keywordDataFile = zip.file("keyword_data.json");
-        if (keywordDataFile) {
-          const keywordDataText = await keywordDataFile.async("text");
-          customKeywordMap = JSON.parse(keywordDataText);
-          updateKeywordTable();
-        }
-
-        document.body.removeChild(processingMsg);
-        draw();
-        updateDefectCount(); // 添加：更新缺失數量
-        updateVendorFilter();
-        updateSummaryTable();
-        updateFooter();
-        
-        const photoCount = Object.keys(pointPhotos).length;
-        console.log('照片載入狀態:', pointPhotos);
-        alert(`資料匯入完成！\n已載入 ${photoCount} 張照片。`);
-        
       } catch (error) {
         console.error('匯入失敗:', error);
         alert('匯入過程發生錯誤，請重試。');
-        if (document.body.contains(processingMsg)) {
-          document.body.removeChild(processingMsg);
-        }
       }
-      
-      this.value = '';
-      updateVendorFilter();
-      updateSummaryTable();
-    });
+    }
 
     // 在其他 script 內容之前添加設定相關函數
     function toggleSettings() {
