@@ -897,6 +897,7 @@
         border-top: 1px solid #ccc;
         page-break-inside: avoid;
         break-inside: avoid;
+        z-index: 1000;
       }
 
       .signature-row {
@@ -917,6 +918,8 @@
         width: 100%;
         height: 120px;
         border: 1px solid #000;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
       }
 
       /* 表格頁面樣式 */
@@ -2165,11 +2168,18 @@
         const canvasBlob = await new Promise(resolve => canvas.toBlob(resolve));
         zip.file("標記平面圖.png", canvasBlob);
 
-        // 3. 匯出缺失表格資料（包含照片關聯資訊）
+        // 3. 匯出簽名資料
+        const signatureData = {
+          owner: document.getElementById('ownerSignature').toDataURL(),
+          client: document.getElementById('clientSignature').toDataURL(),
+          constructor: document.getElementById('constructorSignature').toDataURL()
+        };
+        zip.file("signature_data.json", JSON.stringify(signatureData));
+
+        // 4. 匯出缺失表格資料
         const defectData = {
           points: points.map(point => ({
             ...point,
-            // 確保匯出的是原始座標
             x: point.x,
             y: point.y,
             dx: point.dx,
@@ -2189,10 +2199,10 @@
         };
         zip.file("defect_data.json", JSON.stringify(defectData, null, 2));
 
-        // 4. 匯出關鍵字表格資料
+        // 5. 匯出關鍵字表格資料
         zip.file("keyword_data.json", JSON.stringify(customKeywordMap, null, 2));
 
-        // 5. 匯出照片
+        // 6. 匯出照片
         const photoFolder = zip.folder("照片");
         const processedPhotos = new Set();
 
@@ -2206,7 +2216,7 @@
           }
         }
 
-        // 6. 建立 Excel 工作簿
+        // 7. 建立 Excel 工作簿
         const wb = XLSX.utils.book_new();
         
         // 缺失資料工作表
@@ -2393,18 +2403,35 @@
 
         const zip = await JSZip.loadAsync(file);
         
-        // 1. 載入原始平面圖
-        const originalImageFile = zip.file("原始平面圖.png");
-        if (originalImageFile) {
-          const imageData = await originalImageFile.async("base64");
-          originalImage = "data:image/png;base64," + imageData;
-          img = new Image();
-          img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            draw();
+        // 1. 載入簽名資料
+        const signatureDataFile = zip.file("signature_data.json");
+        if (signatureDataFile) {
+          const signatureDataText = await signatureDataFile.async("text");
+          const signatureData = JSON.parse(signatureDataText);
+          
+          // 載入簽名到畫布
+          const loadSignature = async (canvasId, dataUrl) => {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                signatureStates[canvasId] = true;
+                updateSignatureStatus(canvasId);
+                resolve();
+              };
+              img.onerror = reject;
+              img.src = dataUrl;
+            });
           };
-          img.src = originalImage;
+
+          await Promise.all([
+            loadSignature('ownerSignature', signatureData.owner),
+            loadSignature('clientSignature', signatureData.client),
+            loadSignature('constructorSignature', signatureData.constructor)
+          ]);
         }
 
         // 2. 先載入照片資料
@@ -2921,8 +2948,37 @@
       // 更新頁尾信息
       updateFooter();
       
+      // 確保所有頁面都顯示相同的簽名
+      const signatureCanvases = ['ownerSignature', 'clientSignature', 'constructorSignature'];
+      const signatureImages = signatureCanvases.map(id => {
+        const canvas = document.getElementById(id);
+        return canvas.toDataURL();
+      });
+
+      // 在列印前同步所有頁面的簽名
+      const style = document.createElement('style');
+      style.textContent = `
+        @media print {
+          .signature-container {
+            position: fixed !important;
+            bottom: 1cm !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 1000 !important;
+          }
+          .signature-canvas {
+            image-rendering: -webkit-optimize-contrast !important;
+            image-rendering: crisp-edges !important;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+
       // 執行列印
       window.print();
+
+      // 列印完成後移除樣式
+      document.head.removeChild(style);
     }
 
     // 修改平面圖的觸控事件處理
@@ -3114,47 +3170,41 @@
     // 添加簽名同步功能
     function syncSignatures() {
       const signatures = ['owner', 'client', 'constructor'];
+      const signatureData = {};
+      
+      // 保存當前簽名狀態
       signatures.forEach(type => {
-        const canvas1 = document.getElementById(`${type}Signature`);
-        const canvas2 = document.getElementById(`${type}Signature2`);
-        const ctx1 = canvas1.getContext('2d');
-        const ctx2 = canvas2.getContext('2d');
-        
-        // 同步簽名內容
-        canvas2.width = canvas1.width;
-        canvas2.height = canvas1.height;
-        ctx2.drawImage(canvas1, 0, 0);
+        const canvas = document.getElementById(`${type}Signature`);
+        signatureData[type] = canvas.toDataURL();
+      });
+
+      // 更新所有頁面的簽名
+      document.querySelectorAll('.signature-canvas').forEach(canvas => {
+        const type = canvas.id.replace('Signature', '');
+        if (signatureData[type]) {
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+          };
+          img.src = signatureData[type];
+        }
       });
     }
 
-    // 修改原有的簽名相關函數
-    function initializeSignatures() {
-      const canvasIds = [
-        'ownerSignature', 'clientSignature', 'constructorSignature',
-        'ownerSignature2', 'clientSignature2', 'constructorSignature2'
-      ];
-      
-      canvasIds.forEach(id => {
-        const canvas = document.getElementById(id);
-        const ctx = canvas.getContext('2d');
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-
-        // ... 原有的簽名事件處理程式 ...
-
-        // 在簽名完成時同步
-        canvas.addEventListener('mouseup', () => {
-          if (isDrawing) {
-            syncSignatures();
-          }
-        });
-        canvas.addEventListener('touchend', () => {
-          if (isDrawing) {
-            syncSignatures();
-          }
-        });
-      });
+    // 在簽名完成時自動同步
+    function updateSignatureStatus(canvasId) {
+      const statusElement = document.getElementById(canvasId + 'Status');
+      if (signatureStates[canvasId]) {
+        statusElement.textContent = '已簽名';
+        statusElement.classList.add('signed');
+        // 簽名完成時同步到所有頁面
+        syncSignatures();
+      } else {
+        statusElement.textContent = '未簽名';
+        statusElement.classList.remove('signed');
+      }
     }
 
     // 修改清除簽名函數
@@ -3163,13 +3213,18 @@
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // 同步清除另一個簽名
-      const otherId = canvasId.replace('Signature', 'Signature2');
-      const otherCanvas = document.getElementById(otherId);
-      if (otherCanvas) {
-        const otherCtx = otherCanvas.getContext('2d');
-        otherCtx.clearRect(0, 0, otherCanvas.width, otherCanvas.height);
+      // 更新簽名狀態
+      signatureStates[canvasId] = false;
+      updateSignatureStatus(canvasId);
+      
+      // 如果清除的是當前活動的簽名，停用簽名功能
+      if (canvasId === activeSignatureCanvas) {
+        canvas.classList.remove('active');
+        activeSignatureCanvas = null;
       }
+      
+      // 更新按鈕狀態
+      updateSignatureButtons();
     }
 
     // 簽名相關變數
@@ -3231,127 +3286,6 @@
         }
       });
     }
-
-    // 修改清除簽名函數
-    function clearSignature(canvasId) {
-      const canvas = document.getElementById(canvasId);
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // 更新簽名狀態
-      signatureStates[canvasId] = false;
-      updateSignatureStatus(canvasId);
-      
-      // 如果清除的是當前活動的簽名，停用簽名功能
-      if (canvasId === activeSignatureCanvas) {
-        canvas.classList.remove('active');
-        activeSignatureCanvas = null;
-      }
-      
-      // 更新按鈕狀態
-      updateSignatureButtons();
-    }
-
-    // 修改簽名初始化函數
-    function initializeSignatures() {
-      const canvasIds = ['ownerSignature', 'clientSignature', 'constructorSignature'];
-      
-      canvasIds.forEach(id => {
-        const canvas = document.getElementById(id);
-        const ctx = canvas.getContext('2d');
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-
-        // 滑鼠事件
-        canvas.addEventListener('mousedown', function(e) {
-          if (id !== activeSignatureCanvas) return;
-          isDrawing = true;
-          [lastX, lastY] = getCoordinates(e);
-        });
-
-        canvas.addEventListener('mousemove', function(e) {
-          if (!isDrawing || id !== activeSignatureCanvas) return;
-          draw(e);
-        });
-
-        canvas.addEventListener('mouseup', function() {
-          if (isDrawing && id === activeSignatureCanvas) {
-            isDrawing = false;
-            signatureStates[id] = true;
-            updateSignatureStatus(id);
-          }
-        });
-
-        canvas.addEventListener('mouseout', function() {
-          if (isDrawing && id === activeSignatureCanvas) {
-            isDrawing = false;
-            signatureStates[id] = true;
-            updateSignatureStatus(id);
-          }
-        });
-
-        // 觸控事件
-        canvas.addEventListener('touchstart', function(e) {
-          if (id !== activeSignatureCanvas) return;
-          e.preventDefault();
-          isDrawing = true;
-          const touch = e.touches[0];
-          const rect = canvas.getBoundingClientRect();
-          lastX = touch.clientX - rect.left;
-          lastY = touch.clientY - rect.top;
-        }, { passive: false });
-
-        canvas.addEventListener('touchmove', function(e) {
-          if (!isDrawing || id !== activeSignatureCanvas) return;
-          e.preventDefault();
-          draw(e);
-        }, { passive: false });
-
-        canvas.addEventListener('touchend', function() {
-          if (isDrawing && id === activeSignatureCanvas) {
-            isDrawing = false;
-            signatureStates[id] = true;
-            updateSignatureStatus(id);
-          }
-        });
-
-        function draw(e) {
-          const [currentX, currentY] = getCoordinates(e);
-          ctx.beginPath();
-          ctx.moveTo(lastX, lastY);
-          ctx.lineTo(currentX, currentY);
-          ctx.strokeStyle = '#000';
-          ctx.lineWidth = 2;
-          ctx.lineCap = 'round';
-          ctx.stroke();
-          [lastX, lastY] = [currentX, currentY];
-        }
-
-        function getCoordinates(e) {
-          const rect = canvas.getBoundingClientRect();
-          if (e.touches) {
-            return [
-              e.touches[0].clientX - rect.left,
-              e.touches[0].clientY - rect.top
-            ];
-          }
-          return [
-            e.clientX - rect.left,
-            e.clientY - rect.top
-          ];
-        }
-      });
-
-      // 初始化按鈕狀態
-      updateSignatureButtons();
-    }
-
-    // 在頁面載入時初始化簽名功能
-    document.addEventListener('DOMContentLoaded', function() {
-      initializeSignatures();
-      // ... 其他初始化代碼 ...
-    });
   </script>
 </body>
 </html>
