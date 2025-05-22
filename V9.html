@@ -730,6 +730,12 @@
       border: 1px solid #ccc;
       margin: 10px 0;
       background-color: white;
+      cursor: not-allowed;
+    }
+
+    .signature-canvas.active {
+      cursor: crosshair;
+      border: 2px solid #4CAF50;
     }
 
     .signature-label {
@@ -740,12 +746,63 @@
 
     .signature-buttons {
       margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
     }
 
     .signature-buttons button {
-      margin: 0 5px;
-      padding: 5px 10px;
+      padding: 8px 16px;
       font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .start-signature-btn {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+    }
+
+    .start-signature-btn:hover {
+      background-color: #45a049;
+    }
+
+    .clear-signature-btn {
+      background-color: #f44336;
+      color: white;
+      border: none;
+    }
+
+    .clear-signature-btn:hover {
+      background-color: #da190b;
+    }
+
+    .signature-status {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .signature-status.signed {
+      color: #4CAF50;
+    }
+
+    /* 列印樣式調整 */
+    @media print {
+      .signature-buttons {
+        display: none !important;
+      }
+
+      .signature-canvas {
+        border: 1px solid #000 !important;
+        cursor: default !important;
+      }
+
+      .signature-status {
+        display: none !important;
+      }
     }
 
     /* 頁碼和標題樣式 */
@@ -1147,22 +1204,28 @@
       <div class="signature-box">
         <div class="signature-label">業主簽名</div>
         <canvas class="signature-canvas" id="ownerSignature" width="300" height="150"></canvas>
+        <div class="signature-status" id="ownerSignatureStatus">未簽名</div>
         <div class="signature-buttons">
-          <button onclick="clearSignature('ownerSignature')">清除</button>
+          <button class="start-signature-btn" onclick="startSignature('ownerSignature')">開始簽名</button>
+          <button class="clear-signature-btn" onclick="clearSignature('ownerSignature')">清除</button>
         </div>
       </div>
       <div class="signature-box">
         <div class="signature-label">客戶簽名</div>
         <canvas class="signature-canvas" id="clientSignature" width="300" height="150"></canvas>
+        <div class="signature-status" id="clientSignatureStatus">未簽名</div>
         <div class="signature-buttons">
-          <button onclick="clearSignature('clientSignature')">清除</button>
+          <button class="start-signature-btn" onclick="startSignature('clientSignature')">開始簽名</button>
+          <button class="clear-signature-btn" onclick="clearSignature('clientSignature')">清除</button>
         </div>
       </div>
       <div class="signature-box">
         <div class="signature-label">營造廠簽名</div>
         <canvas class="signature-canvas" id="constructorSignature" width="300" height="150"></canvas>
+        <div class="signature-status" id="constructorSignatureStatus">未簽名</div>
         <div class="signature-buttons">
-          <button onclick="clearSignature('constructorSignature')">清除</button>
+          <button class="start-signature-btn" onclick="startSignature('constructorSignature')">開始簽名</button>
+          <button class="clear-signature-btn" onclick="clearSignature('constructorSignature')">清除</button>
         </div>
       </div>
     </div>
@@ -3108,6 +3171,187 @@
         otherCtx.clearRect(0, 0, otherCanvas.width, otherCanvas.height);
       }
     }
+
+    // 簽名相關變數
+    let activeSignatureCanvas = null;
+    let signatureStates = {
+      ownerSignature: false,
+      clientSignature: false,
+      constructorSignature: false
+    };
+
+    // 開始簽名函數
+    function startSignature(canvasId) {
+      // 如果已經有活動的簽名畫布，先停用它
+      if (activeSignatureCanvas) {
+        const prevCanvas = document.getElementById(activeSignatureCanvas);
+        prevCanvas.classList.remove('active');
+        // 保存當前簽名狀態
+        signatureStates[activeSignatureCanvas] = true;
+        updateSignatureStatus(activeSignatureCanvas);
+      }
+
+      // 啟動新的簽名畫布
+      const canvas = document.getElementById(canvasId);
+      canvas.classList.add('active');
+      activeSignatureCanvas = canvasId;
+
+      // 更新按鈕狀態
+      updateSignatureButtons();
+    }
+
+    // 更新簽名狀態顯示
+    function updateSignatureStatus(canvasId) {
+      const statusElement = document.getElementById(canvasId + 'Status');
+      if (signatureStates[canvasId]) {
+        statusElement.textContent = '已簽名';
+        statusElement.classList.add('signed');
+      } else {
+        statusElement.textContent = '未簽名';
+        statusElement.classList.remove('signed');
+      }
+    }
+
+    // 更新簽名按鈕狀態
+    function updateSignatureButtons() {
+      const canvasIds = ['ownerSignature', 'clientSignature', 'constructorSignature'];
+      canvasIds.forEach(id => {
+        const canvas = document.getElementById(id);
+        const startBtn = canvas.parentElement.querySelector('.start-signature-btn');
+        const clearBtn = canvas.parentElement.querySelector('.clear-signature-btn');
+        
+        if (id === activeSignatureCanvas) {
+          startBtn.textContent = '簽名中...';
+          startBtn.disabled = true;
+          clearBtn.disabled = false;
+        } else {
+          startBtn.textContent = '開始簽名';
+          startBtn.disabled = false;
+          clearBtn.disabled = !signatureStates[id];
+        }
+      });
+    }
+
+    // 修改清除簽名函數
+    function clearSignature(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // 更新簽名狀態
+      signatureStates[canvasId] = false;
+      updateSignatureStatus(canvasId);
+      
+      // 如果清除的是當前活動的簽名，停用簽名功能
+      if (canvasId === activeSignatureCanvas) {
+        canvas.classList.remove('active');
+        activeSignatureCanvas = null;
+      }
+      
+      // 更新按鈕狀態
+      updateSignatureButtons();
+    }
+
+    // 修改簽名初始化函數
+    function initializeSignatures() {
+      const canvasIds = ['ownerSignature', 'clientSignature', 'constructorSignature'];
+      
+      canvasIds.forEach(id => {
+        const canvas = document.getElementById(id);
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // 滑鼠事件
+        canvas.addEventListener('mousedown', function(e) {
+          if (id !== activeSignatureCanvas) return;
+          isDrawing = true;
+          [lastX, lastY] = getCoordinates(e);
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+          if (!isDrawing || id !== activeSignatureCanvas) return;
+          draw(e);
+        });
+
+        canvas.addEventListener('mouseup', function() {
+          if (isDrawing && id === activeSignatureCanvas) {
+            isDrawing = false;
+            signatureStates[id] = true;
+            updateSignatureStatus(id);
+          }
+        });
+
+        canvas.addEventListener('mouseout', function() {
+          if (isDrawing && id === activeSignatureCanvas) {
+            isDrawing = false;
+            signatureStates[id] = true;
+            updateSignatureStatus(id);
+          }
+        });
+
+        // 觸控事件
+        canvas.addEventListener('touchstart', function(e) {
+          if (id !== activeSignatureCanvas) return;
+          e.preventDefault();
+          isDrawing = true;
+          const touch = e.touches[0];
+          const rect = canvas.getBoundingClientRect();
+          lastX = touch.clientX - rect.left;
+          lastY = touch.clientY - rect.top;
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', function(e) {
+          if (!isDrawing || id !== activeSignatureCanvas) return;
+          e.preventDefault();
+          draw(e);
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', function() {
+          if (isDrawing && id === activeSignatureCanvas) {
+            isDrawing = false;
+            signatureStates[id] = true;
+            updateSignatureStatus(id);
+          }
+        });
+
+        function draw(e) {
+          const [currentX, currentY] = getCoordinates(e);
+          ctx.beginPath();
+          ctx.moveTo(lastX, lastY);
+          ctx.lineTo(currentX, currentY);
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 2;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+          [lastX, lastY] = [currentX, currentY];
+        }
+
+        function getCoordinates(e) {
+          const rect = canvas.getBoundingClientRect();
+          if (e.touches) {
+            return [
+              e.touches[0].clientX - rect.left,
+              e.touches[0].clientY - rect.top
+            ];
+          }
+          return [
+            e.clientX - rect.left,
+            e.clientY - rect.top
+          ];
+        }
+      });
+
+      // 初始化按鈕狀態
+      updateSignatureButtons();
+    }
+
+    // 在頁面載入時初始化簽名功能
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeSignatures();
+      // ... 其他初始化代碼 ...
+    });
   </script>
 </body>
 </html>
