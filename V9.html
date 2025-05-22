@@ -1012,118 +1012,58 @@
       }
     }
 
-    /* 列印按鈕樣式 */
+    /* 列印按鈕容器樣式 */
     .print-button-container {
       text-align: right;
       margin: 20px 0;
       padding-right: 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
     }
 
-    .print-button {
+    .print-button,
+    .screenshot-button {
       padding: 12px 24px;
       font-size: 16px;
-      background-color: #4CAF50;
       color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
       transition: background-color 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .print-button {
+      background-color: #4CAF50;
     }
 
     .print-button:hover {
       background-color: #45a049;
     }
 
-    /* 頁尾樣式 */
-    .page-footer {
+    .screenshot-button {
+      background-color: #2196F3;
+    }
+
+    .screenshot-button:hover {
+      background-color: #1976D2;
+    }
+
+    /* 截圖載入中樣式 */
+    .screenshot-loading {
       position: fixed;
-      bottom: 20px;
-      left: 0;
-      right: 0;
-      display: none;
-      padding: 0 20px;
-    }
-
-    .footer-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-top: 1px solid #ccc;
-      padding-top: 10px;
-    }
-
-    .footer-title {
-      text-align: center;
-      flex-grow: 1;
-      font-size: 14pt;
-      font-weight: bold;
-    }
-
-    .footer-page {
-      font-size: 12pt;
-      white-space: nowrap;
-    }
-
-    /* 新增作者資訊樣式 */
-    .author-footer {
-      text-align: center;
-      padding: 20px;
-      margin-top: 30px;
-      border-top: 1px solid #eee;
-      color: #666;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    .author-footer a {
-      color: #4CAF50;
-      text-decoration: none;
-    }
-
-    .author-footer a:hover {
-      text-decoration: underline;
-    }
-
-    /* 列印樣式調整 */
-    @media print {
-      .author-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        padding: 10px;
-        border-top: 1px solid #ccc;
-        background-color: white;
-      }
-    }
-
-    /* 簽名控制按鈕樣式 */
-    .signature-control {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .signature-control-btn {
-      padding: 12px 24px;
-      font-size: 16px;
-      background-color: #4CAF50;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
       color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    .signature-control-btn:hover {
-      background-color: #45a049;
-    }
-
-    .signature-control-btn.active {
-      background-color: #f44336;
-    }
-
-    .signature-control-btn.active:hover {
-      background-color: #da190b;
+      padding: 20px 40px;
+      border-radius: 8px;
+      z-index: 9999;
+      display: none;
     }
   </style>
 </head>
@@ -1310,11 +1250,19 @@
 
   <input type="file" id="importFileInput" style="display: none" accept=".zip" />
 
-  <!-- 添加列印按鈕（移到統計表格前） -->
+  <!-- 修改列印按鈕容器 -->
   <div class="print-button-container">
+    <button class="screenshot-button" onclick="handleScreenshot()">
+      <i class="fas fa-camera"></i> 截圖
+    </button>
     <button class="print-button" onclick="handlePrint()">
       <i class="fas fa-print"></i> 列印文件
     </button>
+  </div>
+
+  <!-- 添加截圖載入中提示 -->
+  <div id="screenshotLoading" class="screenshot-loading">
+    正在生成截圖，請稍候...
   </div>
 
   <!-- 添加頁尾 -->
@@ -3104,6 +3052,191 @@
         draw();
       }
     }, { passive: false }); // 確保 preventDefault 生效
+
+    // 添加截圖功能
+    async function handleScreenshot() {
+      const loadingMsg = document.getElementById('screenshotLoading');
+      loadingMsg.style.display = 'block';
+
+      try {
+        // 更新頁尾信息
+        updateFooter();
+        
+        // 創建一個臨時的 div 來容納要截圖的內容
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '-9999px';
+        container.style.width = '210mm'; // A4 寬度
+        container.style.padding = '20mm';
+        container.style.backgroundColor = 'white';
+        container.style.minHeight = '297mm'; // A4 高度
+        
+        // 複製需要截圖的內容
+        const contentToCapture = document.createElement('div');
+        contentToCapture.style.width = '100%';
+        contentToCapture.style.height = '100%';
+        contentToCapture.style.position = 'relative';
+        
+        // 複製標題
+        const titleContainer = document.querySelector('.page-header').cloneNode(true);
+        titleContainer.style.marginBottom = '20px';
+        contentToCapture.appendChild(titleContainer);
+        
+        // 複製平面圖
+        const canvasContainer = document.createElement('div');
+        canvasContainer.style.position = 'relative';
+        canvasContainer.style.margin = '20px 0';
+        canvasContainer.style.textAlign = 'center';
+        
+        // 創建新的 canvas 並複製內容
+        const floorCanvas = document.createElement('canvas');
+        const originalCanvas = document.querySelector('#floorCanvas');
+        floorCanvas.width = originalCanvas.width;
+        floorCanvas.height = originalCanvas.height;
+        const ctx = floorCanvas.getContext('2d');
+        ctx.drawImage(originalCanvas, 0, 0);
+        
+        // 設置 canvas 樣式
+        floorCanvas.style.maxWidth = '100%';
+        floorCanvas.style.height = 'auto';
+        floorCanvas.style.border = '1px solid #ccc';
+        canvasContainer.appendChild(floorCanvas);
+        contentToCapture.appendChild(canvasContainer);
+        
+        // 複製缺失表格
+        const tableContainer = document.createElement('div');
+        const table = document.getElementById('defectTable').cloneNode(true);
+        // 移除不需要的列
+        const headers = table.querySelectorAll('th');
+        const cells = table.querySelectorAll('td');
+        [3, 4, 5].forEach(index => {
+          headers[index].style.display = 'none';
+          cells.forEach(cell => {
+            if (cell.cellIndex === index) cell.style.display = 'none';
+          });
+        });
+        table.style.width = '100%';
+        table.style.marginBottom = '20px';
+        tableContainer.appendChild(table);
+        contentToCapture.appendChild(tableContainer);
+        
+        // 複製簽名區域
+        const signatureContainer = document.createElement('div');
+        signatureContainer.style.marginTop = '30px';
+        signatureContainer.style.padding = '20px';
+        signatureContainer.style.backgroundColor = '#f8f9fa';
+        signatureContainer.style.borderRadius = '8px';
+        signatureContainer.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        
+        // 複製簽名標籤和畫布
+        const signatureRow = document.createElement('div');
+        signatureRow.style.display = 'flex';
+        signatureRow.style.justifyContent = 'space-between';
+        signatureRow.style.gap = '20px';
+        
+        ['ownerSignature', 'clientSignature', 'constructorSignature'].forEach(id => {
+          const signatureBox = document.createElement('div');
+          signatureBox.style.flex = '1';
+          signatureBox.style.textAlign = 'center';
+          
+          const label = document.createElement('div');
+          label.style.fontSize = '16px';
+          label.style.marginBottom = '10px';
+          label.style.color = '#333';
+          label.textContent = document.querySelector(`#${id}`).parentElement.querySelector('.signature-label').textContent;
+          
+          const canvas = document.createElement('canvas');
+          const originalSignature = document.getElementById(id);
+          canvas.width = originalSignature.width;
+          canvas.height = originalSignature.height;
+          const signatureCtx = canvas.getContext('2d');
+          signatureCtx.drawImage(originalSignature, 0, 0);
+          
+          canvas.style.width = '100%';
+          canvas.style.height = 'auto';
+          canvas.style.border = '1px solid #ccc';
+          canvas.style.backgroundColor = 'white';
+          canvas.style.margin = '10px 0';
+          
+          signatureBox.appendChild(label);
+          signatureBox.appendChild(canvas);
+          signatureRow.appendChild(signatureBox);
+        });
+        
+        signatureContainer.appendChild(signatureRow);
+        contentToCapture.appendChild(signatureContainer);
+        
+        // 添加頁尾
+        const footer = document.createElement('div');
+        footer.style.marginTop = '20px';
+        footer.style.borderTop = '1px solid #ccc';
+        footer.style.paddingTop = '10px';
+        footer.style.textAlign = 'center';
+        footer.innerHTML = `
+          <div style="font-size: 14pt; font-weight: bold;">${document.getElementById('pageTitle').value}</div>
+          <div style="font-size: 12pt;">${document.getElementById('footerPage').textContent}</div>
+        `;
+        contentToCapture.appendChild(footer);
+        
+        // 添加作者資訊
+        const authorFooter = document.createElement('div');
+        authorFooter.style.textAlign = 'center';
+        authorFooter.style.padding = '20px';
+        authorFooter.style.marginTop = '30px';
+        authorFooter.style.borderTop = '1px solid #eee';
+        authorFooter.style.color = '#666';
+        authorFooter.style.fontSize = '14px';
+        authorFooter.style.lineHeight = '1.6';
+        authorFooter.innerHTML = document.querySelector('.author-footer').innerHTML;
+        contentToCapture.appendChild(authorFooter);
+        
+        container.appendChild(contentToCapture);
+        document.body.appendChild(container);
+        
+        // 使用 html2canvas 進行截圖
+        const screenshotCanvas = await html2canvas(contentToCapture, {
+          scale: 2, // 提高清晰度
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          allowTaint: true,
+          foreignObjectRendering: true,
+          imageTimeout: 0,
+          onclone: (clonedDoc) => {
+            // 確保所有圖片都已載入
+            const images = clonedDoc.getElementsByTagName('img');
+            return Promise.all(Array.from(images).map(img => {
+              if (img.complete) return Promise.resolve();
+              return new Promise(resolve => {
+                img.onload = resolve;
+                img.onerror = resolve;
+              });
+            }));
+          }
+        });
+        
+        // 轉換為圖片並下載
+        const image = screenshotCanvas.toDataURL('image/png', 1.0);
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
+        const title = document.getElementById('pageTitle').value || '未命名';
+        link.download = `${date}-${title}-截圖.png`;
+        link.href = image;
+        link.click();
+        
+        // 清理臨時元素
+        document.body.removeChild(container);
+      } catch (error) {
+        console.error('截圖失敗:', error);
+        alert('截圖生成失敗，請重試。');
+      } finally {
+        loadingMsg.style.display = 'none';
+      }
+    }
   </script>
+
+  <!-- 添加 html2canvas 庫 -->
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </body>
 </html>
