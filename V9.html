@@ -3095,7 +3095,16 @@
         floorCanvas.width = originalCanvas.width;
         floorCanvas.height = originalCanvas.height;
         const ctx = floorCanvas.getContext('2d');
-        ctx.drawImage(originalCanvas, 0, 0);
+        
+        // 等待圖片載入完成
+        await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, floorCanvas.width, floorCanvas.height);
+            resolve();
+          };
+          img.src = originalCanvas.toDataURL('image/png');
+        });
         
         // 設置 canvas 樣式
         floorCanvas.style.maxWidth = '100%';
@@ -3135,7 +3144,8 @@
         signatureRow.style.justifyContent = 'space-between';
         signatureRow.style.gap = '20px';
         
-        ['ownerSignature', 'clientSignature', 'constructorSignature'].forEach(id => {
+        // 等待所有簽名畫布處理完成
+        await Promise.all(['ownerSignature', 'clientSignature', 'constructorSignature'].map(async (id) => {
           const signatureBox = document.createElement('div');
           signatureBox.style.flex = '1';
           signatureBox.style.textAlign = 'center';
@@ -3151,7 +3161,16 @@
           canvas.width = originalSignature.width;
           canvas.height = originalSignature.height;
           const signatureCtx = canvas.getContext('2d');
-          signatureCtx.drawImage(originalSignature, 0, 0);
+          
+          // 等待簽名畫布內容載入
+          await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              signatureCtx.drawImage(img, 0, 0);
+              resolve();
+            };
+            img.src = originalSignature.toDataURL('image/png');
+          });
           
           canvas.style.width = '100%';
           canvas.style.height = 'auto';
@@ -3162,7 +3181,7 @@
           signatureBox.appendChild(label);
           signatureBox.appendChild(canvas);
           signatureRow.appendChild(signatureBox);
-        });
+        }));
         
         signatureContainer.appendChild(signatureRow);
         contentToCapture.appendChild(signatureContainer);
@@ -3201,7 +3220,7 @@
           logging: false,
           backgroundColor: '#ffffff',
           allowTaint: true,
-          foreignObjectRendering: true,
+          foreignObjectRendering: false, // 改為 false
           imageTimeout: 0,
           onclone: (clonedDoc) => {
             // 確保所有圖片都已載入
