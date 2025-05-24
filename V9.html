@@ -856,7 +856,7 @@
 
       .title-input {
         border: none;
-        font-size: 24pt;
+        font-size: 48px;
         font-weight: bold;
         text-align: center;
         margin-bottom: 5px;
@@ -1200,7 +1200,8 @@
 <body>
   <!-- 新增標題列 -->
   <div class="page-header">
-    <div class="title-container">
+    <div class="title-container" style="display: flex; align-items: center; gap: 20px;">
+      <img src="https://CWH800729.github.io/CWH-LOGO"alt="logo" style="width:75px; height:75px; object-fit:contain; border-radius:16px;">
       <input type="text" 
              class="title-input" 
              id="pageTitle" 
@@ -3386,18 +3387,6 @@
           <div style="font-size: 12pt;">${document.getElementById('footerPage').textContent}</div>
         `;
         contentToCapture.appendChild(footer);
-        
-        // 添加作者資訊
-        const authorFooter = document.createElement('div');
-        authorFooter.style.textAlign = 'center';
-        authorFooter.style.padding = '20px';
-        authorFooter.style.marginTop = '30px';
-        authorFooter.style.borderTop = '1px solid #eee';
-        authorFooter.style.color = '#666';
-        authorFooter.style.fontSize = '14px';
-        authorFooter.style.lineHeight = '1.6';
-        authorFooter.innerHTML = document.querySelector('.author-footer').innerHTML;
-        contentToCapture.appendChild(authorFooter);
         
         container.appendChild(contentToCapture);
         document.body.appendChild(container);
