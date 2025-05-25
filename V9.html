@@ -730,6 +730,12 @@
       border: 1px solid #ccc;
       margin: 10px 0;
       background-color: white;
+      cursor: not-allowed;
+    }
+
+    .signature-canvas.active {
+      cursor: crosshair;
+      border: 2px solid #4CAF50;
     }
 
     .signature-label {
@@ -740,12 +746,63 @@
 
     .signature-buttons {
       margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
     }
 
     .signature-buttons button {
-      margin: 0 5px;
-      padding: 5px 10px;
+      padding: 8px 16px;
       font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .start-signature-btn {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+    }
+
+    .start-signature-btn:hover {
+      background-color: #45a049;
+    }
+
+    .clear-signature-btn {
+      background-color: #f44336;
+      color: white;
+      border: none;
+    }
+
+    .clear-signature-btn:hover {
+      background-color: #da190b;
+    }
+
+    .signature-status {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .signature-status.signed {
+      color: #4CAF50;
+    }
+
+    /* 列印樣式調整 */
+    @media print {
+      .signature-buttons {
+        display: none !important;
+      }
+
+      .signature-canvas {
+        border: 1px solid #000 !important;
+        cursor: default !important;
+      }
+
+      .signature-status {
+        display: none !important;
+      }
     }
 
     /* 頁碼和標題樣式 */
@@ -769,114 +826,6 @@
     /* 列印樣式調整 */
     @media print {
       @page {
-        margin: 2cm;
-      }
-
-      body {
-        padding: 0;
-      }
-
-      .action-buttons,
-      .filter-container,
-      #keywordTable,
-      #toggleKeywordBtn,
-      .settings-btn,
-      #drawInstruction,
-      button,
-      input[type="file"],
-      .summary-container {
-        display: none !important;
-      }
-
-      #defectTable th:nth-child(3),
-      #defectTable th:nth-child(4),
-      #defectTable th:nth-child(5),
-      #defectTable th:nth-child(6),
-      #defectTable td:nth-child(3),
-      #defectTable td:nth-child(4),
-      #defectTable td:nth-child(5),
-      #defectTable td:nth-child(6) {
-        display: none;
-      }
-
-      .signature-container {
-        page-break-inside: avoid;
-        background-color: white;
-        box-shadow: none;
-      }
-
-      .signature-buttons {
-        display: none;
-      }
-
-      .print-footer {
-        display: block;
-      }
-
-      .page-number {
-        display: block;
-      }
-
-      .signature-canvas {
-        border: 1px solid #000;
-      }
-    }
-
-    /* 列印按鈕樣式 */
-    .print-button-container {
-      text-align: right;
-      margin: 20px 0;
-      padding-right: 20px;
-    }
-
-    .print-button {
-      padding: 12px 24px;
-      font-size: 16px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    .print-button:hover {
-      background-color: #45a049;
-    }
-
-    /* 頁尾樣式 */
-    .page-footer {
-      position: fixed;
-      bottom: 20px;
-      left: 0;
-      right: 0;
-      display: none;
-      padding: 0 20px;
-    }
-
-    .footer-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-top: 1px solid #ccc;
-      padding-top: 10px;
-    }
-
-    .footer-title {
-      text-align: center;
-      flex-grow: 1;
-      font-size: 14pt;
-      font-weight: bold;
-    }
-
-    .footer-page {
-      font-size: 12pt;
-      white-space: nowrap;
-    }
-
-    /* 列印樣式調整 */
-    @media print {
-      @page {
         size: A4;
         margin: 1.5cm;
       }
@@ -884,6 +833,21 @@
       body {
         padding: 0;
         margin: 0;
+        max-width: 100%;
+      }
+
+      /* 強制分頁樣式 */
+      .page-break {
+        page-break-after: always;
+        break-after: page;
+      }
+
+      /* 平面圖頁面樣式 */
+      .floor-plan-page {
+        height: 100vh;
+        page-break-after: always;
+        break-after: page;
+        position: relative;
       }
 
       .page-header {
@@ -892,7 +856,7 @@
 
       .title-input {
         border: none;
-        font-size: 24pt;
+        font-size: 48px;
         font-weight: bold;
         text-align: center;
         margin-bottom: 5px;
@@ -902,34 +866,70 @@
         font-size: 14pt;
       }
 
+      /* 調整平面圖容器 */
       .canvas-container {
         transform: scale(0.75);
         transform-origin: top center;
         margin: 0 auto;
+        max-width: 100%;
+        overflow: hidden;
+        height: calc(100vh - 200px); /* 預留簽名區域空間 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
-      #defectTable {
-        font-size: 10pt;
-        margin: 15px 0;
-        page-break-inside: avoid;
+      /* 調整平面圖透明度 */
+      #floorCanvas {
+        opacity: 0.7; /* 平面圖淡化30% */
+        max-height: 100%;
+        object-fit: contain;
       }
 
-      #defectTable th,
-      #defectTable td {
-        padding: 4px;
-        height: auto;
-        min-height: auto;
-      }
-
+      /* 簽名區域樣式 */
       .signature-container {
-        transform: scale(0.9);
-        transform-origin: top center;
-        margin: 15px auto;
+        position: fixed;
+        bottom: 1cm;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        background-color: white;
+        border-top: 1px solid #ccc;
         page-break-inside: avoid;
-        background-color: transparent;
-        box-shadow: none;
+        break-inside: avoid;
+        z-index: 1000;
       }
 
+      .signature-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 0;
+      }
+
+      .signature-box {
+        flex: 1;
+        min-width: 200px;
+        max-width: calc(33.33% - 10px);
+        margin: 0;
+      }
+
+      .signature-canvas {
+        width: 100%;
+        height: 120px;
+        border: 1px solid #000;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+      }
+
+      /* 表格頁面樣式 */
+      .table-page {
+        min-height: 100vh;
+        position: relative;
+        padding-bottom: 200px; /* 為簽名區域預留空間 */
+      }
+
+      /* 隱藏不需要的元素 */
       .print-button-container,
       .action-buttons,
       .filter-container,
@@ -943,11 +943,18 @@
         display: none !important;
       }
 
-      .page-footer {
-        display: block;
-        position: fixed;
-        bottom: 1cm;
+      /* 調整表格樣式 */
+      #defectTable {
+        font-size: 10pt;
+        margin: 15px 0;
         width: 100%;
+      }
+
+      #defectTable th,
+      #defectTable td {
+        padding: 4px;
+        height: auto;
+        min-height: auto;
       }
 
       /* 移除不需要的列 */
@@ -973,13 +980,219 @@
         width: 85%;
       }
 
+      /* 頁尾樣式 */
+      .page-footer {
+        display: block;
+        position: fixed;
+        bottom: 1cm;
+        width: 100%;
+      }
+
+      /* 作者資訊樣式 */
+      .author-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        border-top: 1px solid #ccc;
+        background-color: white;
+        font-size: 10pt;
+      }
+
       /* 移除元素間的多餘空白 */
       * {
         margin-bottom: 0;
       }
 
-      .signature-row {
-        margin-bottom: 0;
+      /* 確保箭頭清晰可見 */
+      canvas {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+      }
+    }
+
+    /* 列印按鈕容器樣式 */
+    .print-button-container {
+      text-align: right;
+      margin: 20px 0;
+      padding-right: 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .print-button,
+    .screenshot-button {
+      padding: 12px 24px;
+      font-size: 16px;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .print-button {
+      background-color: #4CAF50;
+    }
+
+    .print-button:hover {
+      background-color: #45a049;
+    }
+
+    .screenshot-button {
+      background-color: #2196F3;
+    }
+
+    .screenshot-button:hover {
+      background-color: #1976D2;
+    }
+
+    /* 照片網格樣式 */
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin: 20px 0;
+      page-break-inside: avoid;
+    }
+
+    .photo-item {
+      text-align: center;
+      page-break-inside: avoid;
+    }
+
+    .photo-item img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ccc;
+      margin-bottom: 5px;
+    }
+
+    .photo-item .point-number {
+      font-weight: bold;
+      color: #333;
+    }
+
+    @media print {
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin: 20px 0;
+        page-break-inside: avoid;
+      }
+
+      .photo-item {
+        text-align: center;
+        page-break-inside: avoid;
+      }
+
+      .photo-item img {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #000;
+        margin-bottom: 5px;
+      }
+
+      .photo-item .point-number {
+        font-weight: bold;
+        color: #000;
+      }
+
+      /* 列印模式2的表格樣式 */
+      .print-mode2 #defectTable th,
+      .print-mode2 #defectTable td {
+        display: table-cell !important;
+      }
+    }
+
+    /* 截圖載入中樣式 */
+    .screenshot-loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px 40px;
+      border-radius: 8px;
+      z-index: 9999;
+      display: none;
+    }
+
+    /* 照片總覽表格樣式 */
+    .photo-overview-container {
+      margin: 30px 0;
+      padding: 20px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .photo-overview-title {
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #dee2e6;
+    }
+
+    .photo-overview-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      padding: 20px;
+      background-color: white;
+      border-radius: 4px;
+      border: 1px dashed #ccc;
+    }
+
+    .photo-overview-item {
+      text-align: center;
+      padding: 10px;
+      border: 1px dashed #ccc;
+      border-radius: 4px;
+      background-color: white;
+    }
+
+    .photo-overview-item img {
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 10px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
+
+    .photo-overview-item .point-number {
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+      padding: 5px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    @media print {
+      .photo-overview-container {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .photo-overview-grid {
+        border: 1px dashed #999;
+      }
+
+      .photo-overview-item {
+        border: 1px dashed #999;
+      }
+
+      .photo-overview-item img {
+        border: 1px solid #999;
       }
     }
   </style>
@@ -987,7 +1200,8 @@
 <body>
   <!-- 新增標題列 -->
   <div class="page-header">
-    <div class="title-container">
+    <div class="title-container" style="display: flex; align-items: center; gap: 20px;">
+      <img src="https://CWH800729.github.io/CWH-LOGO"alt="logo" style="width:75px; height:75px; object-fit:contain; border-radius:16px;">
       <input type="text" 
              class="title-input" 
              id="pageTitle" 
@@ -1089,26 +1303,32 @@
 
   <!-- 在統計表格前添加簽名區域 -->
   <div class="signature-container">
+    <div class="signature-control">
+      <button id="signatureControlBtn" class="signature-control-btn" onclick="toggleAllSignatures()">開始簽名</button>
+    </div>
     <div class="signature-row">
       <div class="signature-box">
         <div class="signature-label">業主簽名</div>
         <canvas class="signature-canvas" id="ownerSignature" width="300" height="150"></canvas>
+        <div class="signature-status" id="ownerSignatureStatus">未簽名</div>
         <div class="signature-buttons">
-          <button onclick="clearSignature('ownerSignature')">清除</button>
+          <button class="clear-signature-btn" onclick="clearSignature('ownerSignature')">清除</button>
         </div>
       </div>
       <div class="signature-box">
         <div class="signature-label">客戶簽名</div>
         <canvas class="signature-canvas" id="clientSignature" width="300" height="150"></canvas>
+        <div class="signature-status" id="clientSignatureStatus">未簽名</div>
         <div class="signature-buttons">
-          <button onclick="clearSignature('clientSignature')">清除</button>
+          <button class="clear-signature-btn" onclick="clearSignature('clientSignature')">清除</button>
         </div>
       </div>
       <div class="signature-box">
         <div class="signature-label">營造廠簽名</div>
         <canvas class="signature-canvas" id="constructorSignature" width="300" height="150"></canvas>
+        <div class="signature-status" id="constructorSignatureStatus">未簽名</div>
         <div class="signature-buttons">
-          <button onclick="clearSignature('constructorSignature')">清除</button>
+          <button class="clear-signature-btn" onclick="clearSignature('constructorSignature')">清除</button>
         </div>
       </div>
     </div>
@@ -1161,11 +1381,19 @@
 
   <input type="file" id="importFileInput" style="display: none" accept=".zip" />
 
-  <!-- 添加列印按鈕（移到統計表格前） -->
+  <!-- 修改列印按鈕容器 -->
   <div class="print-button-container">
+    <button class="screenshot-button" onclick="handleScreenshot()">
+      <i class="fas fa-camera"></i> 截圖
+    </button>
     <button class="print-button" onclick="handlePrint()">
       <i class="fas fa-print"></i> 列印文件
     </button>
+  </div>
+
+  <!-- 添加截圖載入中提示 -->
+  <div id="screenshotLoading" class="screenshot-loading">
+    正在生成截圖，請稍候...
   </div>
 
   <!-- 添加頁尾 -->
@@ -1173,6 +1401,20 @@
     <div class="footer-content">
       <div class="footer-title" id="footerTitle"></div>
       <div class="footer-page" id="footerPage"></div>
+    </div>
+  </div>
+
+  <!-- 添加作者資訊 -->
+  <div class="author-footer">
+    <div>表格作者：陳維宏</div>
+    <div>網址：<a href="https://CWH800729.wordpress.com" target="_blank">https://CWH800729.wordpress.com</a></div>
+  </div>
+
+  <!-- 新增照片總覽表格 -->
+  <div class="photo-overview-container">
+    <h3 class="photo-overview-title">缺失照片總覽</h3>
+    <div class="photo-overview-grid" id="photoOverviewGrid">
+      <!-- 照片項目將由 JavaScript 動態生成 -->
     </div>
   </div>
 
@@ -1231,6 +1473,7 @@
       updateSummaryTable();
       initializeSignatures();
       updateFooter();
+      updatePhotoOverview(); // 更新照片總覽
     });
 
     // 每天凌晨更新日期
@@ -1265,7 +1508,11 @@
     let isDragging = false;
     let startPoint = null;
     let currentPoint = null;
+    let previewEndPoint = null; // 新增：用於儲存拖曳時的預覽終點
     let originalImage = null;
+    let scaleFactor = 1; // 新增：用於追蹤圖片縮放比例
+    let originalWidth = 0; // 新增：儲存原始圖片寬度
+    let originalHeight = 0; // 新增：儲存原始圖片高度
 
     // 添加顏色變數
     let defaultArrowColor = "#008000"; // 綠色
@@ -1363,13 +1610,36 @@
       }
     }
 
-    // 添加獲取表格寬度的函數
+    // 新增：計算表格寬度
     function getTableWidth() {
       const table = document.getElementById('defectTable');
       return table.offsetWidth;
     }
 
-    // 修改圖片載入處理函數
+    // 新增：計算適當的縮放比例
+    function calculateScaleFactor(imageWidth) {
+      const tableWidth = getTableWidth();
+      const targetWidth = tableWidth * 0.8;
+      return imageWidth > targetWidth ? targetWidth / imageWidth : 1;
+    }
+
+    // 新增：轉換座標（考慮縮放）
+    function transformCoordinates(x, y) {
+      return {
+        x: x / scaleFactor,
+        y: y / scaleFactor
+      };
+    }
+
+    // 新增：反向轉換座標（考慮縮放）
+    function reverseTransformCoordinates(x, y) {
+      return {
+        x: x * scaleFactor,
+        y: y * scaleFactor
+      };
+    }
+
+    // 修改：圖片載入處理
     imageUploader.addEventListener("change", async function () {
       const file = this.files[0];
       if (!file) return;
@@ -1407,7 +1677,7 @@
               pdfPageSelector.style.display = 'block';
               totalPagesSpan.textContent = `/ ${currentPDF.numPages} 頁`;
               pageNumberInput.max = currentPDF.numPages;
-              pageNumberInput.value = '1';
+              pageNumberInput.value = '1'; // 重設為第一頁
               
               // 預設顯示第一頁
               await renderPDFPage();
@@ -1431,23 +1701,19 @@
               points = [];
               defectBody.innerHTML = "";
               
-              // 計算新的尺寸
-              const maxWidth = getTableWidth();
-              const scale = maxWidth / img.width;
-              const newWidth = maxWidth;
-              const newHeight = img.height * scale;
+              // 儲存原始尺寸
+              originalWidth = img.width;
+              originalHeight = img.height;
               
-              // 設定畫布大小
-              canvas.width = newWidth;
-              canvas.height = newHeight;
+              // 計算縮放比例
+              scaleFactor = calculateScaleFactor(img.width);
               
-              // 儲存原始圖片資訊
-              originalImage = {
-                data: e.target.result,
-                width: img.width,
-                height: img.height,
-                scale: scale
-              };
+              // 設定畫布大小（使用縮放後的尺寸）
+              canvas.width = img.width * scaleFactor;
+              canvas.height = img.height * scaleFactor;
+              
+              // 儲存原始平面圖
+              originalImage = e.target.result;
               
               // 繪製圖片
               draw();
@@ -1471,7 +1737,6 @@
       }
     });
 
-    // 修改 PDF 頁面渲染函數
     async function renderPDFPage() {
       if (!currentPDF) return;
       
@@ -1484,32 +1749,27 @@
       try {
         // 顯示載入中訊息
         const loadingMsg = document.createElement('div');
-        loadingMsg.style.cssText = `
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          padding: 20px 40px;
-          background: rgba(0,0,0,0.8);
-          color: white;
-          border-radius: 8px;
-          z-index: 9999;
-        `;
+        loadingMsg.style.position = 'fixed';
+        loadingMsg.style.top = '50%';
+        loadingMsg.style.left = '50%';
+        loadingMsg.style.transform = 'translate(-50%, -50%)';
+        loadingMsg.style.padding = '20px 40px';
+        loadingMsg.style.background = 'rgba(0,0,0,0.8)';
+        loadingMsg.style.color = 'white';
+        loadingMsg.style.borderRadius = '8px';
+        loadingMsg.style.zIndex = '9999';
         loadingMsg.textContent = '正在載入PDF頁面，請稍候...';
         document.body.appendChild(loadingMsg);
 
         // 取得指定頁面
         const page = await currentPDF.getPage(pageNumber);
         
-        // 計算適當的縮放比例
-        const maxWidth = getTableWidth();
-        const viewport = page.getViewport({scale: 1.0});
-        const scale = maxWidth / viewport.width;
-        const scaledViewport = page.getViewport({scale: scale});
+        // 設定適當的縮放比例
+        const viewport = page.getViewport({scale: 1.5});
         
         // 設定 canvas 大小
-        canvas.width = scaledViewport.width;
-        canvas.height = scaledViewport.height;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
         
         // 清除現有的點位和表格
         points = [];
@@ -1518,18 +1778,13 @@
         // 渲染 PDF 頁面到 canvas
         const renderContext = {
           canvasContext: ctx,
-          viewport: scaledViewport
+          viewport: viewport
         };
         
         await page.render(renderContext).promise;
         
-        // 儲存當前頁面資訊
-        originalImage = {
-          data: canvas.toDataURL(),
-          width: viewport.width,
-          height: viewport.height,
-          scale: scale
-        };
+        // 儲存當前頁面為原始圖片
+        originalImage = canvas.toDataURL();
         
         // 重新繪製（包含任何點位標記）
         draw();
@@ -1544,143 +1799,28 @@
       }
     }
 
-    canvas.addEventListener("mousedown", handleStart);
-    canvas.addEventListener("mousemove", handleMove);
-    canvas.addEventListener("mouseup", handleEnd);
-    canvas.addEventListener("mouseout", handleEnd);
-
-    // 添加觸控事件支援
-    canvas.addEventListener("touchstart", handleTouchStart);
-    canvas.addEventListener("touchmove", handleTouchMove);
-    canvas.addEventListener("touchend", handleTouchEnd);
-    canvas.addEventListener("touchcancel", handleTouchEnd);
-
-    // 統一的事件處理函數
-    function handleStart(e) {
+    canvas.addEventListener("mousedown", function(e) {
       if (!img.src && !currentPDF) {
         alert('請先上傳平面圖');
         return;
       }
       
       const rect = canvas.getBoundingClientRect();
-      const point = getEventPoint(e);
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // 轉換為原始座標
+      const originalCoords = transformCoordinates(x, y);
       startPoint = {
-        x: point.x - rect.left,
-        y: point.y - rect.top
+        x: originalCoords.x,
+        y: originalCoords.y
       };
+      
       isDragging = true;
       currentPoint = null;
-    }
+    });
 
-    function handleMove(e) {
-      if (!isDragging) return;
-      
-      const rect = canvas.getBoundingClientRect();
-      const point = getEventPoint(e);
-      currentPoint = {
-        x: point.x - rect.left,
-        y: point.y - rect.top
-      };
-      
-      // 繪製預覽
-      draw();
-      if (startPoint && currentPoint) {
-        ctx.beginPath();
-        ctx.moveTo(startPoint.x, startPoint.y);
-        ctx.lineTo(currentPoint.x, currentPoint.y);
-        ctx.strokeStyle = defaultArrowColor;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    }
-
-    function handleEnd(e) {
-      if (!isDragging) return;
-      isDragging = false;
-      
-      const rect = canvas.getBoundingClientRect();
-      const point = getEventPoint(e);
-      const endX = point.x - rect.left;
-      const endY = point.y - rect.top;
-      
-      // 計算箭頭方向
-      const dx = endX - startPoint.x;
-      const dy = endY - startPoint.y;
-      
-      // 只有當拖曳距離大於5像素時才建立點位
-      if (Math.sqrt(dx * dx + dy * dy) > 5) {
-        const pointCount = points.length + 1;
-        const id = "點" + pointCount;
-        points.push({
-          id,
-          x: startPoint.x,
-          y: startPoint.y,
-          dx: dx,
-          dy: dy
-        });
-        
-        addTableRow(id);
-        draw();
-        
-        // 修正照片上傳觸發邏輯
-        const photoUploader = document.getElementById('photoUploader');
-        if (!photoUploader) {
-          console.error('找不到照片上傳元素');
-          return;
-        }
-        
-        photoUploader.dataset.pointId = id;
-        
-        // 檢查是否為移動設備且支援相機
-        if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          // 移動設備：提供選擇拍照或上傳
-          const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
-          if (choice) {
-            openCamera(id);
-          } else {
-            photoUploader.click();
-          }
-        } else {
-          // PC設備：直接開啟檔案選擇
-          photoUploader.click();
-        }
-      } else {
-        // 如果拖曳距離太短，重新繪製以清除預覽
-        draw();
-      }
-    }
-
-    // 觸控事件處理函數
-    function handleTouchStart(e) {
-      e.preventDefault(); // 防止頁面滾動
-      handleStart(e.touches[0]);
-    }
-
-    function handleTouchMove(e) {
-      e.preventDefault(); // 防止頁面滾動
-      handleMove(e.touches[0]);
-    }
-
-    function handleTouchEnd(e) {
-      e.preventDefault(); // 防止頁面滾動
-      if (e.touches.length === 0) {
-        handleEnd(e.changedTouches[0]);
-      }
-    }
-
-    // 獲取事件座標的通用函數
-    function getEventPoint(e) {
-      return {
-        x: e.clientX || e.touches[0].clientX,
-        y: e.clientY || e.touches[0].clientY
-      };
-    }
-
-    // 移除原有的事件監聽器
-    // canvas.addEventListener("mousedown", function(e) { ... });
-    // canvas.addEventListener("mouseup", function(e) { ... });
-
-    // 添加相機功能
+    // 新增相機功能
     async function openCamera(pointId) {
       try {
         const video = document.createElement('video');
@@ -1759,50 +1899,22 @@
         await video.play();
         
         // 拍照按鈕事件
-        captureButton.onclick = async () => {
+        captureButton.onclick = () => {
           const canvas = document.createElement('canvas');
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           canvas.getContext('2d').drawImage(video, 0, 0);
           
-          // 顯示處理中訊息
-          const processingMsg = document.createElement('div');
-          processingMsg.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 20px 40px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            border-radius: 8px;
-            z-index: 9999;
-          `;
-          processingMsg.textContent = '正在處理照片，請稍候...';
-          document.body.appendChild(processingMsg);
-
-          try {
-            // 將 canvas 轉換為 Blob
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-            // 創建 File 對象
-            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
-            // 壓縮照片
-            const compressedImage = await compressImage(file);
-            pointPhotos[pointId] = compressedImage;
-
-            // 清理相機
-            stream.getTracks().forEach(track => track.stop());
-            document.body.removeChild(overlay);
-            document.body.removeChild(cameraContainer);
-            document.body.removeChild(processingMsg);
-
-            // 顯示預覽
-            showPhotoPreview(pointId);
-          } catch (error) {
-            console.error('照片處理失敗:', error);
-            alert('照片處理失敗，請重試。');
-            document.body.removeChild(processingMsg);
-          }
+          // 儲存照片
+          pointPhotos[pointId] = canvas.toDataURL('image/jpeg');
+          
+          // 清理相機
+          stream.getTracks().forEach(track => track.stop());
+          document.body.removeChild(overlay);
+          document.body.removeChild(cameraContainer);
+          
+          // 顯示預覽
+          showPhotoPreview(pointId);
         };
         
         // 關閉按鈕事件
@@ -1828,6 +1940,85 @@
       return mobileRegex.test(navigator.userAgent) || 
              ('maxTouchPoints' in navigator && navigator.maxTouchPoints > 0);
     }
+
+    canvas.addEventListener("mousemove", function(e) {
+      if (!isDragging) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // 轉換為原始座標
+      const originalCoords = transformCoordinates(x, y);
+      previewEndPoint = {
+        x: originalCoords.x,
+        y: originalCoords.y
+      };
+      
+      // 重新繪製以顯示預覽箭頭
+      draw();
+    });
+
+    canvas.addEventListener("mouseup", function(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      
+      const rect = canvas.getBoundingClientRect();
+      const endX = e.clientX - rect.left;
+      const endY = e.clientY - rect.top;
+      
+      // 轉換為原始座標
+      const originalEndCoords = transformCoordinates(endX, endY);
+      
+      // 計算箭頭方向（使用原始座標）
+      const dx = originalEndCoords.x - startPoint.x;
+      const dy = originalEndCoords.y - startPoint.y;
+      
+      // 清除預覽終點
+      previewEndPoint = null;
+      
+      // 只有當拖曳距離大於5像素時才建立點位
+      if (Math.sqrt(dx * dx + dy * dy) > 5) {
+        const pointCount = points.length + 1;
+        const id = "點" + pointCount;
+        points.push({
+          id,
+          x: startPoint.x,
+          y: startPoint.y,
+          dx: dx,
+          dy: dy
+        });
+        
+        addTableRow(id);
+        draw();
+        
+        // 修正照片上傳觸發邏輯
+        const photoUploader = document.getElementById('photoUploader');
+        if (!photoUploader) {
+          console.error('找不到照片上傳元素');
+          return;
+        }
+        
+        photoUploader.dataset.pointId = id;
+        
+        // 檢查是否為移動設備且支援相機
+        if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          // 移動設備：提供選擇拍照或上傳
+          const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
+          if (choice) {
+            openCamera(id);
+          } else {
+            photoUploader.click();
+          }
+        } else {
+          // PC設備：直接開啟檔案選擇
+          photoUploader.click();
+        }
+      } else {
+        // 如果拖曳距離太短，重新繪製以清除預覽
+        draw();
+      }
+    });
 
     function drawGuideLines(x, y) {
       ctx.setLineDash([5, 5]); // 設置虛線樣式
@@ -1857,41 +2048,76 @@
       ctx.beginPath();
       ctx.moveTo(fromX, fromY);
       ctx.lineTo(toX, toY);
-      ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
-      ctx.moveTo(toX, toY);
-      ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+      
+      // 只在非預覽狀態下繪製箭頭頭部
+      if (!isDragging) {
+        ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+      }
+      
       ctx.stroke();
     }
 
-    // 修改繪圖函數
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      if (img) {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      }
+      // 繪製縮放後的圖片
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
+      // 繪製點位和箭頭（使用原始座標）
       points.forEach(pt => {
-        // 判斷亮顯狀態：單點亮顯 > 篩選亮顯 > 預設顏色
         const isHighlighted = pt.singleHighlight || pt.isHighlighted;
         const pointColor = isHighlighted ? highlightArrowColor : defaultArrowColor;
 
         if (isHighlighted) {
-          drawGuideLines(pt.x, pt.y);
+          const transformedPoint = reverseTransformCoordinates(pt.x, pt.y);
+          drawGuideLines(transformedPoint.x, transformedPoint.y);
         }
         
+        // 轉換座標以繪製
+        const transformedPoint = reverseTransformCoordinates(pt.x, pt.y);
+        const transformedEndPoint = reverseTransformCoordinates(
+          pt.x + pt.dx,
+          pt.y + pt.dy
+        );
+        
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+        ctx.arc(transformedPoint.x, transformedPoint.y, 5, 0, Math.PI * 2);
         ctx.fillStyle = pointColor;
         ctx.fill();
         
         ctx.fillStyle = pointColor;
         ctx.font = "14px sans-serif";
         const pointNumber = pt.id.replace("點", "");
-        ctx.fillText(pointNumber, pt.x - 3, pt.y + 20);
+        ctx.fillText(pointNumber, transformedPoint.x - 3, transformedPoint.y + 20);
         
-        drawArrow(pt.x, pt.y, pt.x + pt.dx, pt.y + pt.dy, isHighlighted);
+        drawArrow(
+          transformedPoint.x,
+          transformedPoint.y,
+          transformedEndPoint.x,
+          transformedEndPoint.y,
+          isHighlighted
+        );
       });
+
+      // 繪製拖曳預覽箭頭
+      if (isDragging && startPoint && previewEndPoint) {
+        const transformedStart = reverseTransformCoordinates(startPoint.x, startPoint.y);
+        const transformedEnd = reverseTransformCoordinates(previewEndPoint.x, previewEndPoint.y);
+        
+        // 設置虛線樣式
+        ctx.setLineDash([5, 5]);
+        drawArrow(
+          transformedStart.x,
+          transformedStart.y,
+          transformedEnd.x,
+          transformedEnd.y,
+          false
+        );
+        // 重置為實線
+        ctx.setLineDash([]);
+      }
     }
 
     function addTableRow(id) {
@@ -1908,12 +2134,36 @@
         <td>
           <button onclick="toggleEdit(this)">編輯</button>
           <button onclick="deleteRow(this)">刪除</button>
+          <button onclick="changePhoto('${id}')" title="更換照片">
+            <i class="fas fa-camera"></i>
+          </button>
         </td>`;
       defectBody.appendChild(row);
       updateVendorFilter();
       updateSummaryTable();
-      updateDefectCount(); // 新增：更新缺失數量
-      updateFooter(); // 新增：更新頁碼
+      updateDefectCount();
+      updateFooter();
+    }
+
+    // 新增：更換照片函數
+    function changePhoto(pointId) {
+      // 檢查是否為移動設備且支援相機
+      if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // 移動設備：提供選擇拍照或上傳
+        const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
+        if (choice) {
+          openCamera(pointId);
+        } else {
+          const photoUploader = document.getElementById('photoUploader');
+          photoUploader.dataset.pointId = pointId;
+          photoUploader.click();
+        }
+      } else {
+        // PC設備：直接開啟檔案選擇
+        const photoUploader = document.getElementById('photoUploader');
+        photoUploader.dataset.pointId = pointId;
+        photoUploader.click();
+      }
     }
 
     function cycleStatus(td) {
@@ -1984,6 +2234,7 @@
       updateSummaryTable();
       updateDefectCount(); // 新增：更新缺失數量
       updateFooter(); // 新增：更新頁碼
+      updatePhotoOverview(); // 更新照片總覽
     }
 
     // 重新編號點位時同步更新缺失數量
@@ -2028,22 +2279,30 @@
         
         // 1. 匯出原始平面圖
         if (originalImage) {
-          if (typeof originalImage === 'string') {
-            // 舊格式的圖片資料
-            zip.file("原始平面圖.png", originalImage.split(',')[1], {base64: true});
-          } else {
-            // 新格式的圖片資料
-            zip.file("原始平面圖.png", originalImage.data.split(',')[1], {base64: true});
-          }
+          zip.file("原始平面圖.png", originalImage.split(',')[1], {base64: true});
         }
 
         // 2. 匯出目前的平面圖（含標記）
         const canvasBlob = await new Promise(resolve => canvas.toBlob(resolve));
         zip.file("標記平面圖.png", canvasBlob);
 
-        // 3. 匯出缺失表格資料（包含照片關聯資訊）
+        // 3. 匯出簽名資料
+        const signatureData = {
+          owner: document.getElementById('ownerSignature').toDataURL(),
+          client: document.getElementById('clientSignature').toDataURL(),
+          constructor: document.getElementById('constructorSignature').toDataURL()
+        };
+        zip.file("signature_data.json", JSON.stringify(signatureData));
+
+        // 4. 匯出缺失表格資料
         const defectData = {
-          points: points,
+          points: points.map(point => ({
+            ...point,
+            x: point.x,
+            y: point.y,
+            dx: point.dx,
+            dy: point.dy
+          })),
           tableData: Array.from(defectBody.rows).map(row => {
             const pointId = row.cells[0].textContent;
             return {
@@ -2058,10 +2317,10 @@
         };
         zip.file("defect_data.json", JSON.stringify(defectData, null, 2));
 
-        // 4. 匯出關鍵字表格資料
+        // 5. 匯出關鍵字表格資料
         zip.file("keyword_data.json", JSON.stringify(customKeywordMap, null, 2));
 
-        // 5. 匯出照片
+        // 6. 匯出照片
         const photoFolder = zip.folder("照片");
         const processedPhotos = new Set();
 
@@ -2075,7 +2334,7 @@
           }
         }
 
-        // 6. 建立 Excel 工作簿
+        // 7. 建立 Excel 工作簿
         const wb = XLSX.utils.book_new();
         
         // 缺失資料工作表
@@ -2193,154 +2452,6 @@
       }
     }
 
-    // 添加照片壓縮函數
-    async function compressImage(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const img = new Image();
-          img.onload = function() {
-            // 計算新的尺寸，保持寬高比
-            let maxWidth = 1200;  // 最大寬度
-            let maxHeight = 1200; // 最大高度
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-              if (width > maxWidth) {
-                height = Math.round((height * maxWidth) / width);
-                width = maxWidth;
-              }
-            } else {
-              if (height > maxHeight) {
-                width = Math.round((width * maxHeight) / height);
-                height = maxHeight;
-              }
-            }
-
-            // 創建 canvas 進行壓縮
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-
-            // 繪製圖片
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // 轉換為 JPEG 格式，質量為 0.8
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            resolve(compressedDataUrl);
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    // 修改照片上傳處理程序
-    document.getElementById('photoUploader').addEventListener("change", async function() {
-      const file = this.files[0];
-      const id = this.dataset.pointId;
-      if (file && id) {
-        try {
-          // 顯示處理中訊息
-          const processingMsg = document.createElement('div');
-          processingMsg.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 20px 40px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            border-radius: 8px;
-            z-index: 9999;
-          `;
-          processingMsg.textContent = '正在處理照片，請稍候...';
-          document.body.appendChild(processingMsg);
-
-          // 壓縮照片
-          const compressedImage = await compressImage(file);
-          pointPhotos[id] = compressedImage;
-
-          // 移除處理中訊息
-          document.body.removeChild(processingMsg);
-
-          // 顯示預覽
-          showPhotoPreview(id);
-        } catch (error) {
-          console.error('照片處理失敗:', error);
-          alert('照片處理失敗，請重試。');
-        }
-      }
-    });
-
-    // 修改相機拍照處理邏輯
-    async function openCamera(pointId) {
-      try {
-        const video = document.createElement('video');
-        const cameraContainer = document.createElement('div');
-        const captureButton = document.createElement('button');
-        const closeButton = document.createElement('button');
-        
-        // ... existing camera setup code ...
-
-        // 修改拍照按鈕事件
-        captureButton.onclick = async () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          canvas.getContext('2d').drawImage(video, 0, 0);
-          
-          // 顯示處理中訊息
-          const processingMsg = document.createElement('div');
-          processingMsg.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 20px 40px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            border-radius: 8px;
-            z-index: 9999;
-          `;
-          processingMsg.textContent = '正在處理照片，請稍候...';
-          document.body.appendChild(processingMsg);
-
-          try {
-            // 將 canvas 轉換為 Blob
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-            // 創建 File 對象
-            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
-            // 壓縮照片
-            const compressedImage = await compressImage(file);
-            pointPhotos[pointId] = compressedImage;
-
-            // 清理相機
-            stream.getTracks().forEach(track => track.stop());
-            document.body.removeChild(overlay);
-            document.body.removeChild(cameraContainer);
-            document.body.removeChild(processingMsg);
-
-            // 顯示預覽
-            showPhotoPreview(pointId);
-          } catch (error) {
-            console.error('照片處理失敗:', error);
-            alert('照片處理失敗，請重試。');
-            document.body.removeChild(processingMsg);
-          }
-        };
-
-        // ... rest of the camera code ...
-      } catch (error) {
-        console.error('相機啟動失敗:', error);
-        alert('無法啟動相機，請改用檔案上傳。');
-        document.getElementById('photoUploader').click();
-      }
-    }
-
-    // 修改照片預覽函數，添加載入提示
     function showPhotoPreview(pointId) {
       const photo = pointPhotos[pointId];
       if (!photo) {
@@ -2352,26 +2463,6 @@
       const preview = document.getElementById('photoPreview');
       const container = document.getElementById('photoPreviewContainer');
       const overlay = document.getElementById('overlay');
-      
-      // 添加載入提示
-      const loadingMsg = document.createElement('div');
-      loadingMsg.style.cssText = `
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        padding: 10px 20px;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        border-radius: 4px;
-        z-index: 1001;
-      `;
-      loadingMsg.textContent = '載入中...';
-      container.appendChild(loadingMsg);
-      
-      preview.onload = function() {
-        container.removeChild(loadingMsg);
-      };
       
       preview.src = photo;
       container.style.display = 'block';
@@ -2399,6 +2490,7 @@
           pointPhotos[id] = e.target.result;
           // 立即顯示預覽
           showPhotoPreview(id);
+          updatePhotoOverview(); // 更新照片總覽
         };
         reader.readAsDataURL(file);
       }
@@ -2433,18 +2525,112 @@
         // 1. 載入原始平面圖
         const originalImageFile = zip.file("原始平面圖.png");
         if (originalImageFile) {
-          const imageData = await originalImageFile.async("base64");
-          originalImage = "data:image/png;base64," + imageData;
-          img = new Image();
-          img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            draw();
-          };
-          img.src = originalImage;
+          try {
+            const imageData = await originalImageFile.async("base64");
+            originalImage = "data:image/png;base64," + imageData;
+            
+            // 載入圖片並設置到 canvas
+            img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = () => {
+                // 儲存原始尺寸
+                originalWidth = img.width;
+                originalHeight = img.height;
+                
+                // 計算縮放比例
+                scaleFactor = calculateScaleFactor(img.width);
+                
+                // 設定畫布大小
+                canvas.width = img.width * scaleFactor;
+                canvas.height = img.height * scaleFactor;
+                
+                // 繪製圖片
+                draw();
+                resolve();
+              };
+              img.onerror = reject;
+              img.src = originalImage;
+            });
+          } catch (error) {
+            console.error('原始平面圖載入失敗:', error);
+            alert('原始平面圖載入失敗，但其他資料已匯入。');
+          }
         }
 
-        // 2. 先載入照片資料
+        // 2. 載入簽名資料
+        const signatureDataFile = zip.file("signature_data.json");
+        if (signatureDataFile) {
+          const signatureDataText = await signatureDataFile.async("text");
+          const signatureData = JSON.parse(signatureDataText);
+          
+          // 載入簽名到畫布
+          const loadSignature = async (canvasId, dataUrl) => {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                signatureStates[canvasId] = true;
+                updateSignatureStatus(canvasId);
+                resolve();
+              };
+              img.onerror = reject;
+              img.src = dataUrl;
+            });
+          };
+
+          await Promise.all([
+            loadSignature('ownerSignature', signatureData.owner),
+            loadSignature('clientSignature', signatureData.client),
+            loadSignature('constructorSignature', signatureData.constructor)
+          ]);
+        }
+
+        // 3. 載入缺失資料
+        const defectDataFile = zip.file("defect_data.json");
+        if (defectDataFile) {
+          const defectDataText = await defectDataFile.async("text");
+          const defectData = JSON.parse(defectDataText);
+          
+          // 確保在載入點位資料前已清空現有資料
+          points = [];
+          defectBody.innerHTML = "";
+          
+          // 載入點位資料
+          points = defectData.points.map(point => ({
+            ...point,
+            x: point.x,
+            y: point.y,
+            dx: point.dx,
+            dy: point.dy
+          }));
+          
+          // 重建缺失表格
+          defectData.tableData.forEach(row => {
+            const tr = document.createElement("tr");
+            const pointId = '點' + row.id;
+            tr.innerHTML = `
+              <td class="clickable" 
+                  onclick="highlightPoint('${pointId}')"
+                  ondblclick="showPointPhoto('${pointId}')">${row.id}</td>
+              <td><input type="text" value="${row.description || ''}"></td>
+              <td>${row.category || ''}</td>
+              <td>${row.vendor || ''}</td>
+              <td class="status" onclick="cycleStatus(this)">${row.status || '未修繕'}</td>
+              <td>
+                <button onclick="toggleEdit(this)">編輯</button>
+                <button onclick="deleteRow(this)">刪除</button>
+                <button onclick="changePhoto('${pointId}')" title="更換照片">
+                  <i class="fas fa-camera"></i>
+                </button>
+              </td>`;
+            defectBody.appendChild(tr);
+          });
+        }
+
+        // 4. 載入照片資料
         pointPhotos = {};
         const photoFolder = zip.folder("照片");
         if (photoFolder) {
@@ -2469,35 +2655,7 @@
           }
         }
 
-        // 3. 載入缺失資料
-        const defectDataFile = zip.file("defect_data.json");
-        if (defectDataFile) {
-          const defectDataText = await defectDataFile.async("text");
-          const defectData = JSON.parse(defectDataText);
-          points = defectData.points;
-          
-          // 清空並重建缺失表格
-          defectBody.innerHTML = "";
-          defectData.tableData.forEach(row => {
-            const tr = document.createElement("tr");
-            const pointId = '點' + row.id;
-            tr.innerHTML = `
-              <td class="clickable" 
-                  onclick="highlightPoint('${pointId}')"
-                  ondblclick="showPointPhoto('${pointId}')">${row.id}</td>
-              <td><input type="text" value="${row.description || ''}"></td>
-              <td>${row.category || ''}</td>
-              <td>${row.vendor || ''}</td>
-              <td class="status" onclick="cycleStatus(this)">${row.status || '未修繕'}</td>
-              <td>
-                <button onclick="toggleEdit(this)">編輯</button>
-                <button onclick="deleteRow(this)">刪除</button>
-              </td>`;
-            defectBody.appendChild(tr);
-          });
-        }
-
-        // 4. 載入關鍵字資料
+        // 5. 載入關鍵字資料
         const keywordDataFile = zip.file("keyword_data.json");
         if (keywordDataFile) {
           const keywordDataText = await keywordDataFile.async("text");
@@ -2506,11 +2664,16 @@
         }
 
         document.body.removeChild(processingMsg);
-        draw();
-        updateDefectCount(); // 添加：更新缺失數量
+        
+        // 更新所有相關顯示
+        updateDefectCount();
         updateVendorFilter();
         updateSummaryTable();
         updateFooter();
+        updatePhotoOverview();
+        
+        // 重新繪製平面圖（包含所有點位和箭頭）
+        draw();
         
         const photoCount = Object.keys(pointPhotos).length;
         console.log('照片載入狀態:', pointPhotos);
@@ -2525,8 +2688,6 @@
       }
       
       this.value = '';
-      updateVendorFilter();
-      updateSummaryTable();
     });
 
     // 在其他 script 內容之前添加設定相關函數
@@ -2745,7 +2906,63 @@
       });
     }
 
-    // 簽名相關函數
+    // 修改簽名相關變數
+    let isSigningEnabled = false;
+    let signatureStates = {
+      ownerSignature: false,
+      clientSignature: false,
+      constructorSignature: false
+    };
+
+    // 切換所有簽名畫布的狀態
+    function toggleAllSignatures() {
+      isSigningEnabled = !isSigningEnabled;
+      const controlBtn = document.getElementById('signatureControlBtn');
+      const canvases = document.querySelectorAll('.signature-canvas');
+      
+      if (isSigningEnabled) {
+        controlBtn.textContent = '結束簽名';
+        controlBtn.classList.add('active');
+        canvases.forEach(canvas => {
+          canvas.classList.add('active');
+        });
+      } else {
+        controlBtn.textContent = '開始簽名';
+        controlBtn.classList.remove('active');
+        canvases.forEach(canvas => {
+          canvas.classList.remove('active');
+          // 更新簽名狀態
+          const canvasId = canvas.id;
+          signatureStates[canvasId] = true;
+          updateSignatureStatus(canvasId);
+        });
+      }
+    }
+
+    // 修改清除簽名函數
+    function clearSignature(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // 更新簽名狀態
+      signatureStates[canvasId] = false;
+      updateSignatureStatus(canvasId);
+    }
+
+    // 更新簽名狀態顯示
+    function updateSignatureStatus(canvasId) {
+      const statusElement = document.getElementById(canvasId + 'Status');
+      if (signatureStates[canvasId]) {
+        statusElement.textContent = '已簽名';
+        statusElement.classList.add('signed');
+      } else {
+        statusElement.textContent = '未簽名';
+        statusElement.classList.remove('signed');
+      }
+    }
+
+    // 修改簽名初始化函數
     function initializeSignatures() {
       const canvasIds = ['ownerSignature', 'clientSignature', 'constructorSignature'];
       canvasIds.forEach(id => {
@@ -2755,23 +2972,14 @@
         let lastX = 0;
         let lastY = 0;
 
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
-
-        // 觸控支援
-        canvas.addEventListener('touchstart', handleTouchStart);
-        canvas.addEventListener('touchmove', handleTouchMove);
-        canvas.addEventListener('touchend', stopDrawing);
-
-        function startDrawing(e) {
+        canvas.addEventListener('mousedown', function(e) {
+          if (!isSigningEnabled) return;
           isDrawing = true;
           [lastX, lastY] = getCoordinates(e);
-        }
+        });
 
-        function draw(e) {
-          if (!isDrawing) return;
+        canvas.addEventListener('mousemove', function(e) {
+          if (!isDrawing || !isSigningEnabled) return;
           e.preventDefault();
 
           const [currentX, currentY] = getCoordinates(e);
@@ -2784,11 +2992,64 @@
           ctx.stroke();
 
           [lastX, lastY] = [currentX, currentY];
-        }
+        });
 
-        function stopDrawing() {
-          isDrawing = false;
-        }
+        canvas.addEventListener('mouseup', function() {
+          if (isDrawing) {
+            isDrawing = false;
+            signatureStates[id] = true;
+            updateSignatureStatus(id);
+          }
+        });
+
+        canvas.addEventListener('mouseout', function() {
+          if (isDrawing) {
+            isDrawing = false;
+            signatureStates[id] = true;
+            updateSignatureStatus(id);
+          }
+        });
+
+        // 觸控事件處理
+        canvas.addEventListener('touchstart', function(e) {
+          if (!isSigningEnabled) return;
+          e.preventDefault();
+          isDrawing = true;
+          const touch = e.touches[0];
+          const rect = canvas.getBoundingClientRect();
+          lastX = touch.clientX - rect.left;
+          lastY = touch.clientY - rect.top;
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', function(e) {
+          if (!isDrawing || !isSigningEnabled) return;
+          e.preventDefault();
+          
+          const touch = e.touches[0];
+          const rect = canvas.getBoundingClientRect();
+          const currentX = touch.clientX - rect.left;
+          const currentY = touch.clientY - rect.top;
+          
+          ctx.beginPath();
+          ctx.moveTo(lastX, lastY);
+          ctx.lineTo(currentX, currentY);
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 2;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+          
+          lastX = currentX;
+          lastY = currentY;
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', function(e) {
+          if (isDrawing) {
+            e.preventDefault();
+            isDrawing = false;
+            signatureStates[id] = true;
+            updateSignatureStatus(id);
+          }
+        }, { passive: false });
 
         function getCoordinates(e) {
           const rect = canvas.getBoundingClientRect();
@@ -2797,23 +3058,7 @@
             (e.clientY || e.touches[0].clientY) - rect.top
           ];
         }
-
-        function handleTouchStart(e) {
-          e.preventDefault();
-          startDrawing(e.touches[0]);
-        }
-
-        function handleTouchMove(e) {
-          e.preventDefault();
-          draw(e.touches[0]);
-        }
       });
-    }
-
-    function clearSignature(canvasId) {
-      const canvas = document.getElementById(canvasId);
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     // 更新列印頁碼和標題
@@ -2851,6 +3096,7 @@
       updateSummaryTable();
       initializeSignatures();
       updateFooter();
+      updatePhotoOverview(); // 更新照片總覽
     });
 
     // 在標題變更時更新頁尾
@@ -2864,30 +3110,364 @@
       // 更新頁尾信息
       updateFooter();
       
+      // 確保所有頁面都顯示相同的簽名
+      const signatureCanvases = ['ownerSignature', 'clientSignature', 'constructorSignature'];
+      const signatureImages = signatureCanvases.map(id => {
+        const canvas = document.getElementById(id);
+        return canvas.toDataURL();
+      });
+
+      // 在列印前同步所有頁面的簽名
+      const style = document.createElement('style');
+      style.textContent = `
+        @media print {
+          .signature-container {
+            position: fixed !important;
+            bottom: 1cm !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 1000 !important;
+          }
+          .signature-canvas {
+            image-rendering: -webkit-optimize-contrast !important;
+            image-rendering: crisp-edges !important;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+
       // 執行列印
       window.print();
+
+      // 列印完成後移除樣式
+      document.head.removeChild(style);
     }
 
-    // 添加視窗大小改變事件處理
-    window.addEventListener('resize', function() {
-      if (originalImage) {
-        // 重新計算尺寸
-        const maxWidth = getTableWidth();
-        const scale = maxWidth / originalImage.width;
-        const newWidth = maxWidth;
-        const newHeight = originalImage.height * scale;
+    // 修改平面圖的觸控事件處理
+    canvas.addEventListener('touchstart', function(e) {
+      e.preventDefault(); // 防止頁面滾動
+      if (!img.src && !currentPDF) {
+        alert('請先上傳平面圖');
+        return;
+      }
+      
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      // 轉換為原始座標
+      const originalCoords = transformCoordinates(x, y);
+      startPoint = {
+        x: originalCoords.x,
+        y: originalCoords.y
+      };
+      
+      isDragging = true;
+      currentPoint = null;
+    }, { passive: false }); // 確保 preventDefault 生效
+
+    canvas.addEventListener('touchmove', function(e) {
+      e.preventDefault(); // 防止頁面滾動
+      if (!isDragging) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      // 轉換為原始座標
+      const originalCoords = transformCoordinates(x, y);
+      previewEndPoint = {
+        x: originalCoords.x,
+        y: originalCoords.y
+      };
+      
+      draw(); // 重繪以更新預覽箭頭
+    }, { passive: false }); // 確保 preventDefault 生效
+
+    canvas.addEventListener('touchend', function(e) {
+      e.preventDefault(); // 防止頁面滾動
+      if (!isDragging) return;
+      isDragging = false;
+      
+      if (!previewEndPoint) return;
+      
+      // 計算箭頭方向（使用原始座標）
+      const dx = previewEndPoint.x - startPoint.x;
+      const dy = previewEndPoint.y - startPoint.y;
+      
+      // 清除預覽終點
+      previewEndPoint = null;
+      
+      // 只有當拖曳距離大於5像素時才建立點位
+      if (Math.sqrt(dx * dx + dy * dy) > 5) {
+        const pointCount = points.length + 1;
+        const id = "點" + pointCount;
+        points.push({
+          id,
+          x: startPoint.x,
+          y: startPoint.y,
+          dx: dx,
+          dy: dy
+        });
         
-        // 更新 canvas 尺寸
-        canvas.width = newWidth;
-        canvas.height = newHeight;
+        addTableRow(id);
+        draw();
         
-        // 更新原始圖片資訊
-        originalImage.scale = scale;
+        // 修正照片上傳觸發邏輯
+        const photoUploader = document.getElementById('photoUploader');
+        if (!photoUploader) {
+          console.error('找不到照片上傳元素');
+          return;
+        }
         
-        // 重新繪製
+        photoUploader.dataset.pointId = id;
+        
+        // 檢查是否為移動設備且支援相機
+        if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          // 移動設備：提供選擇拍照或上傳
+          const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
+          if (choice) {
+            openCamera(id);
+          } else {
+            photoUploader.click();
+          }
+        } else {
+          // PC設備：直接開啟檔案選擇
+          photoUploader.click();
+        }
+      } else {
+        // 如果拖曳距離太短，重新繪製以清除預覽
         draw();
       }
-    });
+    }, { passive: false }); // 確保 preventDefault 生效
+
+    // 添加截圖功能
+    async function handleScreenshot() {
+      const loadingMsg = document.getElementById('screenshotLoading');
+      loadingMsg.style.display = 'block';
+
+      try {
+        // 更新頁尾信息
+        updateFooter();
+        
+        // 創建一個臨時的 div 來容納要截圖的內容
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '-9999px';
+        container.style.width = '210mm'; // A4 寬度
+        container.style.padding = '20mm';
+        container.style.backgroundColor = 'white';
+        container.style.minHeight = '297mm'; // A4 高度
+        
+        // 複製需要截圖的內容
+        const contentToCapture = document.createElement('div');
+        contentToCapture.style.width = '100%';
+        contentToCapture.style.height = '100%';
+        contentToCapture.style.position = 'relative';
+        
+        // 複製標題
+        const titleContainer = document.querySelector('.page-header').cloneNode(true);
+        titleContainer.style.marginBottom = '20px';
+        contentToCapture.appendChild(titleContainer);
+        
+        // 複製平面圖
+        const canvasContainer = document.createElement('div');
+        canvasContainer.style.position = 'relative';
+        canvasContainer.style.margin = '20px 0';
+        canvasContainer.style.textAlign = 'center';
+        
+        // 創建新的 canvas 並複製內容
+        const floorCanvas = document.createElement('canvas');
+        const originalCanvas = document.querySelector('#floorCanvas');
+        floorCanvas.width = originalCanvas.width;
+        floorCanvas.height = originalCanvas.height;
+        const ctx = floorCanvas.getContext('2d');
+        
+        // 等待圖片載入完成
+        await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, floorCanvas.width, floorCanvas.height);
+            resolve();
+          };
+          img.src = originalCanvas.toDataURL('image/png');
+        });
+        
+        // 設置 canvas 樣式
+        floorCanvas.style.maxWidth = '100%';
+        floorCanvas.style.height = 'auto';
+        floorCanvas.style.border = '1px solid #ccc';
+        canvasContainer.appendChild(floorCanvas);
+        contentToCapture.appendChild(canvasContainer);
+        
+        // 複製缺失表格
+        const tableContainer = document.createElement('div');
+        const table = document.getElementById('defectTable').cloneNode(true);
+        // 移除不需要的列（修改為只保留點位編號和缺失說明）
+        const headers = table.querySelectorAll('th');
+        const cells = table.querySelectorAll('td');
+        [2, 3, 4, 5].forEach(index => { // 修改索引以移除缺失類別欄位
+          headers[index].style.display = 'none';
+          cells.forEach(cell => {
+            if (cell.cellIndex === index) cell.style.display = 'none';
+          });
+        });
+        table.style.width = '100%';
+        table.style.marginBottom = '20px';
+        tableContainer.appendChild(table);
+        contentToCapture.appendChild(tableContainer);
+        
+        // 複製簽名區域
+        const signatureContainer = document.createElement('div');
+        signatureContainer.style.marginTop = '30px';
+        signatureContainer.style.padding = '20px';
+        signatureContainer.style.backgroundColor = '#f8f9fa';
+        signatureContainer.style.borderRadius = '8px';
+        signatureContainer.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        
+        // 複製簽名標籤和畫布
+        const signatureRow = document.createElement('div');
+        signatureRow.style.display = 'flex';
+        signatureRow.style.justifyContent = 'space-between';
+        signatureRow.style.gap = '20px';
+        
+        // 等待所有簽名畫布處理完成
+        await Promise.all(['ownerSignature', 'clientSignature', 'constructorSignature'].map(async (id) => {
+          const signatureBox = document.createElement('div');
+          signatureBox.style.flex = '1';
+          signatureBox.style.textAlign = 'center';
+          
+          const label = document.createElement('div');
+          label.style.fontSize = '16px';
+          label.style.marginBottom = '10px';
+          label.style.color = '#333';
+          label.textContent = document.querySelector(`#${id}`).parentElement.querySelector('.signature-label').textContent;
+          
+          const canvas = document.createElement('canvas');
+          const originalSignature = document.getElementById(id);
+          canvas.width = originalSignature.width;
+          canvas.height = originalSignature.height;
+          const signatureCtx = canvas.getContext('2d');
+          
+          // 等待簽名畫布內容載入
+          await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              signatureCtx.drawImage(img, 0, 0);
+              resolve();
+            };
+            img.src = originalSignature.toDataURL('image/png');
+          });
+          
+          canvas.style.width = '100%';
+          canvas.style.height = 'auto';
+          canvas.style.border = '1px solid #ccc';
+          canvas.style.backgroundColor = 'white';
+          canvas.style.margin = '10px 0';
+          
+          signatureBox.appendChild(label);
+          signatureBox.appendChild(canvas);
+          signatureRow.appendChild(signatureBox);
+        }));
+        
+        signatureContainer.appendChild(signatureRow);
+        contentToCapture.appendChild(signatureContainer);
+        
+        // 添加頁尾
+        const footer = document.createElement('div');
+        footer.style.marginTop = '20px';
+        footer.style.borderTop = '1px solid #ccc';
+        footer.style.paddingTop = '10px';
+        footer.style.textAlign = 'center';
+        footer.innerHTML = `
+          <div style="font-size: 14pt; font-weight: bold;">${document.getElementById('pageTitle').value}</div>
+          <div style="font-size: 12pt;">${document.getElementById('footerPage').textContent}</div>
+        `;
+        contentToCapture.appendChild(footer);
+        
+        container.appendChild(contentToCapture);
+        document.body.appendChild(container);
+        
+        // 使用 html2canvas 進行截圖
+        const screenshotCanvas = await html2canvas(contentToCapture, {
+          scale: 2, // 提高清晰度
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          allowTaint: true,
+          foreignObjectRendering: false, // 改為 false
+          imageTimeout: 0,
+          onclone: (clonedDoc) => {
+            // 確保所有圖片都已載入
+            const images = clonedDoc.getElementsByTagName('img');
+            return Promise.all(Array.from(images).map(img => {
+              if (img.complete) return Promise.resolve();
+              return new Promise(resolve => {
+                img.onload = resolve;
+                img.onerror = resolve;
+              });
+            }));
+          }
+        });
+        
+        // 轉換為圖片並下載
+        const image = screenshotCanvas.toDataURL('image/png', 1.0);
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
+        const title = document.getElementById('pageTitle').value || '未命名';
+        link.download = `${date}-${title}-截圖.png`;
+        link.href = image;
+        link.click();
+        
+        // 清理臨時元素
+        document.body.removeChild(container);
+      } catch (error) {
+        console.error('截圖失敗:', error);
+        alert('截圖生成失敗，請重試。');
+      } finally {
+        loadingMsg.style.display = 'none';
+      }
+    }
+
+    // 更新照片總覽表格
+    function updatePhotoOverview() {
+      const grid = document.getElementById('photoOverviewGrid');
+      grid.innerHTML = ''; // 清空現有內容
+
+      // 收集所有有照片的點位
+      const pointsWithPhotos = Array.from(defectBody.rows)
+        .filter(row => pointPhotos['點' + row.cells[0].textContent])
+        .map(row => ({
+          id: row.cells[0].textContent,
+          photo: pointPhotos['點' + row.cells[0].textContent],
+          description: row.cells[1].querySelector('input')?.value || row.cells[1].textContent
+        }));
+
+      // 為每個點位創建照片項目
+      pointsWithPhotos.forEach(point => {
+        const item = document.createElement('div');
+        item.className = 'photo-overview-item';
+        
+        const img = document.createElement('img');
+        img.src = point.photo;
+        img.alt = `點位 ${point.id} 照片`;
+        img.title = point.description; // 添加提示文字
+        
+        const pointNumber = document.createElement('div');
+        pointNumber.className = 'point-number';
+        pointNumber.textContent = `點位 ${point.id}`;
+        
+        item.appendChild(img);
+        item.appendChild(pointNumber);
+        grid.appendChild(item);
+      });
+    }
   </script>
+
+  <!-- 添加 html2canvas 庫 -->
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </body>
 </html>
