@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>陳維宏的工程應用網站</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            width: 75px;
+            height: 75px;
+            border-radius: 16px;
+        }
+
+        .site-title {
+            margin: 0;
+            font-size: 2em;
+            color: #2c3e50;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .defect-link {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+            transition: background-color 0.3s ease;
+        }
+
+        .defect-link:hover {
+            background-color: #45a049;
+        }
+
+        .author-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .author-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .author-details {
+            flex: 1;
+        }
+
+        .author-name {
+            font-weight: bold;
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .author-bio {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .author-link {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .author-link:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <img src="http://cwh800729.github.io/CWH-LOGO" alt="logo" class="logo">
+                <h1 class="site-title">工程應用網站</h1>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="main-content">
+            <div class="card">
+                <h2><i class="fas fa-clipboard-list"></i> 缺失表格系統</h2>
+                <p>這是一個工程缺失管理系統，用於追蹤和記錄工程現場的缺失項目。系統提供完整的缺失標記、照片管理、進度追蹤等功能。</p>
+                <a href="V9.html" class="defect-link">
+                    <i class="fas fa-external-link-alt"></i> 進入缺失表格系統
+                </a>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-th"></i> 瓷磚設計系統</h2>
+                <p>專業的瓷磚排版設計工具，提供多種瓷磚尺寸、顏色和圖案選擇，幫助您輕鬆規劃完美的瓷磚鋪設方案。</p>
+                <a href="TileDesign.html" class="defect-link" style="background-color: #3498db;">
+                    <i class="fas fa-external-link-alt"></i> 進入瓷磚設計系統
+                </a>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-user"></i> 關於作者</h2>
+                <div class="author-info">
+                    <img src="http://cwh800729.github.io/CWH-LOGO" alt="http://cwh800729.github.io/CWH-LOGO" class="author-avatar">
+                    <div class="author-details">
+                        <h3 class="author-name">陳維宏</h3>
+                        <p class="author-bio">專注於工程品質管理與缺失改善。</p>
+                        <a href="..." class="author-link" target="_blank">
+                            <i class="fas fa-globe"></i> 訪問我的部落格
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 陳維宏的工程應用網站. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html> 
