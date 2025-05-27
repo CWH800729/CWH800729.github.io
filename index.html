@@ -143,6 +143,77 @@
                 text-align: center;
             }
         }
+
+        /* 水溝高程換算卡片樣式 */
+        .elevation-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .elevation-form {
+            display: grid;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .elevation-form-group {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .elevation-form-group label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .elevation-form-group input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .elevation-result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .elevation-result.show {
+            display: block;
+        }
+
+        .elevation-result p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+
+        .elevation-result .highlight {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .calculate-btn {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .calculate-btn:hover {
+            background-color: #2980b9;
+        }
     </style>
 </head>
 <body>
@@ -166,11 +237,38 @@
             </div>
 
             <div class="card">
-                <h2><i class="fas fa-th"></i> 瓷磚設計系統</h2>
-                <p>專業的瓷磚排版設計工具，提供多種瓷磚尺寸、顏色和圖案選擇，幫助您輕鬆規劃完美的瓷磚鋪設方案。</p>
-                <a href="TileDesign.html" class="defect-link" style="background-color: #3498db;">
-                    <i class="fas fa-external-link-alt"></i> 進入瓷磚設計系統
+                <h2><i class="fas fa-images"></i> 照片表格製作系統</h2>
+                <p>專業的照片表格製作工具，支援照片上傳、自訂欄位、自動解析檔名等功能，幫助您快速建立標準化的照片表格文件。</p>
+                <a href="PicSheet.html" class="defect-link" style="background-color: #3498db;">
+                    <i class="fas fa-external-link-alt"></i> 進入照片表格製作系統
                 </a>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-calculator"></i> 水溝高程換算</h2>
+                <div class="elevation-form">
+                    <div class="elevation-form-group">
+                        <label for="designElevation">設計高程 (m)：</label>
+                        <input type="number" id="designElevation" step="0.001" placeholder="請輸入設計高程">
+                    </div>
+                    <div class="elevation-form-group">
+                        <label for="actualElevation">實際高程 (m)：</label>
+                        <input type="number" id="actualElevation" step="0.001" placeholder="請輸入實際高程">
+                    </div>
+                    <div class="elevation-form-group">
+                        <label for="ditchWidth">水溝寬度 (m)：</label>
+                        <input type="number" id="ditchWidth" step="0.001" placeholder="請輸入水溝寬度">
+                    </div>
+                    <button class="calculate-btn" onclick="calculateElevation()">
+                        <i class="fas fa-calculator"></i> 計算
+                    </button>
+                </div>
+                <div class="elevation-result" id="elevationResult">
+                    <p>計算結果：</p>
+                    <p>高程差：<span class="highlight" id="elevationDiff">0.000</span> m</p>
+                    <p>坡度：<span class="highlight" id="slope">0.000</span> %</p>
+                    <p>是否符合規範：<span class="highlight" id="isCompliant">-</span></p>
+                </div>
             </div>
 
             <div class="card">
@@ -194,5 +292,42 @@
             <p>&copy; 2024 陳維宏的工程應用網站. All rights reserved.</p>
         </div>
     </footer>
+
+    <script>
+        // 水溝高程換算功能
+        function calculateElevation() {
+            const designElevation = parseFloat(document.getElementById('designElevation').value);
+            const actualElevation = parseFloat(document.getElementById('actualElevation').value);
+            const ditchWidth = parseFloat(document.getElementById('ditchWidth').value);
+
+            if (isNaN(designElevation) || isNaN(actualElevation) || isNaN(ditchWidth)) {
+                alert('請輸入有效的數值');
+                return;
+            }
+
+            if (ditchWidth <= 0) {
+                alert('水溝寬度必須大於0');
+                return;
+            }
+
+            // 計算高程差
+            const elevationDiff = actualElevation - designElevation;
+            
+            // 計算坡度 (百分比)
+            const slope = (elevationDiff / ditchWidth) * 100;
+            
+            // 判斷是否符合規範 (假設坡度需在 ±0.5% 範圍內)
+            const isCompliant = Math.abs(slope) <= 0.5;
+
+            // 更新結果顯示
+            document.getElementById('elevationDiff').textContent = elevationDiff.toFixed(3);
+            document.getElementById('slope').textContent = slope.toFixed(3);
+            document.getElementById('isCompliant').textContent = isCompliant ? '符合' : '不符合';
+            document.getElementById('isCompliant').style.color = isCompliant ? '#4CAF50' : '#f44336';
+            
+            // 顯示結果區域
+            document.getElementById('elevationResult').classList.add('show');
+        }
+    </script>
 </body>
 </html> 
