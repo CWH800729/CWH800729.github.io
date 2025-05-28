@@ -163,6 +163,9 @@
       max-width: 100%;
       max-height: 100%;
     }
+    .slope-pos { color: #388e3c; font-weight: bold; }
+    .slope-neg { color: #d32f2f; font-weight: bold; }
+    .slope-zero { color: #666; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -230,7 +233,7 @@
             </td>
           </tr>
           <tr>
-            <th>坡度</th>
+            <th>溝底坡度</th>
             <td class="calc-cell">-</td>
             <td class="calc-cell">0</td>
             <td class="calc-cell">0</td>
@@ -334,10 +337,27 @@
         bottomRow[i].innerText = showBottom.toFixed(1);
         if (i > 0) {
           const prev = parseFloat(bottomRow[i-1].innerText);
-          const slope = (showBottom - prev) / (length - parseFloat(lengthRow[i-1].value));
-          slopeRow[i].innerText = isFinite(slope) ? slope.toFixed(1) : '-';
+          const prevLen = parseFloat(lengthRow[i-1].value);
+          const deltaLen = length - prevLen;
+          let slope = '-';
+          if (isFinite(showBottom) && isFinite(prev) && deltaLen !== 0) {
+            slope = ((showBottom - prev) / deltaLen) * 100 / 100;
+            slope = Math.round(slope * 100) / 100;
+            slopeRow[i].innerText = slope.toFixed(2) + '%';
+            if (slope > 0) {
+              slopeRow[i].className = 'calc-cell slope-pos';
+            } else if (slope < 0) {
+              slopeRow[i].className = 'calc-cell slope-neg';
+            } else {
+              slopeRow[i].className = 'calc-cell slope-zero';
+            }
+          } else {
+            slopeRow[i].innerText = '-';
+            slopeRow[i].className = 'calc-cell slope-zero';
+          }
         } else {
           slopeRow[i].innerText = '-';
+          slopeRow[i].className = 'calc-cell slope-zero';
         }
         prevBottom = showBottom;
         prevLen = length;
