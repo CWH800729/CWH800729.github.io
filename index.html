@@ -231,7 +231,7 @@
             <div class="card">
                 <h2><i class="fas fa-clipboard-list"></i> 缺失表格系統</h2>
                 <p>這是一個工程缺失管理系統，用於追蹤和記錄工程現場的缺失項目。系統提供完整的缺失標記、照片管理、進度追蹤等功能。</p>
-                <a href="V9.html" class="defect-link">
+                <a href="http://cwh800729.github.io/V9.html" class="defect-link">
                     <i class="fas fa-external-link-alt"></i> 進入缺失表格系統
                 </a>
             </div>
@@ -239,36 +239,17 @@
             <div class="card">
                 <h2><i class="fas fa-images"></i> 照片表格製作系統</h2>
                 <p>專業的照片表格製作工具，支援照片上傳、自訂欄位、自動解析檔名等功能，幫助您快速建立標準化的照片表格文件。</p>
-                <a href="PicSheet.html" class="defect-link" style="background-color: #3498db;">
+                <a href="http://cwh800729.github.io/PicSheet.html" class="defect-link" style="background-color: #3498db;">
                     <i class="fas fa-external-link-alt"></i> 進入照片表格製作系統
                 </a>
             </div>
 
             <div class="card">
                 <h2><i class="fas fa-calculator"></i> 水溝高程換算</h2>
-                <div class="elevation-form">
-                    <div class="elevation-form-group">
-                        <label for="designElevation">設計高程 (m)：</label>
-                        <input type="number" id="designElevation" step="0.001" placeholder="請輸入設計高程">
-                    </div>
-                    <div class="elevation-form-group">
-                        <label for="actualElevation">實際高程 (m)：</label>
-                        <input type="number" id="actualElevation" step="0.001" placeholder="請輸入實際高程">
-                    </div>
-                    <div class="elevation-form-group">
-                        <label for="ditchWidth">水溝寬度 (m)：</label>
-                        <input type="number" id="ditchWidth" step="0.001" placeholder="請輸入水溝寬度">
-                    </div>
-                    <button class="calculate-btn" onclick="calculateElevation()">
-                        <i class="fas fa-calculator"></i> 計算
-                    </button>
-                </div>
-                <div class="elevation-result" id="elevationResult">
-                    <p>計算結果：</p>
-                    <p>高程差：<span class="highlight" id="elevationDiff">0.000</span> m</p>
-                    <p>坡度：<span class="highlight" id="slope">0.000</span> %</p>
-                    <p>是否符合規範：<span class="highlight" id="isCompliant">-</span></p>
-                </div>
+                <p>專業的水溝高程計算工具，用於計算水溝的高程差、坡度，並判斷是否符合規範要求。支援精確到毫米的計算，提供即時結果顯示。</p>
+                <a href="http://cwh800729.github.io/DitchElevationConversion.html" class="defect-link" style="background-color: #3498db;">
+                    <i class="fas fa-external-link-alt"></i> 進入水溝高程換算系統
+                </a>
             </div>
 
             <div class="card">
@@ -294,40 +275,7 @@
     </footer>
 
     <script>
-        // 水溝高程換算功能
-        function calculateElevation() {
-            const designElevation = parseFloat(document.getElementById('designElevation').value);
-            const actualElevation = parseFloat(document.getElementById('actualElevation').value);
-            const ditchWidth = parseFloat(document.getElementById('ditchWidth').value);
-
-            if (isNaN(designElevation) || isNaN(actualElevation) || isNaN(ditchWidth)) {
-                alert('請輸入有效的數值');
-                return;
-            }
-
-            if (ditchWidth <= 0) {
-                alert('水溝寬度必須大於0');
-                return;
-            }
-
-            // 計算高程差
-            const elevationDiff = actualElevation - designElevation;
-            
-            // 計算坡度 (百分比)
-            const slope = (elevationDiff / ditchWidth) * 100;
-            
-            // 判斷是否符合規範 (假設坡度需在 ±0.5% 範圍內)
-            const isCompliant = Math.abs(slope) <= 0.5;
-
-            // 更新結果顯示
-            document.getElementById('elevationDiff').textContent = elevationDiff.toFixed(3);
-            document.getElementById('slope').textContent = slope.toFixed(3);
-            document.getElementById('isCompliant').textContent = isCompliant ? '符合' : '不符合';
-            document.getElementById('isCompliant').style.color = isCompliant ? '#4CAF50' : '#f44336';
-            
-            // 顯示結果區域
-            document.getElementById('elevationResult').classList.add('show');
-        }
+        // 移除 calculateElevation 函數，因為它已經移到新文件中
     </script>
 </body>
 </html> 
