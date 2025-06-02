@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>照片表格製作系統</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --base-font-size: 16px;
+            --h1-size: 2rem;
+            --h3-size: 1.5rem;
+            --button-font-size: 1rem;
+            --input-font-size: 1rem;
+            --cell-text-size: 0.9rem;
+        }
+
+        @media screen and (max-width: 768px) {
+            :root {
+                --base-font-size: 14px;
+                --h1-size: 1.75rem;
+                --h3-size: 1.25rem;
+                --button-font-size: 0.9rem;
+                --input-font-size: 0.9rem;
+                --cell-text-size: 0.8rem;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            .photo-cell {
+                width: 150px;
+                height: 150px;
+            }
+
+            .custom-field {
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+
+            .custom-field .field-type {
+                width: 100%;
+                margin-top: 5px;
+            }
+
+            .custom-field input[type="text"] {
+                flex: 1;
+                min-width: 100px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            :root {
+                --base-font-size: 12px;
+                --h1-size: 1.5rem;
+                --h3-size: 1.1rem;
+                --button-font-size: 0.8rem;
+                --input-font-size: 0.8rem;
+                --cell-text-size: 0.7rem;
+            }
+
+            .photo-cell {
+                width: 120px;
+                height: 120px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+
+            .logo {
+                width: 50px;
+                height: 50px;
+            }
+
+            .control-panel {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+
+            .btn, .batch-upload-btn {
+                flex: 1;
+                min-width: 120px;
+                margin: 2px;
+                padding: 6px 10px;
+            }
+
+            .export-options select {
+                width: 100%;
+                margin: 5px 0;
+            }
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+            font-size: var(--base-font-size);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            width: 75px;
+            height: 75px;
+            border-radius: 16px;
+        }
+
+        .site-title {
+            margin: 0;
+            font-size: var(--h1-size);
+            color: #2c3e50;
+        }
+
+        .main-content {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .control-panel {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .photo-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .photo-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .photo-cell {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            background: #f8f9fa;
+            border: 2px dashed #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .photo-cell.drag-over {
+            background: #e3f2fd;
+            border-color: #3498db;
+            border-style: solid;
+        }
+
+        .photo-cell img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .photo-cell .upload-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            color: #666;
+            text-align: center;
+        }
+
+        .photo-cell .upload-btn .drag-text {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .photo-cell .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            cursor: pointer;
+            color: #e74c3c;
+            display: none;
+            z-index: 2;
+            background: rgba(255,255,255,0.7);
+            border-radius: 50%;
+            padding: 2px 6px;
+        }
+
+        .photo-cell:hover .remove-btn,
+        .photo-cell img:hover ~ .remove-btn {
+            display: block;
+        }
+
+        .custom-fields {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .available-fields {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .available-fields h4 {
+            margin: 0 0 10px 0;
+            font-size: var(--h3-size);
+            color: #2c3e50;
+        }
+
+        .field-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .field-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .field-checkbox-item:hover {
+            background: #e9ecef;
+        }
+
+        .field-checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+        }
+
+        .field-checkbox-item label {
+            font-size: var(--input-font-size);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        @media screen and (max-width: 768px) {
+            .field-checkboxes {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .field-checkboxes {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .custom-field {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            cursor: move;
+            transition: all 0.3s ease;
+            font-size: 1.15em;
+        }
+
+        .custom-field.dragging {
+            opacity: 0.5;
+            background: #f8f9fa;
+            border: 2px dashed #3498db;
+        }
+
+        .custom-field .drag-handle {
+            color: #95a5a6;
+            cursor: move;
+            padding: 5px;
+        }
+
+        .custom-field .drag-handle:hover {
+            color: #2c3e50;
+        }
+
+        .custom-field input[readonly] {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+        }
+
+        .custom-field .field-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .custom-field .field-buttons button {
+            padding: 5px 10px;
+            font-size: 0.9em;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .custom-field .field-buttons button:hover {
+            background: #c0392b;
+        }
+
+        .custom-field .field-type {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .custom-field .field-type select {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .custom-field .field-type label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .custom-field .field-type input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .custom-field input[type="text"] {
+            font-size: 1.15em;
+            padding: 6px 10px;
+        }
+
+        .custom-field button {
+            font-size: 1.1em;
+        }
+
+        .batch-upload-btn {
+            display: inline-block;
+            padding: 8px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .batch-upload-btn:hover {
+            background: #2980b9;
+        }
+
+        .batch-upload-btn input[type="file"] {
+            display: none;
+        }
+
+        .add-field-btn {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .export-options {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .export-options select {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        /* 調整表格在手機上的顯示 */
+        @media screen and (max-width: 480px) {
+            .photo-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            .photo-table td {
+                padding: 5px;
+            }
+
+            .custom-field {
+                padding: 8px;
+            }
+
+            .custom-field .drag-handle {
+                padding: 3px;
+            }
+
+            .custom-field .field-buttons button {
+                padding: 3px 6px;
+                font-size: var(--button-font-size);
+            }
+        }
+
+        /* 確保按鈕在觸控裝置上容易點擊 */
+        @media (hover: none) {
+            .btn, .batch-upload-btn, .add-field-btn,
+            .custom-field .field-buttons button {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            .custom-field input[type="checkbox"] {
+                width: 20px;
+                height: 20px;
+            }
+        }
+
+        .preview-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            max-width: 420px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .preview-title {
+            font-size: var(--h1-size);
+            color: #2c3e50;
+            margin: 0 0 20px 0;
+            text-align: center;
+        }
+        .preview-photo-vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .preview-photo-vertical .preview-photo-container {
+            margin-bottom: 10px;
+        }
+        .preview-photo-vertical .preview-photo {
+            width: 300px;
+            height: 300px;
+            object-fit: contain;
+            border: 1px solid #333;
+            background: #fff;
+        }
+        .preview-photo-vertical .preview-placeholder {
+            width: 300px;
+            height: 300px;
+            background: #fff;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #95a5a6;
+            font-size: var(--cell-text-size);
+            gap: 10px;
+            position: relative;
+        }
+        .preview-logo-fade {
+            width: 180px;
+            height: 180px;
+            object-fit: contain;
+            opacity: 0.5;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .preview-fields-vertical {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .preview-field-row {
+            display: flex;
+            flex-direction: row;
+            border-bottom: 1px solid #333;
+            min-height: 36px;
+        }
+        .preview-field-label {
+            width: 80px;
+            background: #fff;
+            color: #222;
+            font-weight: bold;
+            padding: 6px 8px;
+            border-right: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        .preview-field-value {
+            flex: 1;
+            background: #fff;
+            color: #222;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+        }
+        @media screen and (max-width: 480px) {
+            .preview-photo-vertical .preview-photo,
+            .preview-photo-vertical .preview-placeholder {
+                width: 180px;
+                height: 180px;
+            }
+            .preview-section {
+                padding: 8px;
+            }
+            .preview-field-label {
+                width: 60px;
+                font-size: 0.9em;
+            }
+            .preview-field-value {
+                font-size: 0.9em;
+            }
+        }
+        .column-selector {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 16px;
+        }
+        .column-selector label {
+            font-size: 1em;
+        }
+        .column-selector input[type="number"] {
+            width: 60px;
+            padding: 4px 8px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .photo-cell-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100%;
+        }
+        .photo-cell img {
+            margin-bottom: 8px;
+        }
+        .photo-cell-fields {
+            width: 100%;
+            margin-top: 4px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            background: #fafbfc;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+        .photo-cell-field-row {
+            display: flex;
+            flex-direction: row;
+            border-bottom: 1px solid #e0e0e0;
+            min-height: 28px;
+        }
+        .photo-cell-field-label {
+            width: 80px;
+            background: #f5f6fa;
+            color: #222;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            font-size: 1.15em;
+        }
+        .photo-cell-field-value {
+            flex: 1;
+            background: #fff;
+            color: #222;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            font-size: 1.15em;
+        }
+        .filename-mapping-config {
+            margin-bottom: 16px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            display: none;
+        }
+        .filename-mapping-config label {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .filename-mapping-config input[type="text"] {
+            font-size: 1.1em;
+            padding: 6px 10px;
+            width: 320px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <img src="https://CWH800729.github.io/CWH-LOGO" alt="logo" class="logo">
+                <h1 class="site-title">照片表格製作系統</h1>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="preview-section">
+            <div class="preview-title">預覽畫面</div>
+            <div class="preview-photo-vertical">
+                <div class="preview-photo-container">
+                    <div class="preview-placeholder" id="previewPhoto">
+                        <img src="https://CWH800729.github.io/CWH-LOGO" class="preview-logo-fade" alt="logo">
+                        <span style="z-index:1;">拖曳或點擊上傳照片</span>
+                        <span class="preview-photo-info" style="z-index:1;">此照片將作為批量匯入的模板</span>
+                    </div>
+                </div>
+                <div class="preview-fields-vertical" id="previewFieldsVertical">
+                    <!-- 動態欄位將在這裡生成 -->
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="custom-fields">
+                <h3>自訂欄位設定</h3>
+                <div class="available-fields">
+                    <h4>可用的欄位</h4>
+                    <div class="field-checkboxes">
+                        <div class="field-checkbox-item">
+                            <input type="checkbox" id="field-date" onchange="toggleField(this, '日期')">
+                            <label for="field-date">日期</label>
+                        </div>
+                        <div class="field-checkbox-item">
+                            <input type="checkbox" id="field-signature" onchange="toggleField(this, '簽名')">
+                            <label for="field-signature">簽名</label>
+                        </div>
+                        <div class="field-checkbox-item">
+                            <input type="checkbox" id="field-verification" onchange="toggleField(this, '查驗單位')">
+                            <label for="field-verification">查驗單位</label>
+                        </div>
+                        <div class="field-checkbox-item">
+                            <input type="checkbox" id="field-project" onchange="toggleField(this, '案名')">
+                            <label for="field-project">案名</label>
+                        </div>
+                        <div class="field-checkbox-item">
+                            <input type="checkbox" id="field-title" onchange="toggleField(this, '標題')">
+                            <label for="field-title">標題</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="filename-mapping-config" id="filenameMappingConfig">
+                    <label for="filenamePattern">檔名組成順序：</label>
+                    <input type="text" id="filenamePattern" placeholder="例如：日期-樓層戶別-標題" value="日期-標題" style="margin-right:8px;">
+                    <button id="filenamePatternConfirmBtn" type="button" style="margin-right:8px;">確定</button>
+                    <button id="filenamePatternEditBtn" type="button" style="display:none;margin-right:8px;">編輯</button>
+                    <span style="color:#888;font-size:0.95em;">（以 - 分隔，順序需與檔名一致）</span>
+                </div>
+                <div id="customFieldsContainer">
+                    <!-- 動態欄位將在這裡生成 -->
+                </div>
+                <button class="add-field-btn" onclick="addCustomField()">
+                    <i class="fas fa-plus"></i> 新增自訂欄位
+                </button>
+            </div>
+
+            <div class="control-panel">
+                <div class="column-selector">
+                    <label for="columnCount">欄數：</label>
+                    <input type="number" id="columnCount" min="1" max="8" value="2" onchange="setPhotoTableColumns()">
+                </div>
+                <button class="batch-upload-btn" onclick="document.getElementById('batchUpload').click()">
+                    <i class="fas fa-folder-open"></i> 批量匯入照片
+                    <input type="file" id="batchUpload" accept="image/*" multiple onchange="handleBatchUpload(this)">
+                </button>
+                <button class="btn btn-secondary" onclick="exportTable()">
+                    <i class="fas fa-download"></i> 匯出表格
+                </button>
+                <select id="exportFormat" class="export-options">
+                    <option value="excel">Excel</option>
+                    <option value="pdf">PDF</option>
+                    <option value="image">圖片</option>
+                </select>
+            </div>
+
+            <table class="photo-table" id="photoTable">
+                <tbody>
+                    <tr>
+                        <td class="photo-cell" 
+                            ondragover="handleDragOver(event)" 
+                            ondragleave="handleDragLeave(event)" 
+                            ondrop="handleDrop(event)">
+                            <input type="file" class="file-input" accept="image/*" onchange="handleImageUpload(this)">
+                            <div class="upload-btn">
+                                <i class="fas fa-cloud-upload-alt fa-2x"></i>
+                                <div>點擊上傳照片</div>
+                                <div class="drag-text">或拖曳圖片至此</div>
+                            </div>
+                            <div class="remove-btn" onclick="removePhoto(this)">
+                                <i class="fas fa-times"></i>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        // 表格操作
+        function addRow() {
+            setPhotoTableColumns();
+        }
+
+        function addColumn() {
+            setPhotoTableColumns();
+        }
+
+        function reorderPhotoCells() {
+            setPhotoTableColumns();
+        }
+
+        // 照片上傳處理
+        function handleImageUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const table = document.getElementById('photoTable');
+                    const cells = Array.from(table.querySelectorAll('.photo-cell'));
+                    let images = cells.map(cell => {
+                        const img = cell.querySelector('img');
+                        return img ? img.src : null;
+                    }).filter(src => src);
+                    let filenames = cells.map(cell => cell.dataset.filename || '');
+                    const cell = input.parentElement.parentElement;
+                    const idx = cells.indexOf(cell);
+                    if (idx !== -1) {
+                        images[idx] = e.target.result;
+                        filenames[idx] = file.name;
+                        cell.dataset.filename = file.name;
+                    } else {
+                        images.push(e.target.result);
+                        filenames.push(file.name);
+                    }
+                    renderPhotoTable(images, filenames);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removePhoto(button) {
+            const cell = button.parentElement.parentElement;
+            const table = document.getElementById('photoTable');
+            const cells = Array.from(table.querySelectorAll('.photo-cell'));
+            let images = cells.map(cell => {
+                const img = cell.querySelector('img');
+                return img ? img.src : null;
+            }).filter(src => src);
+            let filenames = cells.map(cell => cell.dataset.filename || '');
+            const idx = cells.indexOf(cell);
+            if (idx !== -1) {
+                images.splice(idx, 1);
+                filenames.splice(idx, 1);
+            }
+            renderPhotoTable(images, filenames);
+        }
+
+        // 自訂欄位拖曳排序相關函數
+        let draggedField = null;
+
+        function handleFieldDragStart(event) {
+            draggedField = event.currentTarget;
+            event.currentTarget.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleFieldDragEnd(event) {
+            event.currentTarget.classList.remove('dragging');
+            draggedField = null;
+            showOrHideFilenamePatternConfig();
+            updatePreviewTable();
+            setPhotoTableColumns();
+        }
+
+        function handleFieldDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            
+            const container = document.getElementById('customFieldsContainer');
+            const afterElement = getDragAfterElement(container, event.clientY);
+            const currentField = event.currentTarget;
+            
+            if (afterElement) {
+                container.insertBefore(currentField, afterElement);
+            } else {
+                container.appendChild(currentField);
+            }
+        }
+
+        function handleFieldDrop(event) {
+            event.preventDefault();
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.custom-field:not(.dragging)')];
+            
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // 新增欄位切換函數
+        function toggleField(checkbox, fieldName) {
+            const container = document.getElementById('customFieldsContainer');
+            const existingField = Array.from(container.querySelectorAll('.custom-field'))
+                .find(field => field.querySelector('input[placeholder="欄位名稱"]').value === fieldName);
+            if (checkbox.checked) {
+                if (!existingField) {
+                    const newField = createFieldElement(fieldName);
+                    container.appendChild(newField);
+                }
+            } else {
+                if (existingField) {
+                    existingField.remove();
+                }
+            }
+            showOrHideFilenamePatternConfig();
+            updatePreviewTable();
+            setPhotoTableColumns();
+        }
+
+        // 創建欄位元素
+        function createFieldElement(fieldName) {
+            const field = document.createElement('div');
+            field.className = 'custom-field';
+            field.draggable = true;
+            field.ondragstart = handleFieldDragStart;
+            field.ondragend = handleFieldDragEnd;
+            field.ondragover = handleFieldDragOver;
+            field.ondrop = handleFieldDrop;
+            field.innerHTML = `
+                <i class="fas fa-grip-vertical drag-handle"></i>
+                <input type="text" placeholder="欄位名稱" value="${fieldName}" readonly>
+                <input type="text" placeholder="欄位值" class="global-value" oninput="updatePreviewTable();setPhotoTableColumns();">
+                <label style="font-size:0.95em;margin-left:8px;">
+                    <input type="checkbox" class="filename-mapping" onchange="toggleFilenameMapping(this)"> 由檔名帶入
+                </label>
+                <button onclick="removeField(this)">刪除</button>
+            `;
+            return field;
+        }
+
+        // 修改 removeField 函數
+        function removeField(button) {
+            const field = button.closest('.custom-field');
+            const fieldName = field.querySelector('input[placeholder="欄位名稱"]').value;
+            // 取消對應的 checkbox
+            const checkbox = document.querySelector(`input[id^="field-"][onchange*="${fieldName}"]`);
+            if (checkbox) {
+                checkbox.checked = false;
+            }
+            field.remove();
+            showOrHideFilenamePatternConfig();
+            updatePreviewTable();
+            setPhotoTableColumns();
+        }
+
+        // 修改 addCustomField 函數
+        function addCustomField() {
+            const fieldName = prompt('請輸入新欄位名稱：');
+            if (fieldName && fieldName.trim()) {
+                const newField = createFieldElement(fieldName.trim());
+                document.getElementById('customFieldsContainer').appendChild(newField);
+            }
+            showOrHideFilenamePatternConfig();
+            updatePreviewTable();
+            setPhotoTableColumns();
+        }
+
+        // 初始化時清空預設欄位
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('customFieldsContainer');
+            container.innerHTML = '';
+            showOrHideFilenamePatternConfig();
+            updatePreviewTable();
+        });
+
+        // 批量上傳處理
+        function handleBatchUpload(input) {
+            const files = Array.from(input.files);
+            if (files.length === 0) return;
+            const table = document.getElementById('photoTable');
+            const cells = Array.from(table.querySelectorAll('.photo-cell'));
+            let images = cells.map(cell => {
+                const img = cell.querySelector('img');
+                return img ? img.src : null;
+            }).filter(src => src);
+            let filenames = cells.map(cell => cell.dataset.filename || '');
+            let loaded = 0;
+            files.forEach((file, i) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    images.push(e.target.result);
+                    filenames.push(file.name);
+                    loaded++;
+                    if (loaded === files.length) {
+                        renderPhotoTable(images, filenames);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            input.value = '';
+        }
+
+        // 匯出表格
+        function exportTable() {
+            const format = document.getElementById('exportFormat').value;
+            // TODO: 實現匯出功能
+            alert(`匯出格式：${format}\n此功能尚未實現`);
+        }
+
+        // 拖曳相關函數
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const cell = event.currentTarget;
+            cell.classList.add('drag-over');
+        }
+
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const cell = event.currentTarget;
+            cell.classList.remove('drag-over');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const files = event.dataTransfer.files;
+            if (files.length === 0) return;
+            const table = document.getElementById('photoTable');
+            const cells = Array.from(table.querySelectorAll('.photo-cell'));
+            let images = cells.map(cell => {
+                const img = cell.querySelector('img');
+                return img ? img.src : null;
+            }).filter(src => src);
+            let filenames = cells.map(cell => cell.dataset.filename || '');
+            let loaded = 0;
+            Array.from(files).forEach((file, i) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    images.push(e.target.result);
+                    filenames.push(file.name);
+                    loaded++;
+                    if (loaded === files.length) {
+                        renderPhotoTable(images, filenames);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 初始化點擊上傳功能
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.upload-btn')) {
+                const cell = e.target.closest('.photo-cell');
+                const fileInput = cell.querySelector('.file-input');
+                fileInput.click();
+            }
+        });
+
+        // 修改預覽表格更新函數，改為直向欄位
+        function updatePreviewTable() {
+            const previewFields = document.getElementById('previewFieldsVertical');
+            if (!previewFields) return;
+            previewFields.innerHTML = '';
+            // 獲取所有啟用的欄位
+            const activeFields = Array.from(document.querySelectorAll('.custom-field'))
+                .map(field => ({
+                    name: field.querySelector('input[placeholder="欄位名稱"]').value,
+                    value: field.querySelector('.global-value').value
+                }));
+            activeFields.forEach(field => {
+                const row = document.createElement('div');
+                row.className = 'preview-field-row';
+                const label = document.createElement('div');
+                label.className = 'preview-field-label';
+                label.textContent = field.name;
+                const value = document.createElement('div');
+                value.className = 'preview-field-value';
+                value.textContent = field.value;
+                row.appendChild(label);
+                row.appendChild(value);
+                previewFields.appendChild(row);
+            });
+        }
+
+        // 新增 setPhotoTableColumns，根據欄數重建表格
+        function setPhotoTableColumns() {
+            const table = document.getElementById('photoTable');
+            const cells = Array.from(table.querySelectorAll('.photo-cell'));
+            const images = cells.map(cell => {
+                const img = cell.querySelector('img');
+                return img ? img.src : null;
+            }).filter(src => src);
+            const filenames = cells.map(cell => cell.dataset.filename || '');
+            renderPhotoTable(images, filenames);
+        }
+
+        // 修改 renderPhotoTable，讓每張圖片根據自己的檔名分割填值，並保留上次自動帶入的值
+        // 並修正圖片路徑顯示順序
+        // 新增一個全域變數保存每張圖片的解析值
+        if (!window.photoFieldCache) window.photoFieldCache = [];
+        function renderPhotoTable(images, filenames) {
+            const table = document.getElementById('photoTable');
+            const columnCount = parseInt(document.getElementById('columnCount').value) || 2;
+            // 取得目前自訂欄位
+            const customFields = Array.from(document.querySelectorAll('.custom-field'));
+            const activeFields = customFields.map(field => ({
+                name: field.querySelector('input[placeholder="欄位名稱"]').value,
+                value: field.querySelector('.global-value').value,
+                filenameMapping: field.querySelector('.filename-mapping').checked
+            }));
+            // 取得檔名組成順序
+            const pattern = document.getElementById('filenamePattern').value.trim();
+            const patternArr = pattern ? pattern.split('-').map(s => s.trim()) : [];
+            // 計算需要的 row
+            const rowCount = Math.ceil(images.length / columnCount) || 1;
+            // 清空表格
+            table.innerHTML = '';
+            // 準備 field cache
+            if (!window.photoFieldCache) window.photoFieldCache = [];
+            // 逐張圖片處理
+            let imgIdx = 0;
+            for (let r = 0; r < rowCount; r++) {
+                const tr = table.insertRow();
+                for (let c = 0; c < columnCount; c++) {
+                    const idx = imgIdx;
+                    imgIdx++;
+                    const td = tr.insertCell();
+                    td.className = 'photo-cell';
+                    td.setAttribute('ondragover', 'handleDragOver(event)');
+                    td.setAttribute('ondragleave', 'handleDragLeave(event)');
+                    td.setAttribute('ondrop', 'handleDrop(event)');
+                    // cell 內容
+                    const content = document.createElement('div');
+                    content.className = 'photo-cell-content';
+                    // 上傳按鈕與圖片
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.className = 'file-input';
+                    fileInput.accept = 'image/*';
+                    fileInput.onchange = function() { handleImageUpload(this); };
+                    content.appendChild(fileInput);
+                    const uploadBtn = document.createElement('div');
+                    uploadBtn.className = 'upload-btn';
+                    uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt fa-2x"></i><div>點擊上傳照片</div><div class="drag-text">或拖曳圖片至此</div>';
+                    content.appendChild(uploadBtn);
+                    const removeBtn = document.createElement('div');
+                    removeBtn.className = 'remove-btn';
+                    removeBtn.onclick = function() { removePhoto(this); };
+                    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    content.appendChild(removeBtn);
+                    // 圖片
+                    let filename = '';
+                    let filepath = '';
+                    if (images[idx]) {
+                        const img = document.createElement('img');
+                        img.src = images[idx];
+                        content.insertBefore(img, uploadBtn);
+                        uploadBtn.style.display = 'none';
+                        if (filenames && filenames[idx]) filename = filenames[idx];
+                        // 只顯示純檔名（不含路徑與副檔名）
+                        let justName = filename;
+                        if (justName && justName.includes('/')) justName = justName.substring(justName.lastIndexOf('/') + 1);
+                        justName = justName ? (justName.split('.').slice(0, -1).join('.') || justName) : '';
+                        const nameDiv = document.createElement('div');
+                        nameDiv.style.fontSize = '0.95em';
+                        nameDiv.style.color = '#333';
+                        nameDiv.style.fontWeight = 'bold';
+                        nameDiv.style.wordBreak = 'break-all';
+                        nameDiv.textContent = justName;
+                        content.insertBefore(nameDiv, img);
+                    }
+                    // 欄位區
+                    const fieldsDiv = document.createElement('div');
+                    fieldsDiv.className = 'photo-cell-fields';
+                    // 依 patternArr 對應欄位
+                    let parts = [];
+                    let filenameError = false;
+                    if (filename && patternArr.length > 0) {
+                        let justName = filename;
+                        if (justName.includes('/')) justName = justName.substring(justName.lastIndexOf('/') + 1);
+                        justName = justName.split('.').slice(0, -1).join('.') || justName;
+                        parts = justName.split('-');
+                        if (activeFields.some(f => f.filenameMapping) && parts.length !== patternArr.length) {
+                            filenameError = true;
+                        }
+                    }
+                    // 準備本張圖片的欄位 cache
+                    if (!window.photoFieldCache[idx]) window.photoFieldCache[idx] = {};
+                    // 解析並快取本張圖片的欄位值
+                    if (!filenameError && filename && patternArr.length > 0) {
+                        activeFields.forEach((field, fidx) => {
+                            if (field.filenameMapping) {
+                                const pidx = patternArr.findIndex(p => p.replace(/\s/g, '') === field.name.replace(/\s/g, ''));
+                                window.photoFieldCache[idx][field.name] = (pidx !== -1 && parts[pidx]) ? parts[pidx] : '';
+                            }
+                        });
+                    }
+                    if (filenameError) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.style.color = 'red';
+                        errorDiv.style.fontWeight = 'bold';
+                        errorDiv.style.padding = '8px';
+                        errorDiv.textContent = '檔名格式錯誤，請檢查檔名與組成順序是否一致';
+                        content.appendChild(errorDiv);
+                    }
+                    activeFields.forEach((field, fidx) => {
+                        const row = document.createElement('div');
+                        row.className = 'photo-cell-field-row';
+                        const label = document.createElement('div');
+                        label.className = 'photo-cell-field-label';
+                        label.textContent = field.name;
+                        const value = document.createElement('div');
+                        value.className = 'photo-cell-field-value';
+                        if (field.filenameMapping && patternArr.length > 0 && filename && !filenameError) {
+                            // 自動帶入並快取
+                            value.textContent = window.photoFieldCache[idx][field.name] || '';
+                        } else {
+                            // 取消勾選時，保留上次自動帶入的值
+                            value.textContent = window.photoFieldCache[idx][field.name] || field.value;
+                        }
+                        row.appendChild(label);
+                        row.appendChild(value);
+                        fieldsDiv.appendChild(row);
+                    });
+                    content.appendChild(fieldsDiv);
+                    td.appendChild(content);
+                }
+            }
+        }
+
+        // 修改 toggleFilenameMapping，勾選/取消時自動顯示/隱藏檔名組成順序設定欄，並即時分割填值
+        function toggleFilenameMapping(checkbox) {
+            const field = checkbox.closest('.custom-field');
+            const input = field.querySelector('.global-value');
+            if (checkbox.checked) {
+                input.value = '';
+                input.readOnly = true;
+            } else {
+                input.readOnly = false;
+            }
+            // 動態顯示/隱藏檔名組成順序設定欄
+            showOrHideFilenamePatternConfig();
+            updatePreviewTable();
+            setPhotoTableColumns();
+        }
+
+        // 新增 showOrHideFilenamePatternConfig
+        function showOrHideFilenamePatternConfig() {
+            const config = document.getElementById('filenameMappingConfig');
+            const anyChecked = Array.from(document.querySelectorAll('.filename-mapping')).some(cb => cb.checked);
+            config.style.display = anyChecked ? 'flex' : 'none';
+        }
+
+        // 檔名組成鎖定/編輯機制
+        let filenamePatternLocked = false;
+        function applyFilenamePatternLock(lock) {
+            const input = document.getElementById('filenamePattern');
+            const confirmBtn = document.getElementById('filenamePatternConfirmBtn');
+            const editBtn = document.getElementById('filenamePatternEditBtn');
+            filenamePatternLocked = lock;
+            input.readOnly = lock;
+            confirmBtn.style.display = lock ? 'none' : '';
+            editBtn.style.display = lock ? '' : 'none';
+            if (lock) {
+                // 套用規則
+                updatePreviewTable();
+                setPhotoTableColumns();
+            }
+        }
+        document.getElementById('filenamePatternConfirmBtn').onclick = function() {
+            applyFilenamePatternLock(true);
+        };
+        document.getElementById('filenamePatternEditBtn').onclick = function() {
+            applyFilenamePatternLock(false);
+        };
+        // 預設鎖定
+        applyFilenamePatternLock(true);
+    </script>
+</body>
+</html> 
