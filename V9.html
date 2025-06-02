@@ -1209,6 +1209,25 @@
              oninput="saveTitle()"
              value="平面圖標記 + 缺失表格">
     </div>
+    <!-- 新增屋主和聯絡電話輸入欄位 -->
+    <div class="owner-info" style="display: flex; justify-content: space-between; margin: 10px 0; padding: 0 20px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <label style="font-size: 16px; font-weight: bold;">屋主：</label>
+        <input type="text" 
+               id="ownerName" 
+               placeholder="請輸入屋主姓名"
+               style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; width: 200px;"
+               oninput="saveOwnerInfo()">
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <label style="font-size: 16px; font-weight: bold;">聯絡電話：</label>
+        <input type="tel" 
+               id="ownerPhone" 
+               placeholder="請輸入聯絡電話"
+               style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; width: 200px;"
+               oninput="saveOwnerInfo()">
+      </div>
+    </div>
     <div class="date-display">
       <span id="currentDate"></span>
       <span class="defect-count">總缺失數量：<span id="totalDefects"></span></span>
@@ -1308,19 +1327,19 @@
     </div>
     <div class="signature-row">
       <div class="signature-box">
-        <div class="signature-label">業主簽名</div>
-        <canvas class="signature-canvas" id="ownerSignature" width="300" height="150"></canvas>
-        <div class="signature-status" id="ownerSignatureStatus">未簽名</div>
-        <div class="signature-buttons">
-          <button class="clear-signature-btn" onclick="clearSignature('ownerSignature')">清除</button>
-        </div>
-      </div>
-      <div class="signature-box">
         <div class="signature-label">客戶簽名</div>
         <canvas class="signature-canvas" id="clientSignature" width="300" height="150"></canvas>
         <div class="signature-status" id="clientSignatureStatus">未簽名</div>
         <div class="signature-buttons">
           <button class="clear-signature-btn" onclick="clearSignature('clientSignature')">清除</button>
+        </div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-label">業主簽名</div>
+        <canvas class="signature-canvas" id="ownerSignature" width="300" height="150"></canvas>
+        <div class="signature-status" id="ownerSignatureStatus">未簽名</div>
+        <div class="signature-buttons">
+          <button class="clear-signature-btn" onclick="clearSignature('ownerSignature')">清除</button>
         </div>
       </div>
       <div class="signature-box">
@@ -1465,10 +1484,27 @@
       }
     }
 
+    // 添加儲存屋主資訊的函數
+    function saveOwnerInfo() {
+      const ownerName = document.getElementById('ownerName').value;
+      const ownerPhone = document.getElementById('ownerPhone').value;
+      localStorage.setItem('ownerName', ownerName);
+      localStorage.setItem('ownerPhone', ownerPhone);
+    }
+
+    // 添加載入屋主資訊的函數
+    function loadOwnerInfo() {
+      const ownerName = localStorage.getItem('ownerName');
+      const ownerPhone = localStorage.getItem('ownerPhone');
+      if (ownerName) document.getElementById('ownerName').value = ownerName;
+      if (ownerPhone) document.getElementById('ownerPhone').value = ownerPhone;
+    }
+
     // 頁面載入時執行
     document.addEventListener('DOMContentLoaded', function() {
       updateDate();
       loadTitle();
+      loadOwnerInfo(); // 新增：載入屋主資訊
       updateVendorFilter();
       updateSummaryTable();
       initializeSignatures();
@@ -2296,6 +2332,8 @@
 
         // 4. 匯出缺失表格資料
         const defectData = {
+          ownerName: document.getElementById('ownerName').value,
+          ownerPhone: document.getElementById('ownerPhone').value,
           points: points.map(point => ({
             ...point,
             x: point.x,
@@ -2661,6 +2699,14 @@
           const keywordDataText = await keywordDataFile.async("text");
           customKeywordMap = JSON.parse(keywordDataText);
           updateKeywordTable();
+        }
+
+        // 載入屋主資訊
+        if (defectData.ownerName) {
+          document.getElementById('ownerName').value = defectData.ownerName;
+        }
+        if (defectData.ownerPhone) {
+          document.getElementById('ownerPhone').value = defectData.ownerPhone;
         }
 
         document.body.removeChild(processingMsg);
@@ -3092,6 +3138,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       updateDate();
       loadTitle();
+      loadOwnerInfo(); // 新增：載入屋主資訊
       updateVendorFilter();
       updateSummaryTable();
       initializeSignatures();
