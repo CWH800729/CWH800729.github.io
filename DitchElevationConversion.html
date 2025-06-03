@@ -24,9 +24,6 @@
       box-sizing: border-box;
     }
     .mode-indicator {
-      position: absolute;
-      top: 24px;
-      right: 3vw;
       background: #e3eafc;
       color: #1a237e;
       font-weight: bold;
@@ -35,6 +32,29 @@
       font-size: 1.1em;
       box-shadow: 0 1px 4px #0001;
       letter-spacing: 1px;
+    }
+    .back-button {
+      background: #e3eafc;
+      color: #1a237e;
+      font-weight: bold;
+      border-radius: 6px;
+      padding: 6px 18px;
+      font-size: 1.1em;
+      box-shadow: 0 1px 4px #0001;
+      letter-spacing: 1px;
+      text-decoration: none;
+      transition: background-color 0.2s;
+    }
+    .back-button:hover {
+      background: #c5cae9;
+    }
+    .top-right-controls {
+      position: absolute;
+      top: 24px;
+      right: 3vw;
+      display: flex;
+      gap: 12px;
+      z-index: 10;
     }
     h2 {
       margin-top: 0;
@@ -114,7 +134,7 @@
     }
     @media (max-width: 600px) {
       .container { padding: 8px; }
-      .mode-indicator { right: 8px; top: 8px; }
+      .top-right-controls { right: 8px; top: 8px; flex-direction: column; gap: 6px; }
       table { font-size: 0.95em; }
     }
     .point-header {
@@ -170,7 +190,10 @@
 </head>
 <body>
   <div class="container">
-    <div class="mode-indicator" id="modeIndicator">目前模式：EL</div>
+    <div class="top-right-controls">
+      <a href="https://CWH800729.github.io/index.html" class="back-button">返回選單</a>
+      <div class="mode-indicator" id="modeIndicator">目前模式：EL</div>
+    </div>
     <h2>雨溝高程輸入表（橫向排列）</h2>
     <div style="margin-bottom: 1.2em; display: flex; gap: 2em; align-items: center;">
       <label for="angle-input">角鐵預留高：</label>
