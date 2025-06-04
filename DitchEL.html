@@ -194,7 +194,7 @@
       <a href="https://CWH800729.github.io/index.html" class="back-button">返回選單</a>
       <div class="mode-indicator" id="modeIndicator">目前模式：EL</div>
     </div>
-    <h2>雨溝高程輸入表（橫向排列）</h2>
+    <h2>雨溝高程輸入表（橫向排列）<span id="importedFilename" style="font-size: 0.7em; color: #666; margin-left: 12px;"></span></h2>
     <div style="margin-bottom: 1.2em; display: flex; gap: 2em; align-items: center;">
       <label for="angle-input">角鐵預留高：</label>
       <input id="angle-input" class="input-cell" type="number" value="0">
@@ -507,6 +507,16 @@
       updateTableAndChart();
     }
 
+    function getDateTimePrefix() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      return `${year}${month}${day}${hours}${minutes}-`;
+    }
+
     function downloadData() {
       const table = document.getElementById('elevationTable');
       const rows = table.querySelectorAll('tr');
@@ -552,13 +562,45 @@
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = 'rain_gutter_data.csv';
+      
+      // 檢查是否有匯入的檔案名稱
+      const importedFilename = document.getElementById('importedFilename').textContent;
+      let downloadFilename = 'rain_gutter_data.csv'; // 預設檔名
+      
+      if (importedFilename) {
+        // 從 "[已匯入: YYYYMMDDHHMM-filename.csv]" 格式中提取檔名
+        const match = importedFilename.match(/\[已匯入: (.*?)\]/);
+        if (match && match[1]) {
+          // 檢查檔名是否已經包含日期時間前綴
+          const filenameParts = match[1].split('-');
+          if (filenameParts.length > 1) {
+            // 如果已經有日期時間前綴，只取檔名部分
+            downloadFilename = filenameParts.slice(1).join('-');
+          } else {
+            downloadFilename = match[1];
+          }
+        }
+      }
+      
+      // 加上日期時間前綴
+      downloadFilename = getDateTimePrefix() + downloadFilename;
+      link.download = downloadFilename;
       link.click();
     }
 
     function importData(event) {
       const file = event.target.files[0];
       if (!file) return;
+      
+      // 處理檔案名稱顯示
+      let displayName = file.name;
+      const filenameParts = file.name.split('-');
+      if (filenameParts.length > 1) {
+        // 如果檔名包含日期時間前綴，只顯示檔名部分
+        displayName = filenameParts.slice(1).join('-');
+      }
+      document.getElementById('importedFilename').textContent = `[已匯入: ${file.name}]`;
+      
       const reader = new FileReader();
       reader.onload = function(e) {
         const text = e.target.result;
@@ -650,6 +692,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('importedFilename').textContent = '';
       document.querySelectorAll('.net-auto').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
           const input = this.nextElementSibling;
