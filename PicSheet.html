@@ -895,25 +895,29 @@
                     <h4>可用的欄位</h4>
                     <div class="field-checkboxes">
                         <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-date" onchange="toggleField(this, '日期')">
-                            <label for="field-date">日期</label>
-                        </div>
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-signature" onchange="toggleField(this, '簽名')">
-                            <label for="field-signature">簽名</label>
-                        </div>
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-verification" onchange="toggleField(this, '查驗單位')">
-                            <label for="field-verification">查驗單位</label>
+                            <input type="checkbox" id="field-title" onchange="toggleField(this, '標題')">
+                            <label for="field-title">標題</label>
                         </div>
                         <div class="field-checkbox-item">
                             <input type="checkbox" id="field-project" onchange="toggleField(this, '案名')">
                             <label for="field-project">案名</label>
                         </div>
                         <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-title" onchange="toggleField(this, '標題')">
-                            <label for="field-title">標題</label>
+                            
+                            <input type="checkbox" id="field-date" onchange="toggleField(this, '日期')">
+                            <label for="field-date">日期</label>
                         </div>
+                        
+                        <div class="field-checkbox-item">
+                            <input type="checkbox" id="field-verification" onchange="toggleField(this, '查驗單位')">
+                            <label for="field-verification">查驗單位</label>
+                        </div><div class="field-checkbox-item">
+                            <input type="checkbox" id="field-signature" onchange="toggleField(this, '簽名')">
+                            <label for="field-signature">簽名</label>
+                        </div>
+                        
+
+                        
                     </div>
                 </div>
                 <div class="field-config-buttons" style="margin: 10px 0;">
@@ -926,7 +930,10 @@
                     </button>
                 </div>
                 <div class="filename-mapping-config" id="filenameMappingConfig">
-                    <label for="filenamePattern" class="has-tooltip" data-tooltip="請依照照片檔名的組成順序填寫，並以 - 分隔。\n例如：日期-案名-標題，檔名需為 2023-工程A-外觀.jpg\n\n此順序需與檔名完全一致，否則無法自動帶入欄位。">檔名組成順序：</label>
+                    <label for="filenamePattern" class="has-tooltip" data-tooltip="請依照照片檔名的組成順序填寫，並以 - 分隔。
+例如：日期-案名-標題，檔名需為 2023-工程A-外觀.jpg
+
+此順序需與檔名完全一致，否則無法自動帶入欄位。">檔名組成順序：</label>
                     <div class="input-group">
                         <input type="text" id="filenamePattern" placeholder="例如：日期-案名-標題" value="日期-案名-標題" oninput="updatePreviewTable();setPhotoTableColumns();">
                         <button type="button" class="lock-btn unlocked" onclick="toggleFilenamePatternLock(this)" title="點擊鎖定檔名組成順序">
