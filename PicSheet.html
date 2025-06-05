@@ -504,6 +504,45 @@
             margin: 0 0 20px 0;
             text-align: center;
         }
+        .preview-custom-titles {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .preview-custom-titles input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            font-family: inherit;
+        }
+        .preview-custom-titles input.title-main {
+            font-size: 1.5em;
+        }
+        .preview-custom-titles input.title-sub {
+            font-size: 1.25em;
+        }
+        .preview-custom-titles .print-title {
+            display: none;
+        }
+        @media print {
+            .preview-custom-titles .print-title {
+                display: block;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .preview-custom-titles .print-title .title-main {
+                font-size: 1.5em;
+                margin-bottom: 10px;
+            }
+            .preview-custom-titles .print-title .title-sub {
+                font-size: 1.25em;
+            }
+            .preview-custom-titles input {
+                display: none;
+            }
+        }
         .preview-photo-vertical {
             display: flex;
             flex-direction: column;
@@ -758,6 +797,14 @@
     <main class="container">
         <div class="preview-section">
             <div class="preview-title">預覽畫面</div>
+            <div class="preview-custom-titles">
+                <input type="text" class="title-main" placeholder="請輸入主標題" oninput="updatePreviewTitles()">
+                <input type="text" class="title-sub" placeholder="請輸入副標題" oninput="updatePreviewTitles()">
+                <div class="print-title">
+                    <div class="title-main"></div>
+                    <div class="title-sub"></div>
+                </div>
+            </div>
             <div class="preview-photo-vertical">
                 <div class="preview-photo-container">
                     <div class="preview-placeholder" id="previewPhoto">
@@ -1207,6 +1254,21 @@
             const printContainer = document.createElement('div');
             printContainer.className = 'print-content';
             
+            // 添加標題到列印內容
+            const mainTitle = document.querySelector('.preview-custom-titles input.title-main').value;
+            const subTitle = document.querySelector('.preview-custom-titles input.title-sub').value;
+            if (mainTitle || subTitle) {
+                const titlesDiv = document.createElement('div');
+                titlesDiv.className = 'preview-custom-titles';
+                titlesDiv.innerHTML = `
+                    <div class="print-title">
+                        ${mainTitle ? `<div class="title-main">${mainTitle}</div>` : ''}
+                        ${subTitle ? `<div class="title-sub">${subTitle}</div>` : ''}
+                    </div>
+                `;
+                printContainer.appendChild(titlesDiv);
+            }
+            
             // 獲取所有照片單元格
             const cells = document.querySelectorAll('.photo-cell');
             const cellsWithImages = Array.from(cells).filter(cell => cell.querySelector('img'));
@@ -1512,11 +1574,17 @@
                 .filter(cb => cb.checked)
                 .map(cb => cb.nextElementSibling.textContent);
 
+            // 獲取標題
+            const mainTitle = document.querySelector('.preview-custom-titles input.title-main').value;
+            const subTitle = document.querySelector('.preview-custom-titles input.title-sub').value;
+
             // 創建設定對象
             const config = {
                 fields: fields,
                 filenamePattern: filenamePattern,
                 selectedFields: selectedFields,
+                mainTitle: mainTitle,
+                subTitle: subTitle,
                 exportDate: new Date().toISOString()
             };
 
@@ -1597,6 +1665,15 @@
                     // 還原檔名組成順序
                     document.getElementById('filenamePattern').value = config.filenamePattern;
 
+                    // 還原標題
+                    if (config.mainTitle) {
+                        document.querySelector('.preview-custom-titles input.title-main').value = config.mainTitle;
+                    }
+                    if (config.subTitle) {
+                        document.querySelector('.preview-custom-titles input.title-sub').value = config.subTitle;
+                    }
+                    updatePreviewTitles();
+
                     // 更新預覽和表格
                     showOrHideFilenamePatternConfig();
                     updatePreviewTable();
@@ -1610,6 +1687,30 @@
             };
             reader.readAsText(file);
             input.value = '';
+        }
+
+        // 新增更新預覽標題的函數
+        function updatePreviewTitles() {
+            const mainTitle = document.querySelector('.preview-custom-titles input.title-main').value;
+            const subTitle = document.querySelector('.preview-custom-titles input.title-sub').value;
+            
+            // 更新預覽區域的標題
+            const printTitleMain = document.querySelector('.preview-custom-titles .print-title .title-main');
+            const printTitleSub = document.querySelector('.preview-custom-titles .print-title .title-sub');
+            
+            if (mainTitle) {
+                printTitleMain.textContent = mainTitle;
+                printTitleMain.style.display = 'block';
+            } else {
+                printTitleMain.style.display = 'none';
+            }
+            
+            if (subTitle) {
+                printTitleSub.textContent = subTitle;
+                printTitleSub.style.display = 'block';
+            } else {
+                printTitleSub.style.display = 'none';
+            }
         }
     </script>
 </body>
