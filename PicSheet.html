@@ -828,6 +828,29 @@
             border-radius: 6px !important;
             box-shadow: none !important;
         }
+        .has-tooltip {
+            position: relative;
+            cursor: help;
+        }
+        .has-tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #333;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            white-space: pre-line;
+            font-size: 0.98em;
+            z-index: 100;
+            min-width: 220px;
+            max-width: 320px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            margin-left: 12px;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -903,9 +926,9 @@
                     </button>
                 </div>
                 <div class="filename-mapping-config" id="filenameMappingConfig">
-                    <label for="filenamePattern">檔名組成順序：</label>
+                    <label for="filenamePattern" class="has-tooltip" data-tooltip="請依照照片檔名的組成順序填寫，並以 - 分隔。\n例如：日期-案名-標題，檔名需為 2023-工程A-外觀.jpg\n\n此順序需與檔名完全一致，否則無法自動帶入欄位。">檔名組成順序：</label>
                     <div class="input-group">
-                        <input type="text" id="filenamePattern" placeholder="例如：日期-樓層戶別-標題" value="日期-案名-標題" oninput="updatePreviewTable();setPhotoTableColumns();">
+                        <input type="text" id="filenamePattern" placeholder="例如：日期-案名-標題" value="日期-案名-標題" oninput="updatePreviewTable();setPhotoTableColumns();">
                         <button type="button" class="lock-btn unlocked" onclick="toggleFilenamePatternLock(this)" title="點擊鎖定檔名組成順序">
                             <i class="fas fa-lock"></i>
                             <span>鎖定</span>
@@ -929,6 +952,9 @@
                 <button class="batch-upload-btn" onclick="document.getElementById('batchUpload').click()">
                     <i class="fas fa-folder-open"></i> 批量匯入照片
                     <input type="file" id="batchUpload" accept="image/*" multiple onchange="handleBatchUpload(this)">
+                </button>
+                <button class="btn btn-secondary" onclick="clearAllPhotos()">
+                    <i class="fas fa-trash"></i> 清空照片
                 </button>
                 <button class="btn btn-primary" onclick="printTable()">
                     <i class="fas fa-print"></i> 列印表格
@@ -1312,16 +1338,17 @@
                                 printRow.className = 'print-field-row';
                                 
                                 const label = row.querySelector('.photo-cell-field-label');
-                                const value = row.querySelector('.photo-cell-field-value');
+                                const valueInput = row.querySelector('input.photo-cell-field-value');
+                                const value = valueInput ? valueInput.value : '';
                                 
-                                if (label && value) {
+                                if (label) {
                                     const printLabel = document.createElement('div');
                                     printLabel.className = 'print-field-label';
                                     printLabel.textContent = label.textContent;
                                     
                                     const printValue = document.createElement('div');
                                     printValue.className = 'print-field-value';
-                                    printValue.textContent = value.textContent;
+                                    printValue.textContent = value;
                                     
                                     printRow.appendChild(printLabel);
                                     printRow.appendChild(printValue);
@@ -1872,6 +1899,11 @@
             } else {
                 printTitleSub.style.display = 'none';
             }
+        }
+
+        function clearAllPhotos() {
+            document.getElementById('photoTable').innerHTML = '<tbody><tr><td class="photo-cell" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><input type="file" class="file-input" accept="image/*" onchange="handleImageUpload(this)"><div class="upload-btn"><i class="fas fa-cloud-upload-alt fa-2x"></i><div>點擊上傳照片</div><div class="drag-text">或拖曳圖片至此</div></div><div class="remove-btn" onclick="removePhoto(this)"><i class="fas fa-times"></i></div></td></tr></tbody>';
+            window.photoFieldValues = [];
         }
     </script>
 </body>
