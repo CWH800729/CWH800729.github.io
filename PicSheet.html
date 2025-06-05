@@ -691,9 +691,17 @@
                 left: 0;
                 top: 0;
                 width: 100%;
+            }
+            .print-page {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(3, 1fr);
                 gap: 1cm;
+                width: 100%;
+                page-break-after: always;
+            }
+            .print-page:last-child {
+                page-break-after: auto;
             }
             .print-photo-cell {
                 page-break-inside: avoid;
@@ -1219,6 +1227,9 @@
                     pageCells.push(emptyCell);
                 }
                 
+                // 建立每頁的 grid 容器
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'print-page';
                 // 處理這頁的每個單元格
                 pageCells.forEach(cell => {
                     const printCell = document.createElement('div');
@@ -1263,9 +1274,9 @@
                             printCell.appendChild(printFields);
                         }
                     }
-                    
-                    printContainer.appendChild(printCell);
+                    pageDiv.appendChild(printCell);
                 });
+                printContainer.appendChild(pageDiv);
             }
             
             // 將列印內容添加到 body
@@ -1509,12 +1520,20 @@
                 exportDate: new Date().toISOString()
             };
 
+            // 產生日期時間字串 YYYYMMDDHHmm
+            const now = new Date();
+            const pad = n => n.toString().padStart(2, '0');
+            const dateStr = now.getFullYear().toString() + pad(now.getMonth() + 1) + pad(now.getDate()) + pad(now.getHours()) + pad(now.getMinutes());
+            // 預設檔名
+            const defaultName = '欄位設定.json';
+            const fileName = `${dateStr}-${defaultName}`;
+
             // 轉換為 JSON 並下載
             const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `欄位設定_${new Date().toLocaleDateString()}.json`;
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1525,6 +1544,16 @@
         function importFieldConfig(input) {
             const file = input.files[0];
             if (!file) return;
+
+            // 解析檔名，取得日期時間與主檔名
+            let importDateTime = '';
+            let importBaseName = '';
+            const match = file.name.match(/^([0-9]{12})-(.+)$/);
+            if (match) {
+                importDateTime = match[1];
+                importBaseName = match[2];
+                // 你可以根據 importDateTime 做進一步處理
+            }
 
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -1573,14 +1602,14 @@
                     updatePreviewTable();
                     setPhotoTableColumns();
 
-                    alert('欄位設定已成功匯入！');
+                    alert('欄位設定已成功匯入！' + (importDateTime ? `\n檔案日期時間：${importDateTime}` : ''));
                 } catch (error) {
                     alert('匯入失敗：檔案格式不正確');
                     console.error('匯入錯誤：', error);
                 }
             };
             reader.readAsText(file);
-            input.value = ''; // 清空檔案輸入，允許重複匯入相同檔案
+            input.value = '';
         }
     </script>
 </body>
