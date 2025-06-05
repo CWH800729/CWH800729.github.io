@@ -671,6 +671,68 @@
             padding: 6px 10px;
             width: 320px;
         }
+
+        /* 列印樣式 */
+        @media print {
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+            body * {
+                visibility: hidden;
+            }
+            .print-content, .print-content * {
+                visibility: visible;
+            }
+            .print-content {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1cm;
+            }
+            .print-photo-cell {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                height: calc((297mm - 2cm - 2cm) / 3); /* A4 高度減去上下邊距，除以3行 */
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 0;
+            }
+            .print-photo-cell img {
+                width: 100%;
+                height: calc((297mm - 2cm - 2cm) / 3 - 60px); /* 減去欄位高度 */
+                object-fit: contain;
+                margin-bottom: 5px;
+            }
+            .print-photo-fields {
+                width: 100%;
+                border: 1px solid #000;
+                flex-shrink: 0;
+            }
+            .print-field-row {
+                display: flex;
+                border-bottom: 1px solid #000;
+                min-height: 20px;
+            }
+            .print-field-label {
+                width: 80px;
+                padding: 2px 5px;
+                border-right: 1px solid #000;
+                font-weight: bold;
+                font-size: 10pt;
+            }
+            .print-field-value {
+                flex: 1;
+                padding: 2px 5px;
+                font-size: 10pt;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -752,6 +814,9 @@
                 </button>
                 <button class="btn btn-secondary" onclick="exportTable()">
                     <i class="fas fa-download"></i> 匯出表格
+                </button>
+                <button class="btn btn-primary" onclick="printTable()">
+                    <i class="fas fa-print"></i> 列印表格
                 </button>
                 <select id="exportFormat" class="export-options">
                     <option value="excel">Excel</option>
@@ -1002,6 +1067,91 @@
             const format = document.getElementById('exportFormat').value;
             // TODO: 實現匯出功能
             alert(`匯出格式：${format}\n此功能尚未實現`);
+        }
+
+        // 列印表格
+        function printTable() {
+            // 創建列印用的內容容器
+            const printContainer = document.createElement('div');
+            printContainer.className = 'print-content';
+            
+            // 獲取所有照片單元格
+            const cells = document.querySelectorAll('.photo-cell');
+            const cellsWithImages = Array.from(cells).filter(cell => cell.querySelector('img'));
+            
+            // 計算需要多少頁
+            const cellsPerPage = 6; // 2x3 網格
+            const totalPages = Math.ceil(cellsWithImages.length / cellsPerPage);
+            
+            // 為每頁創建內容
+            for (let page = 0; page < totalPages; page++) {
+                const pageStart = page * cellsPerPage;
+                const pageCells = cellsWithImages.slice(pageStart, pageStart + cellsPerPage);
+                
+                // 如果這頁的單元格少於6個，添加空白單元格
+                while (pageCells.length < cellsPerPage) {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'print-photo-cell';
+                    pageCells.push(emptyCell);
+                }
+                
+                // 處理這頁的每個單元格
+                pageCells.forEach(cell => {
+                    const printCell = document.createElement('div');
+                    printCell.className = 'print-photo-cell';
+                    
+                    if (cell.querySelector('img')) {
+                        // 複製圖片
+                        const printImg = document.createElement('img');
+                        printImg.src = cell.querySelector('img').src;
+                        printCell.appendChild(printImg);
+                        
+                        // 複製欄位
+                        const fieldsDiv = cell.querySelector('.photo-cell-fields');
+                        if (fieldsDiv) {
+                            const printFields = document.createElement('div');
+                            printFields.className = 'print-photo-fields';
+                            
+                            // 複製每個欄位
+                            const fieldRows = fieldsDiv.querySelectorAll('.photo-cell-field-row');
+                            fieldRows.forEach(row => {
+                                const printRow = document.createElement('div');
+                                printRow.className = 'print-field-row';
+                                
+                                const label = row.querySelector('.photo-cell-field-label');
+                                const value = row.querySelector('.photo-cell-field-value');
+                                
+                                if (label && value) {
+                                    const printLabel = document.createElement('div');
+                                    printLabel.className = 'print-field-label';
+                                    printLabel.textContent = label.textContent;
+                                    
+                                    const printValue = document.createElement('div');
+                                    printValue.className = 'print-field-value';
+                                    printValue.textContent = value.textContent;
+                                    
+                                    printRow.appendChild(printLabel);
+                                    printRow.appendChild(printValue);
+                                    printFields.appendChild(printRow);
+                                }
+                            });
+                            
+                            printCell.appendChild(printFields);
+                        }
+                    }
+                    
+                    printContainer.appendChild(printCell);
+                });
+            }
+            
+            // 將列印內容添加到 body
+            document.body.appendChild(printContainer);
+            
+            // 執行列印
+            window.print();
+            
+            // 列印完成後移除列印內容
+            document.body.removeChild(printContainer);
         }
 
         // 拖曳相關函數
