@@ -821,6 +821,36 @@
                 display: none !important;
             }
         }
+        .photo-cell-field-value[readonly] {
+            border: 1px solid #d0d0d0 !important;
+            background: #f8f8f8 !important;
+            color: #888 !important;
+            border-radius: 6px !important;
+            box-shadow: none !important;
+        }
+        .has-tooltip {
+            position: relative;
+            cursor: help;
+        }
+        .has-tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #333;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            white-space: pre-line;
+            font-size: 0.98em;
+            z-index: 100;
+            min-width: 220px;
+            max-width: 320px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            margin-left: 12px;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -896,9 +926,9 @@
                     </button>
                 </div>
                 <div class="filename-mapping-config" id="filenameMappingConfig">
-                    <label for="filenamePattern">檔名組成順序：</label>
+                    <label for="filenamePattern" class="has-tooltip" data-tooltip="請依照照片檔名的組成順序填寫，並以 - 分隔。\n例如：日期-案名-標題，檔名需為 2023-工程A-外觀.jpg\n\n此順序需與檔名完全一致，否則無法自動帶入欄位。">檔名組成順序：</label>
                     <div class="input-group">
-                        <input type="text" id="filenamePattern" placeholder="例如：日期-樓層戶別-標題" value="日期-案名-標題" oninput="updatePreviewTable();setPhotoTableColumns();">
+                        <input type="text" id="filenamePattern" placeholder="例如：日期-案名-標題" value="日期-案名-標題" oninput="updatePreviewTable();setPhotoTableColumns();">
                         <button type="button" class="lock-btn unlocked" onclick="toggleFilenamePatternLock(this)" title="點擊鎖定檔名組成順序">
                             <i class="fas fa-lock"></i>
                             <span>鎖定</span>
@@ -922,6 +952,9 @@
                 <button class="batch-upload-btn" onclick="document.getElementById('batchUpload').click()">
                     <i class="fas fa-folder-open"></i> 批量匯入照片
                     <input type="file" id="batchUpload" accept="image/*" multiple onchange="handleBatchUpload(this)">
+                </button>
+                <button class="btn btn-secondary" onclick="clearAllPhotos()">
+                    <i class="fas fa-trash"></i> 清空照片
                 </button>
                 <button class="btn btn-primary" onclick="printTable()">
                     <i class="fas fa-print"></i> 列印表格
@@ -952,6 +985,9 @@
     </main>
 
     <script>
+        // 全域變數保存每張照片的欄位值
+        window.photoFieldValues = [];
+
         // 表格操作
         function addRow() {
             setPhotoTableColumns();
@@ -1225,6 +1261,7 @@
                     if (loaded === files.length) {
                         console.log('所有檔案處理完成，開始渲染表格');
                         console.log('所有檔案的欄位值映射:', allFieldValues);
+                        window.photoFieldValues = allFieldValues;
                         renderPhotoTable(images, filenames, allFieldValues);
                     }
                 };
@@ -1301,16 +1338,17 @@
                                 printRow.className = 'print-field-row';
                                 
                                 const label = row.querySelector('.photo-cell-field-label');
-                                const value = row.querySelector('.photo-cell-field-value');
+                                const valueInput = row.querySelector('input.photo-cell-field-value');
+                                const value = valueInput ? valueInput.value : '';
                                 
-                                if (label && value) {
+                                if (label) {
                                     const printLabel = document.createElement('div');
                                     printLabel.className = 'print-field-label';
                                     printLabel.textContent = label.textContent;
                                     
                                     const printValue = document.createElement('div');
                                     printValue.className = 'print-field-value';
-                                    printValue.textContent = value.textContent;
+                                    printValue.textContent = value;
                                     
                                     printRow.appendChild(printLabel);
                                     printRow.appendChild(printValue);
@@ -1455,6 +1493,7 @@
                     if (loaded === files.length) {
                         console.log('所有檔案處理完成，開始渲染表格');
                         console.log('所有檔案的欄位值映射:', allFieldValues);
+                        window.photoFieldValues = allFieldValues;
                         renderPhotoTable(images, filenames, allFieldValues);
                     }
                 };
@@ -1495,6 +1534,8 @@
                 row.appendChild(value);
                 previewFields.appendChild(row);
             });
+            // 重新渲染下方表格，保留每張照片的欄位值
+            setPhotoTableColumns();
         }
 
         // 新增 setPhotoTableColumns，根據欄數重建表格
@@ -1506,7 +1547,7 @@
                 return img ? img.src : null;
             }).filter(src => src);
             const filenames = cells.map(cell => cell.dataset.filename || '');
-            renderPhotoTable(images, filenames);
+            renderPhotoTable(images, filenames, window.photoFieldValues);
         }
 
         // 修改 renderPhotoTable，讓每張圖片根據自己的檔名分割填值
@@ -1600,20 +1641,27 @@
                         label.className = 'photo-cell-field-label';
                         label.textContent = field.name;
                         
-                        const value = document.createElement('div');
-                        value.className = 'photo-cell-field-value';
-                        
-                        // 根據欄位設定決定顯示的值
-                        if (field.filenameMapping && currentFieldValues[field.name]) {
-                            value.textContent = currentFieldValues[field.name];
-                            console.log(`欄位 ${field.name} 使用檔名值:`, currentFieldValues[field.name]);
+                        // 欄位值輸入框
+                        const valueInput = document.createElement('input');
+                        valueInput.className = 'photo-cell-field-value';
+                        valueInput.type = 'text';
+                        valueInput.value = (field.filenameMapping && currentFieldValues[field.name] !== undefined)
+                            ? currentFieldValues[field.name]
+                            : (currentFieldValues[field.name] !== undefined && currentFieldValues[field.name] !== '' ? currentFieldValues[field.name] : field.value);
+                        valueInput.oninput = function() {
+                            if (!allFieldValues[idx]) allFieldValues[idx] = {};
+                            allFieldValues[idx][field.name] = this.value;
+                            window.photoFieldValues = allFieldValues;
+                        };
+                        // 如果是由檔名帶入且有值，則設為唯讀
+                        if (field.filenameMapping && currentFieldValues[field.name] !== undefined) {
+                            valueInput.readOnly = true;
                         } else {
-                            value.textContent = field.value;
-                            console.log(`欄位 ${field.name} 使用預設值:`, field.value);
+                            valueInput.readOnly = false;
                         }
                         
                         row.appendChild(label);
-                        row.appendChild(value);
+                        row.appendChild(valueInput);
                         fieldsDiv.appendChild(row);
                     });
                     
@@ -1621,6 +1669,8 @@
                     td.appendChild(content);
                 }
             }
+            // 渲染結束後同步全域
+            window.photoFieldValues = allFieldValues;
         }
 
         // 修改 toggleFilenameMapping，勾選/取消時自動顯示/隱藏檔名組成順序設定欄，並即時分割填值
@@ -1849,6 +1899,11 @@
             } else {
                 printTitleSub.style.display = 'none';
             }
+        }
+
+        function clearAllPhotos() {
+            document.getElementById('photoTable').innerHTML = '<tbody><tr><td class="photo-cell" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><input type="file" class="file-input" accept="image/*" onchange="handleImageUpload(this)"><div class="upload-btn"><i class="fas fa-cloud-upload-alt fa-2x"></i><div>點擊上傳照片</div><div class="drag-text">或拖曳圖片至此</div></div><div class="remove-btn" onclick="removePhoto(this)"><i class="fas fa-times"></i></div></td></tr></tbody>';
+            window.photoFieldValues = [];
         }
     </script>
 </body>
