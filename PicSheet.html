@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>照片表格製作系統</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- 添加 SheetJS 庫 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --base-font-size: 16px;
@@ -790,6 +792,15 @@
                         </div>
                     </div>
                 </div>
+                <div class="field-config-buttons" style="margin: 10px 0;">
+                    <button class="btn btn-secondary" onclick="exportFieldConfig()">
+                        <i class="fas fa-save"></i> 匯出欄位設定
+                    </button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('importConfig').click()">
+                        <i class="fas fa-upload"></i> 匯入欄位設定
+                        <input type="file" id="importConfig" accept=".json" style="display: none;" onchange="importFieldConfig(this)">
+                    </button>
+                </div>
                 <div class="filename-mapping-config" id="filenameMappingConfig">
                     <label for="filenamePattern">檔名組成順序：</label>
                     <input type="text" id="filenamePattern" placeholder="例如：日期-樓層戶別-標題" value="日期-標題" oninput="updatePreviewTable();setPhotoTableColumns();">
@@ -1065,8 +1076,121 @@
         // 匯出表格
         function exportTable() {
             const format = document.getElementById('exportFormat').value;
-            // TODO: 實現匯出功能
-            alert(`匯出格式：${format}\n此功能尚未實現`);
+            if (format === 'excel') {
+                exportToExcel();
+            } else {
+                alert(`匯出格式：${format}\n此功能尚未實現`);
+            }
+        }
+
+        // Excel 匯出功能
+        function exportToExcel() {
+            // 獲取所有照片單元格
+            const cells = document.querySelectorAll('.photo-cell');
+            const cellsWithImages = Array.from(cells).filter(cell => cell.querySelector('img'));
+            
+            // 計算需要多少頁
+            const cellsPerPage = 6; // 2x3 網格
+            const totalPages = Math.ceil(cellsWithImages.length / cellsPerPage);
+            
+            // 創建工作簿
+            const wb = XLSX.utils.book_new();
+            
+            // 為每頁創建一個工作表
+            for (let page = 0; page < totalPages; page++) {
+                const pageStart = page * cellsPerPage;
+                const pageCells = cellsWithImages.slice(pageStart, pageStart + cellsPerPage);
+                
+                // 創建頁面數據
+                const pageData = [];
+                
+                // 處理這頁的每個單元格（2x3 網格）
+                for (let row = 0; row < 3; row++) {
+                    for (let col = 0; col < 2; col++) {
+                        const cellIndex = row * 2 + col;
+                        const cell = pageCells[cellIndex];
+                        
+                        if (cell && cell.querySelector('img')) {
+                            // 獲取圖片
+                            const img = cell.querySelector('img');
+                            const imgData = img.src;
+                            
+                            // 獲取欄位數據
+                            const fields = [];
+                            const fieldRows = cell.querySelectorAll('.photo-cell-field-row');
+                            fieldRows.forEach(row => {
+                                const label = row.querySelector('.photo-cell-field-label').textContent;
+                                const value = row.querySelector('.photo-cell-field-value').textContent;
+                                fields.push({ label, value });
+                            });
+                            
+                            // 計算在 Excel 中的位置
+                            const excelRow = row * 20; // 每個照片單元格佔用 20 行
+                            const excelCol = col * 15; // 每個照片單元格佔用 15 列
+                            
+                            // 添加圖片單元格
+                            pageData[excelRow] = pageData[excelRow] || [];
+                            pageData[excelRow][excelCol] = { t: 's', v: '照片' };
+                            
+                            // 添加欄位數據
+                            fields.forEach((field, index) => {
+                                const fieldRow = excelRow + index + 1;
+                                pageData[fieldRow] = pageData[fieldRow] || [];
+                                pageData[fieldRow][excelCol] = { t: 's', v: field.label };
+                                pageData[fieldRow][excelCol + 1] = { t: 's', v: field.value };
+                            });
+                            
+                            // 設置單元格樣式
+                            const range = {
+                                s: { r: excelRow, c: excelCol },
+                                e: { r: excelRow + fields.length, c: excelCol + 1 }
+                            };
+                            
+                            // 添加圖片
+                            if (!wb.Sheets['圖片']) {
+                                wb.Sheets['圖片'] = XLSX.utils.aoa_to_sheet([[]]);
+                            }
+                            const imgName = `img_${page}_${row}_${col}`;
+                            XLSX.utils.sheet_add_aoa(wb.Sheets['圖片'], [[{ t: 's', v: imgData }]], { origin: imgName });
+                        }
+                    }
+                }
+                
+                // 創建工作表
+                const ws = XLSX.utils.aoa_to_sheet(pageData);
+                
+                // 設置列寬
+                const colWidths = [];
+                for (let i = 0; i < 30; i++) {
+                    colWidths.push({ wch: 15 });
+                }
+                ws['!cols'] = colWidths;
+                
+                // 設置行高
+                const rowHeights = [];
+                for (let i = 0; i < 60; i++) {
+                    rowHeights.push({ hpt: 20 });
+                }
+                ws['!rows'] = rowHeights;
+                
+                // 設置打印區域
+                ws['!print'] = {
+                    area: { s: { r: 0, c: 0 }, e: { r: 59, c: 29 } },
+                    gridLines: true,
+                    paperSize: 9, // A4
+                    orientation: 'portrait',
+                    fitToPage: true,
+                    fitToWidth: 1,
+                    fitToHeight: 1
+                };
+                
+                // 添加工作表到工作簿
+                XLSX.utils.book_append_sheet(wb, ws, `頁面 ${page + 1}`);
+            }
+            
+            // 生成並下載 Excel 文件
+            const fileName = `照片表格_${new Date().toLocaleDateString()}.xlsx`;
+            XLSX.writeFile(wb, fileName);
         }
 
         // 列印表格
@@ -1353,6 +1477,110 @@
             const config = document.getElementById('filenameMappingConfig');
             const anyChecked = Array.from(document.querySelectorAll('.filename-mapping')).some(cb => cb.checked);
             config.style.display = anyChecked ? 'flex' : 'none';
+        }
+
+        // 匯出欄位設定
+        function exportFieldConfig() {
+            // 獲取所有自訂欄位的設定
+            const fields = Array.from(document.querySelectorAll('.custom-field')).map(field => {
+                const nameInput = field.querySelector('input[placeholder="欄位名稱"]');
+                const valueInput = field.querySelector('.global-value');
+                const filenameMapping = field.querySelector('.filename-mapping').checked;
+                return {
+                    name: nameInput.value,
+                    value: valueInput.value,
+                    filenameMapping: filenameMapping
+                };
+            });
+
+            // 獲取檔名組成順序
+            const filenamePattern = document.getElementById('filenamePattern').value;
+
+            // 獲取已選中的預設欄位
+            const selectedFields = Array.from(document.querySelectorAll('.field-checkbox-item input[type="checkbox"]'))
+                .filter(cb => cb.checked)
+                .map(cb => cb.nextElementSibling.textContent);
+
+            // 創建設定對象
+            const config = {
+                fields: fields,
+                filenamePattern: filenamePattern,
+                selectedFields: selectedFields,
+                exportDate: new Date().toISOString()
+            };
+
+            // 轉換為 JSON 並下載
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `欄位設定_${new Date().toLocaleDateString()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 匯入欄位設定
+        function importFieldConfig(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    
+                    // 清空現有欄位
+                    const container = document.getElementById('customFieldsContainer');
+                    container.innerHTML = '';
+                    
+                    // 重置所有預設欄位的勾選狀態
+                    document.querySelectorAll('.field-checkbox-item input[type="checkbox"]').forEach(cb => {
+                        cb.checked = false;
+                    });
+
+                    // 還原預設欄位的勾選狀態
+                    config.selectedFields.forEach(fieldName => {
+                        const checkbox = Array.from(document.querySelectorAll('.field-checkbox-item input[type="checkbox"]'))
+                            .find(cb => cb.nextElementSibling.textContent === fieldName);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            // 不要呼叫 toggleField，避免重複產生欄位
+                        }
+                    });
+
+                    // 還原自訂欄位
+                    config.fields.forEach(field => {
+                        const newField = createFieldElement(field.name);
+                        const valueInput = newField.querySelector('.global-value');
+                        const filenameMapping = newField.querySelector('.filename-mapping');
+                        
+                        valueInput.value = field.value;
+                        filenameMapping.checked = field.filenameMapping;
+                        if (field.filenameMapping) {
+                            valueInput.readOnly = true;
+                        }
+                        
+                        container.appendChild(newField);
+                    });
+
+                    // 還原檔名組成順序
+                    document.getElementById('filenamePattern').value = config.filenamePattern;
+
+                    // 更新預覽和表格
+                    showOrHideFilenamePatternConfig();
+                    updatePreviewTable();
+                    setPhotoTableColumns();
+
+                    alert('欄位設定已成功匯入！');
+                } catch (error) {
+                    alert('匯入失敗：檔案格式不正確');
+                    console.error('匯入錯誤：', error);
+                }
+            };
+            reader.readAsText(file);
+            input.value = ''; // 清空檔案輸入，允許重複匯入相同檔案
         }
     </script>
 </body>
