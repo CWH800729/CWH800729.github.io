@@ -298,9 +298,8 @@
         }
 
         .field-checkbox-item label {
-            font-size: var(--input-font-size);
-            cursor: pointer;
-            user-select: none;
+            font-size: 1.08em;
+            padding-left: 2px;
         }
 
         @media screen and (max-width: 768px) {
@@ -893,28 +892,7 @@
                 <h3>自訂欄位設定</h3>
                 <div class="available-fields">
                     <h4>可用的欄位</h4>
-                    <div class="field-checkboxes">
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-date" onchange="toggleField(this, '日期')">
-                            <label for="field-date">日期</label>
-                        </div>
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-signature" onchange="toggleField(this, '簽名')">
-                            <label for="field-signature">簽名</label>
-                        </div>
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-verification" onchange="toggleField(this, '查驗單位')">
-                            <label for="field-verification">查驗單位</label>
-                        </div>
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-project" onchange="toggleField(this, '案名')">
-                            <label for="field-project">案名</label>
-                        </div>
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-title" onchange="toggleField(this, '標題')">
-                            <label for="field-title">標題</label>
-                        </div>
-                    </div>
+                    <div class="field-checkboxes" id="fieldCheckboxes"></div>
                 </div>
                 <div class="field-config-buttons" style="margin: 10px 0;">
                     <button class="btn btn-secondary" onclick="exportFieldConfig()">
@@ -926,7 +904,10 @@
                     </button>
                 </div>
                 <div class="filename-mapping-config" id="filenameMappingConfig">
-                    <label for="filenamePattern" class="has-tooltip" data-tooltip="請依照照片檔名的組成順序填寫，並以 - 分隔。\n例如：日期-案名-標題，檔名需為 2023-工程A-外觀.jpg\n\n此順序需與檔名完全一致，否則無法自動帶入欄位。">檔名組成順序：</label>
+                    <label for="filenamePattern" class="has-tooltip" data-tooltip="請依照照片檔名的組成順序填寫，並以 - 分隔。
+例如：日期-案名-標題，檔名需為 2023-工程A-外觀.jpg
+
+此順序需與檔名完全一致，否則無法自動帶入欄位。">檔名組成順序：</label>
                     <div class="input-group">
                         <input type="text" id="filenamePattern" placeholder="例如：日期-案名-標題" value="日期-案名-標題" oninput="updatePreviewTable();setPhotoTableColumns();">
                         <button type="button" class="lock-btn unlocked" onclick="toggleFilenamePatternLock(this)" title="點擊鎖定檔名組成順序">
@@ -1905,6 +1886,29 @@
             document.getElementById('photoTable').innerHTML = '<tbody><tr><td class="photo-cell" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><input type="file" class="file-input" accept="image/*" onchange="handleImageUpload(this)"><div class="upload-btn"><i class="fas fa-cloud-upload-alt fa-2x"></i><div>點擊上傳照片</div><div class="drag-text">或拖曳圖片至此</div></div><div class="remove-btn" onclick="removePhoto(this)"><i class="fas fa-times"></i></div></td></tr></tbody>';
             window.photoFieldValues = [];
         }
+
+        const availableFields = [
+            { id: 'field-title', name: '標題' },
+            { id: 'field-project', name: '案名' },
+            { id: 'field-date', name: '日期' },
+            { id: 'field-verification', name: '查驗單位' },
+            { id: 'field-signature', name: '簽名' }
+        ];
+
+        function renderAvailableFields() {
+            const container = document.getElementById('fieldCheckboxes');
+            container.innerHTML = '';
+            availableFields.forEach(field => {
+                const div = document.createElement('div');
+                div.className = 'field-checkbox-item';
+                div.innerHTML = `
+                    <input type="checkbox" id="${field.id}" onchange="toggleField(this, '${field.name}')">
+                    <label for="${field.id}">${field.name}</label>
+                `;
+                container.appendChild(div);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', renderAvailableFields);
     </script>
 </body>
 </html> 
