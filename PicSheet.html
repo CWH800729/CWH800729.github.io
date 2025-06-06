@@ -1170,7 +1170,13 @@
                 isLocked: isPatternLocked
             });
 
-            if (!isPatternLocked) {
+            // 檢查是否有任何欄位勾選了"由檔名代入"
+            const hasFilenameMapping = Array.from(document.querySelectorAll('.custom-field')).some(field => 
+                field.querySelector('.filename-mapping').checked
+            );
+
+            // 只有在有欄位勾選"由檔名代入"時才檢查鎖定狀態
+            if (hasFilenameMapping && !isPatternLocked) {
                 alert('請先確認並鎖定檔名組成順序！');
                 input.value = '';
                 return;
@@ -1207,8 +1213,8 @@
                         parts: filenameParts
                     });
 
-                    // 檢查檔名格式是否符合設定
-                    if (filenameParts.length !== patternParts.length) {
+                    // 只有在有欄位勾選"由檔名代入"時才檢查檔名格式
+                    if (hasFilenameMapping && filenameParts.length !== patternParts.length) {
                         console.error('檔名格式不符合:', {
                             expected: patternParts,
                             actual: filenameParts
@@ -1223,14 +1229,16 @@
 
                     // 建立檔名對應的欄位值映射
                     const fieldValues = {};
-                    patternParts.forEach((part, index) => {
-                        customFields.forEach(field => {
-                            if (field.name === part && field.filenameMapping) {
-                                fieldValues[field.name] = filenameParts[index];
-                                console.log(`欄位對應: ${field.name} = ${filenameParts[index]}`);
-                            }
+                    if (hasFilenameMapping) {
+                        patternParts.forEach((part, index) => {
+                            customFields.forEach(field => {
+                                if (field.name === part && field.filenameMapping) {
+                                    fieldValues[field.name] = filenameParts[index];
+                                    console.log(`欄位對應: ${field.name} = ${filenameParts[index]}`);
+                                }
+                            });
                         });
-                    });
+                    }
                     console.log('當前檔案的欄位值映射:', fieldValues);
 
                     // 儲存圖片和檔名，以及對應的欄位值
@@ -1385,7 +1393,13 @@
                 isLocked: isPatternLocked
             });
 
-            if (!isPatternLocked) {
+            // 檢查是否有任何欄位勾選了"由檔名代入"
+            const hasFilenameMapping = Array.from(document.querySelectorAll('.custom-field')).some(field => 
+                field.querySelector('.filename-mapping').checked
+            );
+
+            // 只有在有欄位勾選"由檔名代入"時才檢查鎖定狀態
+            if (hasFilenameMapping && !isPatternLocked) {
                 console.log('請先確認並鎖定檔名組成順序！');
                 return;
             }
@@ -1415,13 +1429,15 @@
                 const filenameWithoutExt = filename.split('.').slice(0, -1).join('.');
                 const filenameParts = filenameWithoutExt.split('-');
                 const fieldValues = {};
-                patternParts.forEach((part, index) => {
-                    customFields.forEach(field => {
-                        if (field.name === part && field.filenameMapping) {
-                            fieldValues[field.name] = filenameParts[index];
-                        }
+                if (hasFilenameMapping) {
+                    patternParts.forEach((part, index) => {
+                        customFields.forEach(field => {
+                            if (field.name === part && field.filenameMapping) {
+                                fieldValues[field.name] = filenameParts[index];
+                            }
+                        });
                     });
-                });
+                }
                 return fieldValues;
             });
             let loaded = 0;
@@ -1439,8 +1455,8 @@
                         parts: filenameParts
                     });
 
-                    // 檢查檔名格式是否符合設定
-                    if (filenameParts.length !== patternParts.length) {
+                    // 只有在有欄位勾選"由檔名代入"時才檢查檔名格式
+                    if (hasFilenameMapping && filenameParts.length !== patternParts.length) {
                         console.error('檔名格式不符合:', {
                             expected: patternParts,
                             actual: filenameParts
@@ -1455,14 +1471,16 @@
 
                     // 建立檔名對應的欄位值映射
                     const fieldValues = {};
-                    patternParts.forEach((part, index) => {
-                        customFields.forEach(field => {
-                            if (field.name === part && field.filenameMapping) {
-                                fieldValues[field.name] = filenameParts[index];
-                                console.log(`欄位對應: ${field.name} = ${filenameParts[index]}`);
-                            }
+                    if (hasFilenameMapping) {
+                        patternParts.forEach((part, index) => {
+                            customFields.forEach(field => {
+                                if (field.name === part && field.filenameMapping) {
+                                    fieldValues[field.name] = filenameParts[index];
+                                    console.log(`欄位對應: ${field.name} = ${filenameParts[index]}`);
+                                }
+                            });
                         });
-                    });
+                    }
                     console.log('當前檔案的欄位值映射:', fieldValues);
 
                     // 儲存圖片和檔名，以及對應的欄位值
