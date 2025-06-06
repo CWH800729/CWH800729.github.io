@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>連續壁灌漿表</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            position: relative;
+            margin: 20px 0;
+            height: 400px;
+        }
+        .btn-group {
+            margin: 10px 0;
+        }
+        .data-table {
+            margin-top: 20px;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">連續壁灌漿表</h1>
+        
+        <!-- 控制按鈕組 -->
+        <div class="btn-group no-print" role="group">
+            <button class="btn btn-primary" onclick="addNewRow()">新增資料</button>
+            <button class="btn btn-success" onclick="exportToExcel()">匯出Excel</button>
+            <button class="btn btn-info" onclick="window.print()">列印</button>
+            <button class="btn btn-secondary" onclick="importFromExcel()">匯入Excel</button>
+        </div>
+
+        <!-- 圖表區域 -->
+        <div class="chart-container">
+            <canvas id="groutingChart"></canvas>
+        </div>
+
+        <!-- 數據表格 -->
+        <div class="table-responsive data-table">
+            <table class="table table-bordered table-hover" id="groutingTable">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>槽段編號</th>
+                        <th>深度(m)</th>
+                        <th>灌漿量(m³)</th>
+                        <th>壓力(kg/cm²)</th>
+                        <th>備註</th>
+                        <th class="no-print">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 數據行將通過JavaScript動態添加 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 初始化圖表
+        let groutingChart;
+        const ctx = document.getElementById('groutingChart').getContext('2d');
+        
+        function initChart() {
+            groutingChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '灌漿量 (m³)',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }, {
+                        label: '壓力 (kg/cm²)',
+                        data: [],
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '灌漿量 (m³)'
+                            }
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '壓力 (kg/cm²)'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 添加新行
+        function addNewRow() {
+            const tbody = document.querySelector('#groutingTable tbody');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td><input type="date" class="form-control"></td>
+                <td><input type="text" class="form-control"></td>
+                <td><input type="number" class="form-control" step="0.01"></td>
+                <td><input type="number" class="form-control" step="0.01"></td>
+                <td><input type="number" class="form-control" step="0.1"></td>
+                <td><input type="text" class="form-control"></td>
+                <td class="no-print">
+                    <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">刪除</button>
+                </td>
+            `;
+            tbody.appendChild(newRow);
+            updateChart();
+        }
+
+        // 刪除行
+        function deleteRow(button) {
+            button.closest('tr').remove();
+            updateChart();
+        }
+
+        // 更新圖表
+        function updateChart() {
+            const rows = document.querySelectorAll('#groutingTable tbody tr');
+            const labels = [];
+            const groutingData = [];
+            const pressureData = [];
+
+            rows.forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                if (inputs[0].value && inputs[2].value && inputs[3].value && inputs[4].value) {
+                    labels.push(inputs[0].value);
+                    groutingData.push(parseFloat(inputs[3].value));
+                    pressureData.push(parseFloat(inputs[4].value));
+                }
+            });
+
+            groutingChart.data.labels = labels;
+            groutingChart.data.datasets[0].data = groutingData;
+            groutingChart.data.datasets[1].data = pressureData;
+            groutingChart.update();
+        }
+
+        // 匯出Excel
+        function exportToExcel() {
+            const table = document.getElementById('groutingTable');
+            const wb = XLSX.utils.table_to_book(table, {sheet: "灌漿數據"});
+            XLSX.writeFile(wb, "連續壁灌漿表.xlsx");
+        }
+
+        // 匯入Excel
+        function importFromExcel() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xlsx, .xls';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                    
+                    // 清空現有表格
+                    const tbody = document.querySelector('#groutingTable tbody');
+                    tbody.innerHTML = '';
+                    
+                    // 添加新數據
+                    jsonData.slice(1).forEach(row => {
+                        if (row.length > 0) {
+                            const newRow = document.createElement('tr');
+                            newRow.innerHTML = `
+                                <td><input type="date" class="form-control" value="${row[0] || ''}"></td>
+                                <td><input type="text" class="form-control" value="${row[1] || ''}"></td>
+                                <td><input type="number" class="form-control" step="0.01" value="${row[2] || ''}"></td>
+                                <td><input type="number" class="form-control" step="0.01" value="${row[3] || ''}"></td>
+                                <td><input type="number" class="form-control" step="0.1" value="${row[4] || ''}"></td>
+                                <td><input type="text" class="form-control" value="${row[5] || ''}"></td>
+                                <td class="no-print">
+                                    <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">刪除</button>
+                                </td>
+                            `;
+                            tbody.appendChild(newRow);
+                        }
+                    });
+                    updateChart();
+                };
+                reader.readAsArrayBuffer(file);
+            };
+            input.click();
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            // 添加事件監聽器以在輸入變化時更新圖表
+            document.getElementById('groutingTable').addEventListener('input', updateChart);
+        });
+    </script>
+</body>
+</html> 
