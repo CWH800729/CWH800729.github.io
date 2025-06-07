@@ -105,27 +105,41 @@
             font-size: 1.1rem;
             text-align: center;
         }
-        .table th {
-            white-space: normal;
-            min-width: 100px;
-            text-align: center;
-            vertical-align: middle;
-            background-color: #f8f9fa;
-            padding: 0.75rem;
+        .table th, .table td {
+            white-space: nowrap;
+            padding: 0.5rem;
         }
-        .table td {
-            vertical-align: middle;
-            padding: 0.75rem;
-            text-align: center;
+        .table th:nth-child(1), /* 項次 */
+        .table td:nth-child(1) {
+            width: 60px;
         }
-        .table input {
-            text-align: center;
+        .table th:nth-child(2), /* 澆置體積 */
+        .table td:nth-child(2) {
+            width: 100px;
         }
-        .table .calculated-value {
-            text-align: center;
+        .table th:nth-child(3), /* 累計體積 */
+        .table td:nth-child(3) {
+            width: 100px;
         }
-        .table .btn-sm {
-            font-size: 0.9rem;
+        .table th:nth-child(4), /* 理論剩餘 */
+        .table td:nth-child(4) {
+            width: 100px;
+        }
+        .table th:nth-child(5), /* 實際剩餘 */
+        .table td:nth-child(5) {
+            width: 100px;
+        }
+        .table th:nth-child(6), /* 預估深度 */
+        .table td:nth-child(6) {
+            width: 100px;
+        }
+        .table th:nth-child(7), /* 實際平均深度 */
+        .table td:nth-child(7) {
+            width: 100px;
+        }
+        .table th:nth-child(8), /* 實際深度 */
+        .table td:nth-child(8) {
+            width: 100px;
         }
         .item-number {
             min-width: 60px;
@@ -155,15 +169,31 @@
             pointer-events: none;
             opacity: 0.7;
         }
+        .theoretical-remaining, .actual-remaining {
+            display: none;  /* 初始設定為隱藏 */
+        }
+        .theoretical-remaining.show, .actual-remaining.show {
+            display: table-cell;
+        }
+        .btn-group .btn.active {
+            background-color: #6c757d;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="text-center mb-4">
-            <a href="https://CWH800729.github.io/index.html">
-                <img src="https://CWH800729.github.io/CWH-LOGO" alt="CWH-LOGO" style="height: 60px; margin-right: 15px;">
-            </a>
-            <h1 class="d-inline-block align-middle mb-0">連續壁澆置記錄表</h1>
+        <!-- 修改標題區域，將檔案名稱顯示移到右側 -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="text-center">
+                <a href="https://CWH800729.github.io/index.html">
+                    <img src="https://CWH800729.github.io/CWH-LOGO" alt="CWH-LOGO" style="height: 60px; margin-right: 15px;">
+                </a>
+                <h1 class="d-inline-block align-middle mb-0">連續壁澆置記錄表</h1>
+            </div>
+            <div id="importedFileName" class="text-muted" style="display: none;">
+                已匯入檔案：<span class="fw-bold"></span>
+            </div>
         </div>
         
         <!-- 匯出匯入按鈕 -->
@@ -245,6 +275,12 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addDepthColumn()">
                         <i class="fas fa-plus"></i> 新增深度欄位
                     </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleTheoreticalRemaining()">
+                        <i class="fas fa-eye"></i> 理論剩餘
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleActualRemaining()">
+                        <i class="fas fa-eye"></i> 實際需求混凝土量
+                    </button>
                 </div>
             </div>
             <table id="concreteDataTable" class="table table-bordered">
@@ -252,7 +288,9 @@
                     <tr>
                         <th rowspan="2">項次</th>
                         <th rowspan="2">澆置體積 (m³)</th>
-                        <th rowspan="2">累計體積/剩餘數量 (m³)</th>
+                        <th rowspan="2">累計體積 (m³)</th>
+                        <th rowspan="2" class="theoretical-remaining">理論剩餘 (m³)</th>
+                        <th rowspan="2" class="actual-remaining">實際需求混凝土量 (m³)</th>
                         <th rowspan="2">預估深度 (m)</th>
                         <th rowspan="2">實際平均深度 (m)</th>
                         <th colspan="1">實際深度 (m)</th>
@@ -382,7 +420,10 @@
                             position: 'left',
                             reverse: true,
                             min: 0,
-                            max: maxDepth,
+                            max: function() {
+                                const unitDepth = parseFloat(document.getElementById('unitDepth').value) || 0;
+                                return Math.ceil(unitDepth / 5) * 5;  // 向上取整到最接近的5的倍數
+                            },
                             ticks: {
                                 stepSize: 1,  // 小刻度間距為1m
                                 callback: function(value) {
@@ -391,6 +432,14 @@
                                         return value;
                                     }
                                     return '';
+                                },
+                                font: {
+                                    size: 12,
+                                    weight: 'normal'
+                                },
+                                color: function(context) {
+                                    // 大刻度（5m的倍數）使用深色，小刻度使用淺色
+                                    return context.tick.value % 5 === 0 ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.4)';
                                 }
                             },
                             grid: {
@@ -471,7 +520,9 @@
                 let rowHtml = `
                     <td class="item-number">${rowCount}</td>
                     <td><input type="number" class="form-control" step="0.01" value="${inputValue.toFixed(2)}" oninput="updateConcreteData()"></td>
-                    <td class="calculated-value">0.00<br><small class="text-muted">剩餘: ${targetVolume.toFixed(2)}</small></td>
+                    <td class="calculated-value">0.00</td>
+                    <td class="calculated-value theoretical-remaining">0.00</td>
+                    <td class="calculated-value actual-remaining">0.00</td>
                     <td class="calculated-value">0.00</td>
                     <td class="calculated-value">0.00</td>
                     <td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>
@@ -491,58 +542,49 @@
         // 更新圖表
         function updateChart() {
             const rows = document.querySelectorAll('#concreteDataTable tbody tr');
-            const depths = [];
-            const volumes = [];
-            const actualDepths = [];
             const unitDepth = parseFloat(document.getElementById('unitDepth').value) || 0;
+            const unitWidth = parseFloat(document.getElementById('unitWidth').value) || 0;
+            const unitLength = parseFloat(document.getElementById('unitLength').value) || 0;
+            const unitArea = unitWidth * unitLength;
 
             // 更新Y軸刻度範圍
             const maxDepth = Math.ceil(unitDepth / 5) * 5;
             groutingChart.options.scales.y.max = maxDepth;
-            groutingChart.options.scales.y.ticks.stepSize = 1;
 
-            // 添加起點 (單元深度, 0)
-            depths.push(unitDepth);
-            actualDepths.push(unitDepth);
-            volumes.push(0);
+            // 收集數據點
+            const dataPoints = [];
+            let cumulativeVolume = 0;
+
+            // 添加起點 (0, unitDepth)
+            dataPoints.push({
+                volume: 0,
+                plannedDepth: unitDepth,
+                actualDepth: unitDepth
+            });
 
             // 收集其他數據點
-            let hasActualData = false;
             rows.forEach((row) => {
-                // 正確解析累計體積（去除剩餘數量部分）
-                const cumulativeVolumeText = row.querySelector('td:nth-child(3)').textContent.split('<br>')[0];
-                const cumulativeVolume = parseFloat(cumulativeVolumeText) || 0;
-                const plannedDepth = parseFloat(row.querySelector('td:nth-child(4)').textContent) || 0;
-                const actualDepth = parseFloat(row.querySelector('td:nth-child(5)').textContent) || 0;
-                
-                if (cumulativeVolume > 0 || plannedDepth > 0) {
-                    depths.push(plannedDepth);
-                    if (actualDepth > 0) {
-                        actualDepths.push(actualDepth);
-                        hasActualData = true;
-                    } else {
-                        actualDepths.push(null);
-                    }
-                    volumes.push(cumulativeVolume);
+                const volume = parseFloat(row.querySelector('td:nth-child(2) input').value) || 0;
+                if (volume > 0) {
+                    cumulativeVolume += volume;
+                    const plannedDepth = unitDepth - (cumulativeVolume / unitArea);
+                    const actualDepth = parseFloat(row.querySelector('td:nth-child(7)').textContent) || 0;
+                    
+                    dataPoints.push({
+                        volume: cumulativeVolume,
+                        plannedDepth: plannedDepth,
+                        actualDepth: actualDepth > 0 ? actualDepth : null
+                    });
                 }
             });
 
             // 確保數據按累計體積升序排序
-            const sortedData = volumes.map((volume, index) => ({
-                volume: volume,
-                depth: depths[index],
-                actualDepth: actualDepths[index]
-            })).sort((a, b) => a.volume - b.volume);
+            dataPoints.sort((a, b) => a.volume - b.volume);
 
             // 更新圖表數據
-            groutingChart.data.labels = sortedData.map(item => item.volume.toFixed(2));
-            groutingChart.data.datasets[0].data = sortedData.map(item => item.depth);
-            
-            if (!hasActualData) {
-                groutingChart.data.datasets[1].data = [unitDepth, ...Array(sortedData.length - 1).fill(null)];
-            } else {
-                groutingChart.data.datasets[1].data = sortedData.map(item => item.actualDepth);
-            }
+            groutingChart.data.labels = dataPoints.map(point => point.volume.toFixed(2));
+            groutingChart.data.datasets[0].data = dataPoints.map(point => point.plannedDepth);
+            groutingChart.data.datasets[1].data = dataPoints.map(point => point.actualDepth);
 
             // 更新填滿區域
             const ctx = groutingChart.ctx;
@@ -550,14 +592,13 @@
 
             // 根據實際深度和設計深度的關係決定使用哪種顏色
             let useYellow = false;
-            if (hasActualData) {
-                const actualData = groutingChart.data.datasets[1].data;
-                const plannedData = groutingChart.data.datasets[0].data;
-                for (let i = 0; i < actualData.length; i++) {
-                    if (actualData[i] !== null && actualData[i] > plannedData[i]) {
-                        useYellow = true;
-                        break;
-                    }
+            const actualData = groutingChart.data.datasets[1].data;
+            const plannedData = groutingChart.data.datasets[0].data;
+            
+            for (let i = 0; i < actualData.length; i++) {
+                if (actualData[i] !== null && actualData[i] > plannedData[i]) {
+                    useYellow = true;
+                    break;
                 }
             }
 
@@ -571,10 +612,74 @@
 
             groutingChart.data.datasets[2].backgroundColor = gradientFill;
             groutingChart.data.datasets[2].hidden = !showFillArea;
-            groutingChart.data.datasets[2].data = sortedData.map(item => item.depth);
+            groutingChart.data.datasets[2].data = dataPoints.map(point => point.plannedDepth);
             
             // 更新圖表
             groutingChart.update();
+        }
+
+        // 修改計算實際平均深度函數
+        function calculateAverageDepth(input) {
+            const row = input.closest('tr');
+            const depthInputs = row.querySelectorAll('td:nth-child(n+8) input');
+            let sum = 0;
+            let count = 0;
+            
+            depthInputs.forEach(input => {
+                const value = parseFloat(input.value) || 0;
+                if (value > 0) {
+                    sum += value;
+                    count++;
+                }
+            });
+            
+            const averageDepth = count > 0 ? sum / count : 0;
+            row.querySelector('td:nth-child(7)').textContent = averageDepth.toFixed(2);
+            
+            // 更新實際需求混凝土量
+            const unitWidth = parseFloat(document.getElementById('unitWidth').value) || 0;
+            const unitLength = parseFloat(document.getElementById('unitLength').value) || 0;
+            const unitArea = unitWidth * unitLength;
+            const actualConcreteVolume = averageDepth * unitArea;
+            row.querySelector('td:nth-child(5)').textContent = actualConcreteVolume.toFixed(2);
+            
+            // 更新圖表
+            updateChart();
+        }
+
+        // 修改更新混凝土數據函數
+        function updateConcreteData() {
+            const rows = document.querySelectorAll('#concreteDataTable tbody tr');
+            let cumulativeVolume = 0;
+            const unitWidth = parseFloat(document.getElementById('unitWidth').value) || 0;
+            const unitLength = parseFloat(document.getElementById('unitLength').value) || 0;
+            const unitDepth = parseFloat(document.getElementById('unitDepth').value) || 0;
+            const unitArea = unitWidth * unitLength;
+            const designVolume = parseFloat(document.getElementById('unitVolume').textContent) || 0;
+
+            rows.forEach((row) => {
+                const volume = parseFloat(row.querySelector('td:nth-child(2) input').value) || 0;
+                cumulativeVolume += volume;
+                
+                // 更新累計體積
+                row.querySelector('td:nth-child(3)').textContent = cumulativeVolume.toFixed(2);
+                
+                // 更新理論剩餘
+                const theoreticalRemaining = designVolume - cumulativeVolume;
+                row.querySelector('td:nth-child(4)').textContent = theoreticalRemaining.toFixed(2);
+                
+                // 更新預估深度
+                const plannedDepth = unitDepth - (cumulativeVolume / unitArea);
+                row.querySelector('td:nth-child(6)').textContent = plannedDepth.toFixed(2);
+                
+                // 更新實際需求混凝土量
+                const averageDepth = parseFloat(row.querySelector('td:nth-child(7)').textContent) || 0;
+                const actualConcreteVolume = averageDepth * unitArea;
+                row.querySelector('td:nth-child(5)').textContent = actualConcreteVolume.toFixed(2);
+            });
+            
+            // 更新圖表
+            updateChart();
         }
 
         // 修改表頭：只針對實際深度欄位加上移除按鈕
@@ -632,63 +737,32 @@
             updateChart();
         }
 
-        // 計算實際平均深度
-        function calculateAverageDepth(input) {
-            const row = input.closest('tr');
-            const depthInputs = row.querySelectorAll('td:nth-child(n+6) input');
-            let sum = 0;
-            let count = 0;
+        // 切換理論剩餘顯示
+        function toggleTheoreticalRemaining() {
+            const button = event.target.closest('button');
+            const cells = document.querySelectorAll('.theoretical-remaining');
+            const isHidden = !cells[0].classList.contains('show');
             
-            depthInputs.forEach(input => {
-                const value = parseFloat(input.value) || 0;
-                if (value > 0) {
-                    sum += value;
-                    count++;
-                }
+            cells.forEach(cell => {
+                cell.classList.toggle('show');
             });
             
-            const averageDepth = count > 0 ? sum / count : 0;
-            row.querySelector('td:nth-child(5)').textContent = averageDepth.toFixed(2);
-            
-            // 計算實際剩餘數量
-            const unitWidth = parseFloat(document.getElementById('unitWidth').value) || 0;
-            const unitLength = parseFloat(document.getElementById('unitLength').value) || 0;
-            const unitArea = unitWidth * unitLength;
-            const cumulativeVolumeText = row.querySelector('td:nth-child(3)').textContent.split('<br>')[0];
-            const cumulativeVolume = parseFloat(cumulativeVolumeText) || 0;
-            const designVolume = parseFloat(document.getElementById('unitVolume').textContent) || 0;
-            const theoreticalRemaining = designVolume - cumulativeVolume;
-            const actualRemainingVolume = (unitDepth - averageDepth) * unitArea;
-            // 只顯示一次內容，直接覆蓋
-            row.querySelector('td:nth-child(3)').innerHTML = `${cumulativeVolume.toFixed(2)}<br><small class="text-muted">理論剩餘: ${theoreticalRemaining.toFixed(2)}</small><br><small class="text-muted">實際剩餘: ${actualRemainingVolume.toFixed(2)}</small>`;
-            updateChart();
+            button.classList.toggle('active');
+            button.querySelector('i').className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
         }
 
-        // 修正：每次更新時重設累計體積/剩餘數量欄位內容
-        function updateConcreteData() {
-            const rows = document.querySelectorAll('#concreteDataTable tbody tr');
-            let cumulativeVolume = 0;
-            const unitWidth = parseFloat(document.getElementById('unitWidth').value) || 0;
-            const unitLength = parseFloat(document.getElementById('unitLength').value) || 0;
-            const unitDepth = parseFloat(document.getElementById('unitDepth').value) || 0;
-            const unitArea = unitWidth * unitLength;
-            const designVolume = parseFloat(document.getElementById('unitVolume').textContent) || 0;
-            rows.forEach((row, index) => {
-                const volume = parseFloat(row.querySelector('td:nth-child(2) input').value) || 0;
-                cumulativeVolume += volume;
-                // 計算預估深度
-                const plannedDepth = unitDepth - (cumulativeVolume / unitArea);
-                // 更新預估深度
-                row.querySelector('td:nth-child(4)').textContent = plannedDepth.toFixed(2);
-                // 更新累計體積和剩餘數量
-                const averageDepth = parseFloat(row.querySelector('td:nth-child(5)').textContent) || 0;
-                const actualRemainingVolume = (unitDepth - averageDepth) * unitArea;
-                const theoreticalRemaining = designVolume - cumulativeVolume;
-                // 只顯示一次內容，直接覆蓋
-                row.querySelector('td:nth-child(3)').innerHTML = 
-                    `${cumulativeVolume.toFixed(2)}<br><small class="text-muted">理論剩餘: ${theoreticalRemaining.toFixed(2)}</small><br><small class="text-muted">實際剩餘: ${actualRemainingVolume.toFixed(2)}</small>`;
+        // 切換實際剩餘顯示
+        function toggleActualRemaining() {
+            const button = event.target.closest('button');
+            const cells = document.querySelectorAll('.actual-remaining');
+            const isHidden = !cells[0].classList.contains('show');
+            
+            cells.forEach(cell => {
+                cell.classList.toggle('show');
             });
-            updateChart();
+            
+            button.classList.toggle('active');
+            button.querySelector('i').className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
         }
 
         // 新增混凝土數據行
@@ -701,7 +775,7 @@
             let rowHtml = `
                 <td class="item-number">${rowNumber}</td>
                 <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
-                <td class="calculated-value">0.00<br><small class="text-muted">理論剩餘: 0.00</small><br><small class="text-muted">實際剩餘: 0.00</small></td>
+                <td class="calculated-value">0.00<br><small class="text-muted">理論剩餘: 0.00</small><br><small class="text-muted">實際需求混凝土量: 0.00</small></td>
                 <td class="calculated-value">0.00</td>
                 <td class="calculated-value">0.00</td>
             `;
@@ -716,13 +790,21 @@
             tbody.appendChild(newRow);
         }
 
-        // 修改匯出功能以包含新的數據格式
+        // 修改匯出功能
         function exportUnitData() {
             const unitNumber = document.getElementById('unitNumber').value.trim();
             if (!unitNumber) {
                 alert('請先填入單元編號後再匯出資料');
                 return;
             }
+
+            // 生成日期時間字串 (格式：YYYYMMDD-HHmm)
+            const now = new Date();
+            const dateStr = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, '0') +
+                String(now.getDate()).padStart(2, '0') + '-' +
+                String(now.getHours()).padStart(2, '0') +
+                String(now.getMinutes()).padStart(2, '0');
 
             // 準備CSV內容
             let csvContent = '\ufeff'; // 添加BOM以確保Excel正確顯示中文
@@ -741,10 +823,10 @@
             // 合併兩行標題
             let headers = [];
             for (let i = 0; i < headerRow1.children.length; i++) {
-                if (i < 5) {
-                    headers.push(headerRow1.children[i].textContent);
-                } else {
-                    headers.push(headerRow2.children[i-5].textContent);
+                if (i < 7) { // 基本欄位
+                    headers.push(headerRow1.children[i].textContent.trim());
+                } else { // 實際深度欄位
+                    headers.push(headerRow2.children[i-7].textContent.trim());
                 }
             }
             csvContent += headers.join(',') + '\n';
@@ -756,38 +838,42 @@
                 const rowData = [];
                 
                 cells.forEach((cell, index) => {
-                    if (index === 2) { // 累計體積/剩餘數量單元格
-                        const cumulativeVolume = cell.textContent.split('<br>')[0];
-                        rowData.push(cumulativeVolume);
-                    } else if (index === 4) { // 實際平均深度
-                        rowData.push(cell.textContent);
-                    } else if (index >= 5) { // 實際深度輸入框
+                    if (index === 1) { // 澆置體積
                         rowData.push(cell.querySelector('input').value);
-                    } else if (index === 1) { // 澆置體積
+                    } else if (index >= 7) { // 實際深度輸入框
                         rowData.push(cell.querySelector('input').value);
-                    } else {
-                        rowData.push(cell.textContent);
+                    } else { // 其他計算值
+                        rowData.push(cell.textContent.trim());
                     }
                 });
                 
                 csvContent += rowData.join(',') + '\n';
             });
             
-            // 下載文件
+            // 修改下載檔案名稱格式
+            const fileName = `${dateStr}-${unitNumber}-連續壁澆置記錄表.csv`;
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `連續壁單元_${unitNumber}_${new Date().toISOString().split('T')[0]}.csv`;
+            link.download = fileName;
             link.click();
         }
 
-        // 匯入單元資料
+        // 修改匯入功能
         function importUnitData() {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.csv,.txt';
             input.onchange = function(e) {
                 const file = e.target.files[0];
+                if (!file) return;
+
+                // 顯示匯入的檔案名稱
+                const fileNameDisplay = document.getElementById('importedFileName');
+                const fileNameSpan = fileNameDisplay.querySelector('span');
+                fileNameSpan.textContent = file.name;
+                fileNameDisplay.style.display = 'block';
+
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     try {
@@ -850,7 +936,7 @@
                                     continue;
                                 }
                                 const rowData = line.split(',');
-                                if (rowData.length >= 5) {
+                                if (rowData.length >= 7) {
                                     concreteData.push(rowData);
                                 }
                             }
@@ -858,43 +944,38 @@
 
                         // 計算實際深度欄位數量
                         const headerColumns = headerLine.split(',');
-                        const depthColumnCount = headerColumns.length - 5; // 減去基本欄位數量
+                        const depthColumnCount = Math.max(0, headerColumns.length - 7); // 減去基本欄位數量，確保不小於0
                         
                         // 更新表格標題
                         const thead = document.querySelector('#concreteDataTable thead tr:last-child');
-                        const existingDepthColumns = thead.querySelectorAll('th').length - 5;
+                        thead.innerHTML = ''; // 清空現有的深度欄位
                         
-                        // 移除多餘的深度欄位
-                        while (existingDepthColumns > depthColumnCount) {
-                            thead.removeChild(thead.lastChild);
-                        }
-                        
-                        // 添加缺少的深度欄位
-                        while (existingDepthColumns < depthColumnCount) {
+                        // 添加新的深度欄位
+                        for (let i = 0; i < depthColumnCount; i++) {
                             const newTh = document.createElement('th');
-                            newTh.textContent = `實際深度 ${existingDepthColumns + 1}`;
+                            newTh.innerHTML = `實際深度 ${i + 1} <button type='button' class='btn btn-link btn-sm p-0' onclick='removeSpecificDepthColumn(${i})' title='移除此欄位'><i class="fas fa-trash-alt"></i></button>`;
                             thead.appendChild(newTh);
-                            existingDepthColumns++;
                         }
                         
                         // 填充混凝土數據表格
                         if (concreteData.length > 0) {
                             const tbody = document.querySelector('#concreteDataTable tbody');
                             tbody.innerHTML = '';
-                            const designVolume = parseFloat(document.getElementById('unitVolume').textContent) || 0;
                             
                             concreteData.forEach((rowData, index) => {
                                 const newRow = document.createElement('tr');
                                 let rowHtml = `
                                     <td class="item-number">${index + 1}</td>
                                     <td><input type="number" class="form-control" step="0.01" value="${rowData[1]}" oninput="updateConcreteData()"></td>
-                                    <td class="calculated-value">${rowData[2]}<br><small class="text-muted">剩餘: ${(designVolume - parseFloat(rowData[2])).toFixed(2)}</small></td>
-                                    <td class="calculated-value">${rowData[3]}</td>
-                                    <td class="calculated-value">${rowData[4]}</td>
+                                    <td class="calculated-value">${rowData[2]}</td>
+                                    <td class="calculated-value theoretical-remaining">${rowData[3]}</td>
+                                    <td class="calculated-value actual-remaining">${rowData[4]}</td>
+                                    <td class="calculated-value">${rowData[5]}</td>
+                                    <td class="calculated-value">${rowData[6]}</td>
                                 `;
                                 
                                 // 添加實際深度輸入框
-                                for (let i = 5; i < rowData.length; i++) {
+                                for (let i = 7; i < rowData.length; i++) {
                                     rowHtml += `<td><input type="number" class="form-control" step="0.01" value="${rowData[i]}" oninput="calculateAverageDepth(this)"></td>`;
                                 }
                                 
@@ -907,6 +988,7 @@
                         }
                     } catch (error) {
                         alert('匯入數據格式錯誤：' + error.message);
+                        document.getElementById('importedFileName').style.display = 'none';
                     }
                 };
                 reader.readAsText(file, 'UTF-8');
@@ -914,13 +996,32 @@
             input.click();
         }
 
-        // 初始化
+        // 在清空數據時也要隱藏檔案名稱顯示
+        function clearData() {
+            // ... 原有的清空邏輯 ...
+            document.getElementById('importedFileName').style.display = 'none';
+        }
+
+        // 修改初始化事件監聽器
         document.addEventListener('DOMContentLoaded', function() {
-            initChart();
-            // 添加體積輸入監聽器
-            ['unitWidth', 'unitLength', 'unitDepth'].forEach(id => {
-                document.getElementById(id).addEventListener('input', calculateVolume);
-            });
+            // 確保在DOM完全加載後再初始化圖表
+            setTimeout(function() {
+                initChart();
+                // 添加體積輸入監聽器
+                ['unitWidth', 'unitLength', 'unitDepth'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', function() {
+                        calculateVolume();
+                        // 重新初始化圖表以更新刻度
+                        initChart();
+                    });
+                });
+
+                // 初始化按鈕狀態
+                const theoreticalBtn = document.querySelector('button[onclick="toggleTheoreticalRemaining()"]');
+                const actualBtn = document.querySelector('button[onclick="toggleActualRemaining()"]');
+                theoreticalBtn.classList.remove('active');
+                actualBtn.classList.remove('active');
+            }, 100);
         });
     </script>
 </body>
