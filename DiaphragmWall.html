@@ -1,3 +1,4 @@
+@ -0,0 +1,646 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -21,6 +22,48 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 1200px;
+        }
+        .card {
+            margin-bottom: 1rem;
+        }
+        .card-body {
+            padding: 1rem;
+        }
+        .form-label {
+            margin-bottom: 0.2rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        .form-control, .form-select {
+            padding: 0.5rem;
+            font-size: 1.1rem;
+            height: calc(2em + 1rem + 2px);
+        }
+        /* 移除數字輸入框的上下箭頭 */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .calculated-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #dc3545;
+            background: none;
+            border: none;
+            padding: 0.5rem 0;
+            width: 100%;
+        }
+        .calculated-value:focus {
+            outline: none;
+            box-shadow: none;
+        }
+        .mb-3 {
+            margin-bottom: 0.5rem !important;
         }
         .chart-container {
             position: relative;
@@ -33,6 +76,38 @@
         .data-table {
             margin-top: 20px;
         }
+        /* 表格樣式優化 */
+        .table {
+            font-size: 1.1rem;
+            text-align: center;
+        }
+        .table th {
+            white-space: normal;
+            min-width: 100px;
+            text-align: center;
+            vertical-align: middle;
+            background-color: #f8f9fa;
+            padding: 0.75rem;
+        }
+        .table td {
+            vertical-align: middle;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .table input {
+            text-align: center;
+        }
+        .table .calculated-value {
+            text-align: center;
+        }
+        .table .btn-sm {
+            font-size: 0.9rem;
+        }
+        .item-number {
+            min-width: 60px;
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }
         @media print {
             .no-print {
                 display: none !important;
@@ -41,12 +116,90 @@
                 box-shadow: none;
             }
         }
+        .table input:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+        .table.disabled {
+            opacity: 0.7;
+        }
+        .table.disabled input {
+            pointer-events: none;
+            background-color: #e9ecef;
+        }
+        .table.disabled .btn {
+            pointer-events: none;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="text-center mb-4">連續壁灌漿表</h1>
         
+        <!-- 單元規格輸入表單 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">單元規格</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-2">
+                        <label class="form-label">日期</label>
+                        <input type="date" class="form-control" id="unitDate">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">單元編號</label>
+                        <input type="text" class="form-control" id="unitNumber">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">公/母單元</label>
+                        <select class="form-select" id="unitType">
+                            <option value="公">公單元</option>
+                            <option value="母">母單元</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-2 mt-1">
+                    <div class="col-md-4">
+                        <label class="form-label">單元寬(m)</label>
+                        <input type="text" class="form-control" id="unitWidth" onchange="calculateVolume()">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">單元長(m)</label>
+                        <input type="text" class="form-control" id="unitLength" onchange="calculateVolume()">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">深度(m)</label>
+                        <input type="text" class="form-control" id="unitDepth" onchange="calculateVolume()">
+                    </div>
+                </div>
+                <div class="row g-2 mt-1">
+                    <div class="col-md-4">
+                        <label class="form-label">單元體積(m³)</label>
+                        <div class="calculated-value" id="unitVolume">0.00</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">單元面積(m²)</label>
+                        <div class="calculated-value" id="unitArea">0.00</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">預計灌漿底部高程(m)</label>
+                        <input type="text" class="form-control" id="bottomElevation">
+                    </div>
+                </div>
+                <div class="row g-2 mt-1">
+                    <div class="col-md-4">
+                        <label class="form-label">預計灌漿頂部高程(m)</label>
+                        <input type="text" class="form-control" id="topElevation">
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <button class="btn btn-primary btn-sm" onclick="saveUnitSpecs()">儲存規格</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 控制按鈕組 -->
         <div class="btn-group no-print" role="group">
             <button class="btn btn-primary" onclick="addNewRow()">新增資料</button>
@@ -60,17 +213,89 @@
             <canvas id="groutingChart"></canvas>
         </div>
 
+        <!-- 混凝土量與深度數據表格 -->
+        <div class="table-responsive mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">混凝土量與深度數據</h5>
+                <button class="btn btn-primary btn-sm" onclick="addConcreteDataRow()">增加行數</button>
+            </div>
+            <table class="table table-bordered table-hover" id="concreteDataTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="item-number">項目</th>
+                        <th colspan="2" class="text-center" style="min-width: 200px;">混凝土量(m³)</th>
+                        <th colspan="2" class="text-center" style="min-width: 200px;">深度(m)</th>
+                        <th class="text-center" style="min-width: 150px;">
+                            <button class="btn btn-sm btn-outline-primary" onclick="addDepthColumn()">+ 實際深度</button>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th class="item-number"></th>
+                        <th>灌漿體積</th>
+                        <th>累計體積</th>
+                        <th>預計深度</th>
+                        <th>實際平均深度</th>
+                        <th>實際深度 1</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 預設5列空白行 -->
+                    <tr>
+                        <td class="item-number">1</td>
+                        <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
+                        <td class="calculated-value">0.00</td>
+                        <td class="calculated-value">0.00</td>
+                        <td class="calculated-value">0.00</td>
+                        <td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>
+                    </tr>
+                    <tr>
+                        <td class="item-number">2</td>
+                        <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
+                        <td class="calculated-value">0.00</td>
+                        <td class="calculated-value">0.00</td>
+                        <td class="calculated-value">0.00</td>
+                        <td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>
+                    </tr>
+                    <tr>
+                        <td class="item-number">3</td>
+                        <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
+                        <td class="calculated-value">0.00</td>
+                        <td class="calculated-value">0.00</td>
+                        <td class="calculated-value">0.00</td>
+                        <td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>
+                    </tr>
+                    <tr>
+                        <td class="item-number">4</td>
+                        <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
+                        <td class="calculated-value">0.00</td>
+                        <td class="calculated-value">0.00</td>
+                        <td class="calculated-value">0.00</td>
+                        <td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>
+                    </tr>
+                    <tr>
+                        <td class="item-number">5</td>
+                        <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
+                        <td class="calculated-value">0.00</td>
+                        <td class="calculated-value">0.00</td>
+                        <td class="calculated-value">0.00</td>
+                        <td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
         <!-- 數據表格 -->
         <div class="table-responsive data-table">
+            <h5 class="mb-3">所有單元</h5>
             <table class="table table-bordered table-hover" id="groutingTable">
                 <thead>
                     <tr>
                         <th>日期</th>
-                        <th>槽段編號</th>
+                        <th>單元編號</th>
                         <th>深度(m)</th>
                         <th>灌漿量(m³)</th>
-                        <th>壓力(kg/cm²)</th>
-                        <th>備註</th>
+                        <th>單元尺寸(m)</th>
+                        <th>高程範圍(m)</th>
                         <th class="no-print">操作</th>
                     </tr>
                 </thead>
@@ -98,34 +323,24 @@
                         data: [],
                         borderColor: 'rgb(75, 192, 192)',
                         tension: 0.1
-                    }, {
-                        label: '壓力 (kg/cm²)',
-                        data: [],
-                        borderColor: 'rgb(255, 99, 132)',
-                        tension: 0.1,
-                        yAxisID: 'y1'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: {
-                            beginAtZero: true,
+                        x: {
+                            reverse: true,
                             title: {
                                 display: true,
                                 text: '灌漿量 (m³)'
                             }
                         },
-                        y1: {
-                            beginAtZero: true,
-                            position: 'right',
+                        y: {
+                            reverse: true,
                             title: {
                                 display: true,
-                                text: '壓力 (kg/cm²)'
-                            },
-                            grid: {
-                                drawOnChartArea: false
+                                text: '深度 (m)'
                             }
                         }
                     }
@@ -142,7 +357,7 @@
                 <td><input type="text" class="form-control"></td>
                 <td><input type="number" class="form-control" step="0.01"></td>
                 <td><input type="number" class="form-control" step="0.01"></td>
-                <td><input type="number" class="form-control" step="0.1"></td>
+                <td><input type="text" class="form-control"></td>
                 <td><input type="text" class="form-control"></td>
                 <td class="no-print">
                     <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">刪除</button>
@@ -158,27 +373,224 @@
             updateChart();
         }
 
+        // 計算體積和面積
+        function calculateVolume() {
+            const width = parseFloat(document.getElementById('unitWidth').value) || 0;
+            const length = parseFloat(document.getElementById('unitLength').value) || 0;
+            const depth = parseFloat(document.getElementById('unitDepth').value) || 0;
+            
+            const volume = width * length * depth;
+            const area = width * length;
+            
+            document.getElementById('unitVolume').textContent = volume.toFixed(2);
+            document.getElementById('unitArea').textContent = area.toFixed(2);
+        }
+
+        // 儲存單元規格
+        function saveUnitSpecs() {
+            const specs = {
+                unitNumber: document.getElementById('unitNumber').value,
+                unitType: document.getElementById('unitType').value,
+                depth: document.getElementById('unitDepth').value,
+                width: document.getElementById('unitWidth').value,
+                length: document.getElementById('unitLength').value,
+                volume: document.getElementById('unitVolume').textContent,
+                area: document.getElementById('unitArea').textContent,
+                date: document.getElementById('unitDate').value,
+                bottomElevation: document.getElementById('bottomElevation').value,
+                topElevation: document.getElementById('topElevation').value
+            };
+            
+            // 將規格添加到表格中
+            const tbody = document.querySelector('#groutingTable tbody');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td>${specs.date}</td>
+                <td>${specs.unitNumber} (${specs.unitType})</td>
+                <td>${specs.depth}</td>
+                <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
+                <td>${specs.width} × ${specs.length} (${specs.volume}m³, ${specs.area}m²)</td>
+                <td>${specs.bottomElevation} ~ ${specs.topElevation}</td>
+                <td class="no-print">
+                    <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">刪除</button>
+                </td>
+            `;
+            tbody.appendChild(newRow);
+            updateChart();
+            updateConcreteData();
+        }
+
         // 更新圖表
         function updateChart() {
             const rows = document.querySelectorAll('#groutingTable tbody tr');
-            const labels = [];
+            const depths = [];
             const groutingData = [];
-            const pressureData = [];
 
             rows.forEach(row => {
-                const inputs = row.querySelectorAll('input');
-                if (inputs[0].value && inputs[2].value && inputs[3].value && inputs[4].value) {
-                    labels.push(inputs[0].value);
-                    groutingData.push(parseFloat(inputs[3].value));
-                    pressureData.push(parseFloat(inputs[4].value));
+                const cells = row.querySelectorAll('td');
+                const depth = parseFloat(cells[2].textContent);
+                const groutingInput = row.querySelector('input[type="number"]');
+                if (depth && groutingInput.value) {
+                    depths.push(depth);
+                    groutingData.push(parseFloat(groutingInput.value));
                 }
             });
 
-            groutingChart.data.labels = labels;
+            groutingChart.data.labels = depths;
             groutingChart.data.datasets[0].data = groutingData;
-            groutingChart.data.datasets[1].data = pressureData;
             groutingChart.update();
         }
+
+        // 檢查單元規格是否完整
+        function checkUnitSpecs() {
+            const width = parseFloat(document.getElementById('unitWidth').value) || 0;
+            const length = parseFloat(document.getElementById('unitLength').value) || 0;
+            const depth = parseFloat(document.getElementById('unitDepth').value) || 0;
+            const concreteTable = document.getElementById('concreteDataTable');
+            
+            if (width <= 0 || length <= 0 || depth <= 0) {
+                concreteTable.classList.add('disabled');
+                return false;
+            } else {
+                concreteTable.classList.remove('disabled');
+                return true;
+            }
+        }
+
+        // 監聽單元規格輸入變化
+        function setupUnitSpecsListeners() {
+            const specsInputs = ['unitWidth', 'unitLength', 'unitDepth'];
+            specsInputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', function() {
+                    checkUnitSpecs();
+                });
+            });
+
+            // 為表格添加點擊事件監聽
+            const concreteTable = document.getElementById('concreteDataTable');
+            concreteTable.addEventListener('click', function(e) {
+                if (e.target.tagName === 'INPUT' && !checkUnitSpecs()) {
+                    e.preventDefault();
+                    alert('請先完成單元規格的填寫（寬度、長度、深度必須大於0）');
+                }
+            });
+        }
+
+        // 更新混凝土量與深度數據
+        function updateConcreteData() {
+            const rows = document.querySelectorAll('#concreteDataTable tbody tr');
+            let totalVolume = 0;
+            const unitDepth = parseFloat(document.getElementById('unitDepth').value) || 0;
+            const unitArea = parseFloat(document.getElementById('unitArea').textContent) || 0;
+            
+            rows.forEach(row => {
+                const groutingVolume = parseFloat(row.querySelector('td:nth-child(2) input').value) || 0;
+                totalVolume += groutingVolume;
+                row.querySelector('td:nth-child(3)').textContent = totalVolume.toFixed(2);
+                
+                // 計算預計深度（只有當該行有灌漿體積時才計算）
+                if (groutingVolume > 0 && unitArea > 0) {
+                    const plannedDepth = unitDepth - (totalVolume / unitArea);
+                    row.querySelector('td:nth-child(4)').textContent = plannedDepth.toFixed(2);
+                } else {
+                    row.querySelector('td:nth-child(4)').textContent = '0.00';
+                }
+            });
+        }
+
+        // 初始化表格的預設行
+        function initializeTableRows() {
+            const tbody = document.querySelector('#concreteDataTable tbody');
+            tbody.innerHTML = ''; // 清空現有行
+            
+            // 添加3個預設行
+            for (let i = 0; i < 3; i++) {
+                const newRow = document.createElement('tr');
+                let rowHtml = `
+                    <td class="item-number">${i + 1}</td>
+                    <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
+                    <td class="calculated-value">0.00</td>
+                    <td class="calculated-value">0.00</td>
+                    <td class="calculated-value">0.00</td>
+                    <td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>
+                `;
+                newRow.innerHTML = rowHtml;
+                tbody.appendChild(newRow);
+            }
+        }
+
+        // 增加混凝土數據行
+        function addConcreteDataRow() {
+            const tbody = document.querySelector('#concreteDataTable tbody');
+            const depthCount = document.querySelector('#concreteDataTable thead tr:last-child').querySelectorAll('th').length - 5;
+            const rowCount = tbody.querySelectorAll('tr').length;
+            const newRow = document.createElement('tr');
+            
+            let rowHtml = `
+                <td class="item-number">${rowCount + 1}</td>
+                <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
+                <td class="calculated-value">0.00</td>
+                <td class="calculated-value">0.00</td>
+                <td class="calculated-value">0.00</td>
+            `;
+            
+            // 添加所有實際深度輸入框
+            for (let i = 0; i < depthCount; i++) {
+                rowHtml += `<td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>`;
+            }
+            
+            newRow.innerHTML = rowHtml;
+            tbody.appendChild(newRow);
+        }
+
+        // 增加實際深度欄位
+        function addDepthColumn() {
+            const thead = document.querySelector('#concreteDataTable thead tr:last-child');
+            const tbody = document.querySelector('#concreteDataTable tbody');
+            const depthCount = thead.querySelectorAll('th').length - 5;
+            
+            // 在表頭添加新欄位
+            const newTh = document.createElement('th');
+            newTh.textContent = `實際深度 ${depthCount + 1}`;
+            thead.appendChild(newTh);
+            
+            // 為每一行添加新的輸入框
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+                const newTd = document.createElement('td');
+                newTd.innerHTML = `<input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)">`;
+                row.appendChild(newTd);
+            });
+        }
+
+        // 計算平均深度
+        function calculateAverageDepth(input) {
+            const row = input.closest('tr');
+            const depthInputs = row.querySelectorAll('td:nth-child(n+6) input'); // 從第6列開始的所有輸入框
+            let totalDepth = 0;
+            let validInputs = 0;
+            
+            depthInputs.forEach(input => {
+                const depth = parseFloat(input.value) || 0;
+                if (depth > 0) {
+                    totalDepth += depth;
+                    validInputs++;
+                }
+            });
+            
+            const averageDepth = validInputs > 0 ? totalDepth / validInputs : 0;
+            row.querySelector('td:nth-child(5)').textContent = averageDepth.toFixed(2);
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            initializeTableRows();
+            setupUnitSpecsListeners();
+            checkUnitSpecs(); // 初始檢查單元規格
+            // 添加事件監聽器以在輸入變化時更新圖表
+            document.getElementById('groutingTable').addEventListener('input', updateChart);
+        });
 
         // 匯出Excel
         function exportToExcel() {
@@ -213,8 +625,8 @@
                                 <td><input type="date" class="form-control" value="${row[0] || ''}"></td>
                                 <td><input type="text" class="form-control" value="${row[1] || ''}"></td>
                                 <td><input type="number" class="form-control" step="0.01" value="${row[2] || ''}"></td>
-                                <td><input type="number" class="form-control" step="0.01" value="${row[3] || ''}"></td>
-                                <td><input type="number" class="form-control" step="0.1" value="${row[4] || ''}"></td>
+                                <td><input type="number" class="form-control" step="0.01" value="${row[3] || ''}" oninput="updateConcreteData()"></td>
+                                <td><input type="text" class="form-control" value="${row[4] || ''}"></td>
                                 <td><input type="text" class="form-control" value="${row[5] || ''}"></td>
                                 <td class="no-print">
                                     <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">刪除</button>
@@ -224,18 +636,12 @@
                         }
                     });
                     updateChart();
+                    updateConcreteData();
                 };
                 reader.readAsArrayBuffer(file);
             };
             input.click();
         }
-
-        // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            initChart();
-            // 添加事件監聽器以在輸入變化時更新圖表
-            document.getElementById('groutingTable').addEventListener('input', updateChart);
-        });
     </script>
 </body>
 </html> 
