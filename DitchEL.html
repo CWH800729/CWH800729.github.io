@@ -23,6 +23,24 @@
       position: relative;
       box-sizing: border-box;
     }
+    .title-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 1.2em;
+    }
+    .logo-link {
+      display: block;
+      text-decoration: none;
+    }
+    .logo-img {
+      height: 48px;
+      width: auto;
+      transition: transform 0.2s;
+    }
+    .logo-img:hover {
+      transform: scale(1.05);
+    }
     .mode-indicator {
       background: #e3eafc;
       color: #1a237e;
@@ -194,7 +212,12 @@
       <a href="https://CWH800729.github.io/index.html" class="back-button">返回選單</a>
       <div class="mode-indicator" id="modeIndicator">目前模式：EL</div>
     </div>
-    <h2>雨溝高程輸入表（橫向排列）<span id="importedFilename" style="font-size: 0.7em; color: #666; margin-left: 12px;"></span></h2>
+    <div class="title-container">
+      <a href="https://CWH800729.github.io/index.html" class="logo-link">
+        <img src="https://CWH800729.github.io/CWH-LOGO.png" alt="CWH LOGO" class="logo-img">
+      </a>
+      <h2>雨溝高程輸入表（橫向排列）<span id="importedFilename" style="font-size: 0.7em; color: #666; margin-left: 12px;"></span></h2>
+    </div>
     <div style="margin-bottom: 1.2em; display: flex; gap: 2em; align-items: center;">
       <label for="angle-input">角鐵預留高：</label>
       <input id="angle-input" class="input-cell" type="number" value="0">
