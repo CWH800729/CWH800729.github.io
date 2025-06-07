@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>照片表格製作系統</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- 添加 SheetJS 庫 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --base-font-size: 16px;
@@ -296,9 +298,8 @@
         }
 
         .field-checkbox-item label {
-            font-size: var(--input-font-size);
-            cursor: pointer;
-            user-select: none;
+            font-size: 1.08em;
+            padding-left: 2px;
         }
 
         @media screen and (max-width: 768px) {
@@ -408,6 +409,7 @@
             border-radius: 4px;
             cursor: pointer;
             margin-right: 10px;
+            font-size: var(--button-font-size);
         }
 
         .batch-upload-btn:hover {
@@ -501,6 +503,45 @@
             color: #2c3e50;
             margin: 0 0 20px 0;
             text-align: center;
+        }
+        .preview-custom-titles {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .preview-custom-titles input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            font-family: inherit;
+        }
+        .preview-custom-titles input.title-main {
+            font-size: 1.5em;
+        }
+        .preview-custom-titles input.title-sub {
+            font-size: 1.25em;
+        }
+        .preview-custom-titles .print-title {
+            display: none;
+        }
+        @media print {
+            .preview-custom-titles .print-title {
+                display: block;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .preview-custom-titles .print-title .title-main {
+                font-size: 1.5em;
+                margin-bottom: 10px;
+            }
+            .preview-custom-titles .print-title .title-sub {
+                font-size: 1.25em;
+            }
+            .preview-custom-titles input {
+                display: none;
+            }
         }
         .preview-photo-vertical {
             display: flex;
@@ -665,11 +706,149 @@
         .filename-mapping-config label {
             font-size: 1.1em;
             font-weight: bold;
+            white-space: nowrap;
+        }
+        .filename-mapping-config .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
         }
         .filename-mapping-config input[type="text"] {
             font-size: 1.1em;
             padding: 6px 10px;
-            width: 320px;
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .filename-mapping-config input[type="text"]:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+        .filename-mapping-config .lock-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+        .filename-mapping-config .lock-btn.locked {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .filename-mapping-config .lock-btn.unlocked {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .filename-mapping-config .lock-btn:hover {
+            opacity: 0.9;
+        }
+        .filename-mapping-config .lock-btn i {
+            font-size: 1.1em;
+        }
+
+        /* 列印樣式 */
+        @media print {
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+            body * {
+                visibility: hidden;
+            }
+            .print-content, .print-content * {
+                visibility: visible;
+            }
+            .print-content {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .print-page {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(3, 1fr);
+                gap: 1cm;
+                width: 100%;
+                page-break-after: always;
+            }
+            .print-page:last-child {
+                page-break-after: auto;
+            }
+            .print-photo-cell {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                height: calc((297mm - 2cm - 2cm) / 3); /* A4 高度減去上下邊距，除以3行 */
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 0;
+            }
+            .print-photo-cell img {
+                width: 100%;
+                height: calc((297mm - 2cm - 2cm) / 3 - 60px); /* 減去欄位高度 */
+                object-fit: contain;
+                margin-bottom: 5px;
+            }
+            .print-photo-fields {
+                width: 100%;
+                border: 1px solid #000;
+                flex-shrink: 0;
+            }
+            .print-field-row {
+                display: flex;
+                border-bottom: 1px solid #000;
+                min-height: 20px;
+            }
+            .print-field-label {
+                width: 80px;
+                padding: 2px 5px;
+                border-right: 1px solid #000;
+                font-weight: bold;
+                font-size: 10pt;
+            }
+            .print-field-value {
+                flex: 1;
+                padding: 2px 5px;
+                font-size: 10pt;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        .photo-cell-field-value[readonly] {
+            border: 1px solid #d0d0d0 !important;
+            background: #f8f8f8 !important;
+            color: #888 !important;
+            border-radius: 6px !important;
+            box-shadow: none !important;
+        }
+        .has-tooltip {
+            position: relative;
+            cursor: help;
+        }
+        .has-tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #333;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            white-space: pre-line;
+            font-size: 0.98em;
+            z-index: 100;
+            min-width: 220px;
+            max-width: 320px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            margin-left: 12px;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -686,6 +865,14 @@
     <main class="container">
         <div class="preview-section">
             <div class="preview-title">預覽畫面</div>
+            <div class="preview-custom-titles">
+                <input type="text" class="title-main" placeholder="請輸入主標題" oninput="updatePreviewTitles()">
+                <input type="text" class="title-sub" placeholder="請輸入副標題" oninput="updatePreviewTitles()">
+                <div class="print-title">
+                    <div class="title-main"></div>
+                    <div class="title-sub"></div>
+                </div>
+            </div>
             <div class="preview-photo-vertical">
                 <div class="preview-photo-container">
                     <div class="preview-placeholder" id="previewPhoto">
@@ -705,34 +892,29 @@
                 <h3>自訂欄位設定</h3>
                 <div class="available-fields">
                     <h4>可用的欄位</h4>
-                    <div class="field-checkboxes">
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-date" onchange="toggleField(this, '日期')">
-                            <label for="field-date">日期</label>
-                        </div>
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-signature" onchange="toggleField(this, '簽名')">
-                            <label for="field-signature">簽名</label>
-                        </div>
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-verification" onchange="toggleField(this, '查驗單位')">
-                            <label for="field-verification">查驗單位</label>
-                        </div>
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-project" onchange="toggleField(this, '案名')">
-                            <label for="field-project">案名</label>
-                        </div>
-                        <div class="field-checkbox-item">
-                            <input type="checkbox" id="field-title" onchange="toggleField(this, '標題')">
-                            <label for="field-title">標題</label>
-                        </div>
-                    </div>
+                    <div class="field-checkboxes" id="fieldCheckboxes"></div>
+                </div>
+                <div class="field-config-buttons" style="margin: 10px 0;">
+                    <button class="btn btn-secondary" onclick="exportFieldConfig()">
+                        <i class="fas fa-save"></i> 匯出欄位設定
+                    </button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('importConfig').click()">
+                        <i class="fas fa-upload"></i> 匯入欄位設定
+                        <input type="file" id="importConfig" accept=".json" style="display: none;" onchange="importFieldConfig(this)">
+                    </button>
                 </div>
                 <div class="filename-mapping-config" id="filenameMappingConfig">
-                    <label for="filenamePattern">檔名組成順序：</label>
-                    <input type="text" id="filenamePattern" placeholder="例如：日期-樓層戶別-標題" value="日期-標題" style="margin-right:8px;">
-                    <button id="filenamePatternConfirmBtn" type="button" style="margin-right:8px;">確定</button>
-                    <button id="filenamePatternEditBtn" type="button" style="display:none;margin-right:8px;">編輯</button>
+                    <label for="filenamePattern" class="has-tooltip" data-tooltip="請依照照片檔名的組成順序填寫，並以 - 分隔。
+例如：日期-案名-標題，檔名需為 2023-工程A-外觀.jpg
+
+此順序需與檔名完全一致，否則無法自動帶入欄位。">檔名組成順序：</label>
+                    <div class="input-group">
+                        <input type="text" id="filenamePattern" placeholder="例如：日期-案名-標題" value="日期-案名-標題" oninput="updatePreviewTable();setPhotoTableColumns();">
+                        <button type="button" class="lock-btn unlocked" onclick="toggleFilenamePatternLock(this)" title="點擊鎖定檔名組成順序">
+                            <i class="fas fa-lock"></i>
+                            <span>鎖定</span>
+                        </button>
+                    </div>
                     <span style="color:#888;font-size:0.95em;">（以 - 分隔，順序需與檔名一致）</span>
                 </div>
                 <div id="customFieldsContainer">
@@ -752,14 +934,12 @@
                     <i class="fas fa-folder-open"></i> 批量匯入照片
                     <input type="file" id="batchUpload" accept="image/*" multiple onchange="handleBatchUpload(this)">
                 </button>
-                <button class="btn btn-secondary" onclick="exportTable()">
-                    <i class="fas fa-download"></i> 匯出表格
+                <button class="btn btn-secondary" onclick="clearAllPhotos()">
+                    <i class="fas fa-trash"></i> 清空照片
                 </button>
-                <select id="exportFormat" class="export-options">
-                    <option value="excel">Excel</option>
-                    <option value="pdf">PDF</option>
-                    <option value="image">圖片</option>
-                </select>
+                <button class="btn btn-primary" onclick="printTable()">
+                    <i class="fas fa-print"></i> 列印表格
+                </button>
             </div>
 
             <table class="photo-table" id="photoTable">
@@ -786,6 +966,9 @@
     </main>
 
     <script>
+        // 全域變數保存每張照片的欄位值
+        window.photoFieldValues = [];
+
         // 表格操作
         function addRow() {
             setPhotoTableColumns();
@@ -976,22 +1159,99 @@
         function handleBatchUpload(input) {
             const files = Array.from(input.files);
             if (files.length === 0) return;
-            const table = document.getElementById('photoTable');
-            const cells = Array.from(table.querySelectorAll('.photo-cell'));
-            let images = cells.map(cell => {
-                const img = cell.querySelector('img');
-                return img ? img.src : null;
-            }).filter(src => src);
-            let filenames = cells.map(cell => cell.dataset.filename || '');
+
+            console.log('開始批量上傳處理...');
+
+            // 獲取檔名組成順序
+            const patternInput = document.getElementById('filenamePattern');
+            const isPatternLocked = document.querySelector('.filename-mapping-config .lock-btn').classList.contains('locked');
+            console.log('檔名組成順序狀態:', {
+                pattern: patternInput.value,
+                isLocked: isPatternLocked
+            });
+
+            // 檢查是否有任何欄位勾選了"由檔名代入"
+            const hasFilenameMapping = Array.from(document.querySelectorAll('.custom-field')).some(field => 
+                field.querySelector('.filename-mapping').checked
+            );
+
+            // 只有在有欄位勾選"由檔名代入"時才檢查鎖定狀態
+            if (hasFilenameMapping && !isPatternLocked) {
+                alert('請先確認並鎖定檔名組成順序！');
+                input.value = '';
+                return;
+            }
+
+            const pattern = patternInput.value.trim();
+            const patternParts = pattern.split('-').map(part => part.trim());
+            console.log('解析後的檔名組成順序:', patternParts);
+            
+            // 獲取自訂欄位設定
+            const customFields = Array.from(document.querySelectorAll('.custom-field')).map(field => ({
+                name: field.querySelector('input[placeholder="欄位名稱"]').value,
+                value: field.querySelector('.global-value').value,
+                filenameMapping: field.querySelector('.filename-mapping').checked
+            }));
+            console.log('自訂欄位設定:', customFields);
+
+            // 只用新匯入檔案重建三個陣列，確保 index 對齊
+            let images = [];
+            let filenames = [];
+            let allFieldValues = [];
             let loaded = 0;
+
             files.forEach((file, i) => {
+                console.log(`處理檔案 ${i + 1}/${files.length}:`, file.name);
                 const reader = new FileReader();
                 reader.onload = function(e) {
+                    // 解析檔名
+                    const filenameWithoutExt = file.name.split('.').slice(0, -1).join('.');
+                    const filenameParts = filenameWithoutExt.split('-');
+                    console.log('解析後的檔名:', {
+                        original: file.name,
+                        withoutExt: filenameWithoutExt,
+                        parts: filenameParts
+                    });
+
+                    // 只有在有欄位勾選"由檔名代入"時才檢查檔名格式
+                    if (hasFilenameMapping && filenameParts.length !== patternParts.length) {
+                        console.error('檔名格式不符合:', {
+                            expected: patternParts,
+                            actual: filenameParts
+                        });
+                        alert(`檔案 "${file.name}" 的格式不符合設定！\n預期格式：${pattern}\n實際格式：${filenameWithoutExt}`);
+                        loaded++;
+                        if (loaded === files.length) {
+                            renderPhotoTable(images, filenames, allFieldValues);
+                        }
+                        return;
+                    }
+
+                    // 建立檔名對應的欄位值映射
+                    const fieldValues = {};
+                    if (hasFilenameMapping) {
+                        patternParts.forEach((part, index) => {
+                            customFields.forEach(field => {
+                                if (field.name === part && field.filenameMapping) {
+                                    fieldValues[field.name] = filenameParts[index];
+                                    console.log(`欄位對應: ${field.name} = ${filenameParts[index]}`);
+                                }
+                            });
+                        });
+                    }
+                    console.log('當前檔案的欄位值映射:', fieldValues);
+
+                    // 儲存圖片和檔名，以及對應的欄位值
                     images.push(e.target.result);
                     filenames.push(file.name);
+                    allFieldValues.push(fieldValues);
                     loaded++;
+
                     if (loaded === files.length) {
-                        renderPhotoTable(images, filenames);
+                        console.log('所有檔案處理完成，開始渲染表格');
+                        console.log('所有檔案的欄位值映射:', allFieldValues);
+                        window.photoFieldValues = allFieldValues;
+                        renderPhotoTable(images, filenames, allFieldValues);
                     }
                 };
                 reader.readAsDataURL(file);
@@ -999,11 +1259,108 @@
             input.value = '';
         }
 
-        // 匯出表格
-        function exportTable() {
-            const format = document.getElementById('exportFormat').value;
-            // TODO: 實現匯出功能
-            alert(`匯出格式：${format}\n此功能尚未實現`);
+        // 列印表格
+        function printTable() {
+            // 創建列印用的內容容器
+            const printContainer = document.createElement('div');
+            printContainer.className = 'print-content';
+            
+            // 添加標題到列印內容
+            const mainTitle = document.querySelector('.preview-custom-titles input.title-main').value;
+            const subTitle = document.querySelector('.preview-custom-titles input.title-sub').value;
+            if (mainTitle || subTitle) {
+                const titlesDiv = document.createElement('div');
+                titlesDiv.className = 'preview-custom-titles';
+                titlesDiv.innerHTML = `
+                    <div class="print-title">
+                        ${mainTitle ? `<div class="title-main">${mainTitle}</div>` : ''}
+                        ${subTitle ? `<div class="title-sub">${subTitle}</div>` : ''}
+                    </div>
+                `;
+                printContainer.appendChild(titlesDiv);
+            }
+            
+            // 獲取所有照片單元格
+            const cells = document.querySelectorAll('.photo-cell');
+            const cellsWithImages = Array.from(cells).filter(cell => cell.querySelector('img'));
+            
+            // 計算需要多少頁
+            const cellsPerPage = 6; // 2x3 網格
+            const totalPages = Math.ceil(cellsWithImages.length / cellsPerPage);
+            
+            // 為每頁創建內容
+            for (let page = 0; page < totalPages; page++) {
+                const pageStart = page * cellsPerPage;
+                const pageCells = cellsWithImages.slice(pageStart, pageStart + cellsPerPage);
+                
+                // 如果這頁的單元格少於6個，添加空白單元格
+                while (pageCells.length < cellsPerPage) {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'print-photo-cell';
+                    pageCells.push(emptyCell);
+                }
+                
+                // 建立每頁的 grid 容器
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'print-page';
+                // 處理這頁的每個單元格
+                pageCells.forEach(cell => {
+                    const printCell = document.createElement('div');
+                    printCell.className = 'print-photo-cell';
+                    
+                    if (cell.querySelector('img')) {
+                        // 複製圖片
+                        const printImg = document.createElement('img');
+                        printImg.src = cell.querySelector('img').src;
+                        printCell.appendChild(printImg);
+                        
+                        // 複製欄位
+                        const fieldsDiv = cell.querySelector('.photo-cell-fields');
+                        if (fieldsDiv) {
+                            const printFields = document.createElement('div');
+                            printFields.className = 'print-photo-fields';
+                            
+                            // 複製每個欄位
+                            const fieldRows = fieldsDiv.querySelectorAll('.photo-cell-field-row');
+                            fieldRows.forEach(row => {
+                                const printRow = document.createElement('div');
+                                printRow.className = 'print-field-row';
+                                
+                                const label = row.querySelector('.photo-cell-field-label');
+                                const valueInput = row.querySelector('input.photo-cell-field-value');
+                                const value = valueInput ? valueInput.value : '';
+                                
+                                if (label) {
+                                    const printLabel = document.createElement('div');
+                                    printLabel.className = 'print-field-label';
+                                    printLabel.textContent = label.textContent;
+                                    
+                                    const printValue = document.createElement('div');
+                                    printValue.className = 'print-field-value';
+                                    printValue.textContent = value;
+                                    
+                                    printRow.appendChild(printLabel);
+                                    printRow.appendChild(printValue);
+                                    printFields.appendChild(printRow);
+                                }
+                            });
+                            
+                            printCell.appendChild(printFields);
+                        }
+                    }
+                    pageDiv.appendChild(printCell);
+                });
+                printContainer.appendChild(pageDiv);
+            }
+            
+            // 將列印內容添加到 body
+            document.body.appendChild(printContainer);
+            
+            // 執行列印
+            window.print();
+            
+            // 列印完成後移除列印內容
+            document.body.removeChild(printContainer);
         }
 
         // 拖曳相關函數
@@ -1022,10 +1379,43 @@
         }
 
         function handleDrop(event) {
+            console.log('開始拖放處理...');
             event.preventDefault();
             event.stopPropagation();
             const files = event.dataTransfer.files;
             if (files.length === 0) return;
+
+            // 獲取檔名組成順序
+            const patternInput = document.getElementById('filenamePattern');
+            const isPatternLocked = document.querySelector('.filename-mapping-config .lock-btn').classList.contains('locked');
+            console.log('檔名組成順序狀態:', {
+                pattern: patternInput.value,
+                isLocked: isPatternLocked
+            });
+
+            // 檢查是否有任何欄位勾選了"由檔名代入"
+            const hasFilenameMapping = Array.from(document.querySelectorAll('.custom-field')).some(field => 
+                field.querySelector('.filename-mapping').checked
+            );
+
+            // 只有在有欄位勾選"由檔名代入"時才檢查鎖定狀態
+            if (hasFilenameMapping && !isPatternLocked) {
+                console.log('請先確認並鎖定檔名組成順序！');
+                return;
+            }
+
+            const pattern = patternInput.value.trim();
+            const patternParts = pattern.split('-').map(part => part.trim());
+            console.log('解析後的檔名組成順序:', patternParts);
+            
+            // 獲取自訂欄位設定
+            const customFields = Array.from(document.querySelectorAll('.custom-field')).map(field => ({
+                name: field.querySelector('input[placeholder="欄位名稱"]').value,
+                value: field.querySelector('.global-value').value,
+                filenameMapping: field.querySelector('.filename-mapping').checked
+            }));
+            console.log('自訂欄位設定:', customFields);
+
             const table = document.getElementById('photoTable');
             const cells = Array.from(table.querySelectorAll('.photo-cell'));
             let images = cells.map(cell => {
@@ -1033,15 +1423,77 @@
                 return img ? img.src : null;
             }).filter(src => src);
             let filenames = cells.map(cell => cell.dataset.filename || '');
+            let allFieldValues = cells.map(cell => {
+                const filename = cell.dataset.filename;
+                if (!filename) return {};
+                const filenameWithoutExt = filename.split('.').slice(0, -1).join('.');
+                const filenameParts = filenameWithoutExt.split('-');
+                const fieldValues = {};
+                if (hasFilenameMapping) {
+                    patternParts.forEach((part, index) => {
+                        customFields.forEach(field => {
+                            if (field.name === part && field.filenameMapping) {
+                                fieldValues[field.name] = filenameParts[index];
+                            }
+                        });
+                    });
+                }
+                return fieldValues;
+            });
             let loaded = 0;
+
             Array.from(files).forEach((file, i) => {
+                console.log(`處理檔案 ${i + 1}/${files.length}:`, file.name);
                 const reader = new FileReader();
                 reader.onload = function(e) {
+                    // 解析檔名
+                    const filenameWithoutExt = file.name.split('.').slice(0, -1).join('.');
+                    const filenameParts = filenameWithoutExt.split('-');
+                    console.log('解析後的檔名:', {
+                        original: file.name,
+                        withoutExt: filenameWithoutExt,
+                        parts: filenameParts
+                    });
+
+                    // 只有在有欄位勾選"由檔名代入"時才檢查檔名格式
+                    if (hasFilenameMapping && filenameParts.length !== patternParts.length) {
+                        console.error('檔名格式不符合:', {
+                            expected: patternParts,
+                            actual: filenameParts
+                        });
+                        alert(`檔案 "${file.name}" 的格式不符合設定！\n預期格式：${pattern}\n實際格式：${filenameWithoutExt}`);
+                        loaded++;
+                        if (loaded === files.length) {
+                            renderPhotoTable(images, filenames, allFieldValues);
+                        }
+                        return;
+                    }
+
+                    // 建立檔名對應的欄位值映射
+                    const fieldValues = {};
+                    if (hasFilenameMapping) {
+                        patternParts.forEach((part, index) => {
+                            customFields.forEach(field => {
+                                if (field.name === part && field.filenameMapping) {
+                                    fieldValues[field.name] = filenameParts[index];
+                                    console.log(`欄位對應: ${field.name} = ${filenameParts[index]}`);
+                                }
+                            });
+                        });
+                    }
+                    console.log('當前檔案的欄位值映射:', fieldValues);
+
+                    // 儲存圖片和檔名，以及對應的欄位值
                     images.push(e.target.result);
                     filenames.push(file.name);
+                    allFieldValues.push(fieldValues);
                     loaded++;
+
                     if (loaded === files.length) {
-                        renderPhotoTable(images, filenames);
+                        console.log('所有檔案處理完成，開始渲染表格');
+                        console.log('所有檔案的欄位值映射:', allFieldValues);
+                        window.photoFieldValues = allFieldValues;
+                        renderPhotoTable(images, filenames, allFieldValues);
                     }
                 };
                 reader.readAsDataURL(file);
@@ -1081,6 +1533,8 @@
                 row.appendChild(value);
                 previewFields.appendChild(row);
             });
+            // 重新渲染下方表格，保留每張照片的欄位值
+            setPhotoTableColumns();
         }
 
         // 新增 setPhotoTableColumns，根據欄數重建表格
@@ -1092,14 +1546,17 @@
                 return img ? img.src : null;
             }).filter(src => src);
             const filenames = cells.map(cell => cell.dataset.filename || '');
-            renderPhotoTable(images, filenames);
+            renderPhotoTable(images, filenames, window.photoFieldValues);
         }
 
-        // 修改 renderPhotoTable，讓每張圖片根據自己的檔名分割填值，並保留上次自動帶入的值
-        // 並修正圖片路徑顯示順序
-        // 新增一個全域變數保存每張圖片的解析值
-        if (!window.photoFieldCache) window.photoFieldCache = [];
-        function renderPhotoTable(images, filenames) {
+        // 修改 renderPhotoTable，讓每張圖片根據自己的檔名分割填值
+        function renderPhotoTable(images, filenames, allFieldValues = []) {
+            console.log('開始渲染表格:', {
+                imagesCount: images.length,
+                filenames: filenames,
+                allFieldValues: allFieldValues
+            });
+
             const table = document.getElementById('photoTable');
             const columnCount = parseInt(document.getElementById('columnCount').value) || 2;
             // 取得目前自訂欄位
@@ -1109,30 +1566,26 @@
                 value: field.querySelector('.global-value').value,
                 filenameMapping: field.querySelector('.filename-mapping').checked
             }));
-            // 取得檔名組成順序
-            const pattern = document.getElementById('filenamePattern').value.trim();
-            const patternArr = pattern ? pattern.split('-').map(s => s.trim()) : [];
+            console.log('當前啟用的欄位:', activeFields);
+
             // 計算需要的 row
             const rowCount = Math.ceil(images.length / columnCount) || 1;
             // 清空表格
             table.innerHTML = '';
-            // 準備 field cache
-            if (!window.photoFieldCache) window.photoFieldCache = [];
-            // 逐張圖片處理
-            let imgIdx = 0;
             for (let r = 0; r < rowCount; r++) {
                 const tr = table.insertRow();
                 for (let c = 0; c < columnCount; c++) {
-                    const idx = imgIdx;
-                    imgIdx++;
+                    const idx = r * columnCount + c;
                     const td = tr.insertCell();
                     td.className = 'photo-cell';
                     td.setAttribute('ondragover', 'handleDragOver(event)');
                     td.setAttribute('ondragleave', 'handleDragLeave(event)');
                     td.setAttribute('ondrop', 'handleDrop(event)');
+                    
                     // cell 內容
                     const content = document.createElement('div');
                     content.className = 'photo-cell-content';
+                    
                     // 上傳按鈕與圖片
                     const fileInput = document.createElement('input');
                     fileInput.type = 'file';
@@ -1140,93 +1593,83 @@
                     fileInput.accept = 'image/*';
                     fileInput.onchange = function() { handleImageUpload(this); };
                     content.appendChild(fileInput);
+                    
                     const uploadBtn = document.createElement('div');
                     uploadBtn.className = 'upload-btn';
                     uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt fa-2x"></i><div>點擊上傳照片</div><div class="drag-text">或拖曳圖片至此</div>';
                     content.appendChild(uploadBtn);
+                    
                     const removeBtn = document.createElement('div');
                     removeBtn.className = 'remove-btn';
                     removeBtn.onclick = function() { removePhoto(this); };
                     removeBtn.innerHTML = '<i class="fas fa-times"></i>';
                     content.appendChild(removeBtn);
+
                     // 圖片
                     let filename = '';
-                    let filepath = '';
                     if (images[idx]) {
                         const img = document.createElement('img');
                         img.src = images[idx];
                         content.insertBefore(img, uploadBtn);
                         uploadBtn.style.display = 'none';
-                        if (filenames && filenames[idx]) filename = filenames[idx];
-                        // 只顯示純檔名（不含路徑與副檔名）
-                        let justName = filename;
-                        if (justName && justName.includes('/')) justName = justName.substring(justName.lastIndexOf('/') + 1);
-                        justName = justName ? (justName.split('.').slice(0, -1).join('.') || justName) : '';
-                        const nameDiv = document.createElement('div');
-                        nameDiv.style.fontSize = '0.95em';
-                        nameDiv.style.color = '#333';
-                        nameDiv.style.fontWeight = 'bold';
-                        nameDiv.style.wordBreak = 'break-all';
-                        nameDiv.textContent = justName;
-                        content.insertBefore(nameDiv, img);
+                        if (filenames && filenames[idx]) {
+                            filename = filenames[idx];
+                            td.dataset.filename = filename;
+                        }
                     }
+
                     // 欄位區
                     const fieldsDiv = document.createElement('div');
                     fieldsDiv.className = 'photo-cell-fields';
-                    // 依 patternArr 對應欄位
-                    let parts = [];
-                    let filenameError = false;
-                    if (filename && patternArr.length > 0) {
-                        let justName = filename;
-                        if (justName.includes('/')) justName = justName.substring(justName.lastIndexOf('/') + 1);
-                        justName = justName.split('.').slice(0, -1).join('.') || justName;
-                        parts = justName.split('-');
-                        if (activeFields.some(f => f.filenameMapping) && parts.length !== patternArr.length) {
-                            filenameError = true;
-                        }
-                    }
-                    // 準備本張圖片的欄位 cache
-                    if (!window.photoFieldCache[idx]) window.photoFieldCache[idx] = {};
-                    // 解析並快取本張圖片的欄位值
-                    if (!filenameError && filename && patternArr.length > 0) {
-                        activeFields.forEach((field, fidx) => {
-                            if (field.filenameMapping) {
-                                const pidx = patternArr.findIndex(p => p.replace(/\s/g, '') === field.name.replace(/\s/g, ''));
-                                window.photoFieldCache[idx][field.name] = (pidx !== -1 && parts[pidx]) ? parts[pidx] : '';
-                            }
+                    
+                    // 獲取當前照片的欄位值映射
+                    const currentFieldValues = allFieldValues[idx] || {};
+                    console.log(`處理第 ${idx + 1} 張照片的欄位值:`, currentFieldValues);
+                    
+                    activeFields.forEach(field => {
+                        console.log(`處理欄位: ${field.name}`, {
+                            filenameMapping: field.filenameMapping,
+                            mappedValue: currentFieldValues[field.name],
+                            defaultValue: field.value
                         });
-                    }
-                    if (filenameError) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.style.color = 'red';
-                        errorDiv.style.fontWeight = 'bold';
-                        errorDiv.style.padding = '8px';
-                        errorDiv.textContent = '檔名格式錯誤，請檢查檔名與組成順序是否一致';
-                        content.appendChild(errorDiv);
-                    }
-                    activeFields.forEach((field, fidx) => {
+                        
                         const row = document.createElement('div');
                         row.className = 'photo-cell-field-row';
+                        
                         const label = document.createElement('div');
                         label.className = 'photo-cell-field-label';
                         label.textContent = field.name;
-                        const value = document.createElement('div');
-                        value.className = 'photo-cell-field-value';
-                        if (field.filenameMapping && patternArr.length > 0 && filename && !filenameError) {
-                            // 自動帶入並快取
-                            value.textContent = window.photoFieldCache[idx][field.name] || '';
+                        
+                        // 欄位值輸入框
+                        const valueInput = document.createElement('input');
+                        valueInput.className = 'photo-cell-field-value';
+                        valueInput.type = 'text';
+                        valueInput.value = (field.filenameMapping && currentFieldValues[field.name] !== undefined)
+                            ? currentFieldValues[field.name]
+                            : (currentFieldValues[field.name] !== undefined && currentFieldValues[field.name] !== '' ? currentFieldValues[field.name] : field.value);
+                        valueInput.oninput = function() {
+                            if (!allFieldValues[idx]) allFieldValues[idx] = {};
+                            allFieldValues[idx][field.name] = this.value;
+                            window.photoFieldValues = allFieldValues;
+                        };
+                        // 如果是由檔名帶入且有值，則設為唯讀
+                        if (field.filenameMapping && currentFieldValues[field.name] !== undefined) {
+                            valueInput.readOnly = true;
                         } else {
-                            // 取消勾選時，保留上次自動帶入的值
-                            value.textContent = window.photoFieldCache[idx][field.name] || field.value;
+                            valueInput.readOnly = false;
                         }
+                        
                         row.appendChild(label);
-                        row.appendChild(value);
+                        row.appendChild(valueInput);
                         fieldsDiv.appendChild(row);
                     });
+                    
                     content.appendChild(fieldsDiv);
                     td.appendChild(content);
                 }
             }
+            // 渲染結束後同步全域
+            window.photoFieldValues = allFieldValues;
         }
 
         // 修改 toggleFilenameMapping，勾選/取消時自動顯示/隱藏檔名組成順序設定欄，並即時分割填值
@@ -1252,30 +1695,238 @@
             config.style.display = anyChecked ? 'flex' : 'none';
         }
 
-        // 檔名組成鎖定/編輯機制
-        let filenamePatternLocked = false;
-        function applyFilenamePatternLock(lock) {
+        // 新增檔名組成順序鎖定功能
+        function toggleFilenamePatternLock(button) {
             const input = document.getElementById('filenamePattern');
-            const confirmBtn = document.getElementById('filenamePatternConfirmBtn');
-            const editBtn = document.getElementById('filenamePatternEditBtn');
-            filenamePatternLocked = lock;
-            input.readOnly = lock;
-            confirmBtn.style.display = lock ? 'none' : '';
-            editBtn.style.display = lock ? '' : 'none';
-            if (lock) {
-                // 套用規則
-                updatePreviewTable();
-                setPhotoTableColumns();
+            const isLocked = button.classList.contains('locked');
+            
+            if (isLocked) {
+                // 解鎖
+                button.classList.remove('locked');
+                button.classList.add('unlocked');
+                button.innerHTML = '<i class="fas fa-lock"></i><span>鎖定</span>';
+                button.title = '點擊鎖定檔名組成順序';
+                input.disabled = false;
+                input.style.backgroundColor = '';
+            } else {
+                // 鎖定
+                button.classList.remove('unlocked');
+                button.classList.add('locked');
+                button.innerHTML = '<i class="fas fa-lock"></i><span>已鎖定</span>';
+                button.title = '點擊解除鎖定';
+                input.disabled = true;
+                input.style.backgroundColor = '#f5f5f5';
             }
         }
-        document.getElementById('filenamePatternConfirmBtn').onclick = function() {
-            applyFilenamePatternLock(true);
-        };
-        document.getElementById('filenamePatternEditBtn').onclick = function() {
-            applyFilenamePatternLock(false);
-        };
-        // 預設鎖定
-        applyFilenamePatternLock(true);
+
+        // 修改 exportFieldConfig 函數，加入檔名組成順序的鎖定狀態
+        function exportFieldConfig() {
+            // 獲取所有自訂欄位的設定
+            const fields = Array.from(document.querySelectorAll('.custom-field')).map(field => {
+                const nameInput = field.querySelector('input[placeholder="欄位名稱"]');
+                const valueInput = field.querySelector('.global-value');
+                const filenameMapping = field.querySelector('.filename-mapping').checked;
+                return {
+                    name: nameInput.value,
+                    value: valueInput.value,
+                    filenameMapping: filenameMapping
+                };
+            });
+
+            // 獲取檔名組成順序
+            const filenamePattern = document.getElementById('filenamePattern').value;
+            const isPatternLocked = document.querySelector('.filename-mapping-config .lock-btn').classList.contains('locked');
+
+            // 獲取已選中的預設欄位
+            const selectedFields = Array.from(document.querySelectorAll('.field-checkbox-item input[type="checkbox"]'))
+                .filter(cb => cb.checked)
+                .map(cb => cb.nextElementSibling.textContent);
+
+            // 獲取標題
+            const mainTitle = document.querySelector('.preview-custom-titles input.title-main').value;
+            const subTitle = document.querySelector('.preview-custom-titles input.title-sub').value;
+
+            // 創建設定對象
+            const config = {
+                fields: fields,
+                filenamePattern: filenamePattern,
+                isPatternLocked: isPatternLocked,
+                selectedFields: selectedFields,
+                mainTitle: mainTitle,
+                subTitle: subTitle,
+                exportDate: new Date().toISOString()
+            };
+
+            // 產生日期時間字串 YYYYMMDDHHmm
+            const now = new Date();
+            const pad = n => n.toString().padStart(2, '0');
+            const dateStr = now.getFullYear().toString() + pad(now.getMonth() + 1) + pad(now.getDate()) + pad(now.getHours()) + pad(now.getMinutes());
+            // 預設檔名
+            const defaultName = '欄位設定.json';
+            const fileName = `${dateStr}-${defaultName}`;
+
+            // 轉換為 JSON 並下載
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 修改 importFieldConfig 函數，還原檔名組成順序的鎖定狀態
+        function importFieldConfig(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // 解析檔名，取得日期時間與主檔名
+            let importDateTime = '';
+            let importBaseName = '';
+            const match = file.name.match(/^([0-9]{12})-(.+)$/);
+            if (match) {
+                importDateTime = match[1];
+                importBaseName = match[2];
+                // 你可以根據 importDateTime 做進一步處理
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    
+                    // 清空現有欄位
+                    const container = document.getElementById('customFieldsContainer');
+                    container.innerHTML = '';
+                    
+                    // 重置所有預設欄位的勾選狀態
+                    document.querySelectorAll('.field-checkbox-item input[type="checkbox"]').forEach(cb => {
+                        cb.checked = false;
+                    });
+
+                    // 還原預設欄位的勾選狀態
+                    config.selectedFields.forEach(fieldName => {
+                        const checkbox = Array.from(document.querySelectorAll('.field-checkbox-item input[type="checkbox"]'))
+                            .find(cb => cb.nextElementSibling.textContent === fieldName);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            // 不要呼叫 toggleField，避免重複產生欄位
+                        }
+                    });
+
+                    // 還原自訂欄位
+                    config.fields.forEach(field => {
+                        const newField = createFieldElement(field.name);
+                        const valueInput = newField.querySelector('.global-value');
+                        const filenameMapping = newField.querySelector('.filename-mapping');
+                        
+                        valueInput.value = field.value;
+                        filenameMapping.checked = field.filenameMapping;
+                        if (field.filenameMapping) {
+                            valueInput.readOnly = true;
+                        }
+                        
+                        container.appendChild(newField);
+                    });
+
+                    // 還原檔名組成順序
+                    document.getElementById('filenamePattern').value = config.filenamePattern;
+                    
+                    // 還原鎖定狀態
+                    const lockBtn = document.querySelector('.filename-mapping-config .lock-btn');
+                    if (config.isPatternLocked) {
+                        lockBtn.classList.remove('unlocked');
+                        lockBtn.classList.add('locked');
+                        lockBtn.innerHTML = '<i class="fas fa-lock"></i><span>已鎖定</span>';
+                        lockBtn.title = '點擊解除鎖定';
+                        document.getElementById('filenamePattern').disabled = true;
+                        document.getElementById('filenamePattern').style.backgroundColor = '#f5f5f5';
+                    } else {
+                        lockBtn.classList.remove('locked');
+                        lockBtn.classList.add('unlocked');
+                        lockBtn.innerHTML = '<i class="fas fa-lock"></i><span>鎖定</span>';
+                        lockBtn.title = '點擊鎖定檔名組成順序';
+                        document.getElementById('filenamePattern').disabled = false;
+                        document.getElementById('filenamePattern').style.backgroundColor = '';
+                    }
+
+                    // 還原標題
+                    if (config.mainTitle) {
+                        document.querySelector('.preview-custom-titles input.title-main').value = config.mainTitle;
+                    }
+                    if (config.subTitle) {
+                        document.querySelector('.preview-custom-titles input.title-sub').value = config.subTitle;
+                    }
+                    updatePreviewTitles();
+
+                    // 更新預覽和表格
+                    showOrHideFilenamePatternConfig();
+                    updatePreviewTable();
+                    setPhotoTableColumns();
+
+                    alert('欄位設定已成功匯入！' + (importDateTime ? `\n檔案日期時間：${importDateTime}` : ''));
+                } catch (error) {
+                    alert('匯入失敗：檔案格式不正確');
+                    console.error('匯入錯誤：', error);
+                }
+            };
+            reader.readAsText(file);
+            input.value = '';
+        }
+
+        // 新增更新預覽標題的函數
+        function updatePreviewTitles() {
+            const mainTitle = document.querySelector('.preview-custom-titles input.title-main').value;
+            const subTitle = document.querySelector('.preview-custom-titles input.title-sub').value;
+            
+            // 更新預覽區域的標題
+            const printTitleMain = document.querySelector('.preview-custom-titles .print-title .title-main');
+            const printTitleSub = document.querySelector('.preview-custom-titles .print-title .title-sub');
+            
+            if (mainTitle) {
+                printTitleMain.textContent = mainTitle;
+                printTitleMain.style.display = 'block';
+            } else {
+                printTitleMain.style.display = 'none';
+            }
+            
+            if (subTitle) {
+                printTitleSub.textContent = subTitle;
+                printTitleSub.style.display = 'block';
+            } else {
+                printTitleSub.style.display = 'none';
+            }
+        }
+
+        function clearAllPhotos() {
+            document.getElementById('photoTable').innerHTML = '<tbody><tr><td class="photo-cell" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><input type="file" class="file-input" accept="image/*" onchange="handleImageUpload(this)"><div class="upload-btn"><i class="fas fa-cloud-upload-alt fa-2x"></i><div>點擊上傳照片</div><div class="drag-text">或拖曳圖片至此</div></div><div class="remove-btn" onclick="removePhoto(this)"><i class="fas fa-times"></i></div></td></tr></tbody>';
+            window.photoFieldValues = [];
+        }
+
+        const availableFields = [
+            { id: 'field-title', name: '標題' },
+            { id: 'field-project', name: '案名' },
+            { id: 'field-date', name: '日期' },
+            { id: 'field-verification', name: '查驗單位' },
+            { id: 'field-signature', name: '簽名' }
+        ];
+
+        function renderAvailableFields() {
+            const container = document.getElementById('fieldCheckboxes');
+            container.innerHTML = '';
+            availableFields.forEach(field => {
+                const div = document.createElement('div');
+                div.className = 'field-checkbox-item';
+                div.innerHTML = `
+                    <input type="checkbox" id="${field.id}" onchange="toggleField(this, '${field.name}')">
+                    <label for="${field.id}">${field.name}</label>
+                `;
+                container.appendChild(div);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', renderAvailableFields);
     </script>
 </body>
 </html> 
