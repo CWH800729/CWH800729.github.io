@@ -1,4 +1,3 @@
-@ -0,0 +1,646 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -137,6 +136,12 @@
     <div class="container">
         <h1 class="text-center mb-4">連續壁灌漿表</h1>
         
+        <!-- 匯出匯入按鈕 -->
+        <div class="d-flex justify-content-end mb-3">
+            <button class="btn btn-success me-2" onclick="exportUnitData()">匯出單元資料</button>
+            <button class="btn btn-primary" onclick="importUnitData()">匯入單元資料</button>
+        </div>
+
         <!-- 單元規格輸入表單 -->
         <div class="card mb-4">
             <div class="card-header">
@@ -183,29 +188,8 @@
                         <label class="form-label">單元面積(m²)</label>
                         <div class="calculated-value" id="unitArea">0.00</div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">預計灌漿底部高程(m)</label>
-                        <input type="text" class="form-control" id="bottomElevation">
-                    </div>
-                </div>
-                <div class="row g-2 mt-1">
-                    <div class="col-md-4">
-                        <label class="form-label">預計灌漿頂部高程(m)</label>
-                        <input type="text" class="form-control" id="topElevation">
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <button class="btn btn-primary btn-sm" onclick="saveUnitSpecs()">儲存規格</button>
                 </div>
             </div>
-        </div>
-
-        <!-- 控制按鈕組 -->
-        <div class="btn-group no-print" role="group">
-            <button class="btn btn-primary" onclick="addNewRow()">新增資料</button>
-            <button class="btn btn-success" onclick="exportToExcel()">匯出Excel</button>
-            <button class="btn btn-info" onclick="window.print()">列印</button>
-            <button class="btn btn-secondary" onclick="importFromExcel()">匯入Excel</button>
         </div>
 
         <!-- 圖表區域 -->
@@ -283,27 +267,6 @@
                 </tbody>
             </table>
         </div>
-
-        <!-- 數據表格 -->
-        <div class="table-responsive data-table">
-            <h5 class="mb-3">所有單元</h5>
-            <table class="table table-bordered table-hover" id="groutingTable">
-                <thead>
-                    <tr>
-                        <th>日期</th>
-                        <th>單元編號</th>
-                        <th>深度(m)</th>
-                        <th>灌漿量(m³)</th>
-                        <th>單元尺寸(m)</th>
-                        <th>高程範圍(m)</th>
-                        <th class="no-print">操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- 數據行將通過JavaScript動態添加 -->
-                </tbody>
-            </table>
-        </div>
     </div>
 
     <!-- Bootstrap Bundle with Popper -->
@@ -314,63 +277,100 @@
         const ctx = document.getElementById('groutingChart').getContext('2d');
         
         function initChart() {
+            const unitDepth = parseFloat(document.getElementById('unitDepth').value) || 0;
             groutingChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: [],
+                    labels: [0],  // 初始起點體積為0
                     datasets: [{
-                        label: '灌漿量 (m³)',
-                        data: [],
+                        label: '預估設計曲線',
+                        data: [unitDepth],  // 初始起點深度為單元深度
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: '實際澆置曲線',
+                        data: [unitDepth],  // 初始起點深度為單元深度
                         borderColor: 'rgb(75, 192, 192)',
-                        tension: 0.1
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toFixed(2) + ' m';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         x: {
-                            reverse: true,
+                            display: true,
+                            reverse: false,
                             title: {
                                 display: true,
-                                text: '灌漿量 (m³)'
+                                text: '累計體積 (m³)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
                             }
                         },
                         y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
                             reverse: true,
                             title: {
                                 display: true,
-                                text: '深度 (m)'
+                                text: '深度 (m)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
                             }
                         }
                     }
                 }
             });
-        }
-
-        // 添加新行
-        function addNewRow() {
-            const tbody = document.querySelector('#groutingTable tbody');
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td><input type="date" class="form-control"></td>
-                <td><input type="text" class="form-control"></td>
-                <td><input type="number" class="form-control" step="0.01"></td>
-                <td><input type="number" class="form-control" step="0.01"></td>
-                <td><input type="text" class="form-control"></td>
-                <td><input type="text" class="form-control"></td>
-                <td class="no-print">
-                    <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">刪除</button>
-                </td>
-            `;
-            tbody.appendChild(newRow);
-            updateChart();
-        }
-
-        // 刪除行
-        function deleteRow(button) {
-            button.closest('tr').remove();
-            updateChart();
         }
 
         // 計算體積和面積
@@ -384,96 +384,99 @@
             
             document.getElementById('unitVolume').textContent = volume.toFixed(2);
             document.getElementById('unitArea').textContent = area.toFixed(2);
+
+            // 當體積計算完成後，自動填充混凝土數據表格
+            if (volume > 0) {
+                autoFillConcreteData(volume);
+            }
         }
 
-        // 儲存單元規格
-        function saveUnitSpecs() {
-            const specs = {
-                unitNumber: document.getElementById('unitNumber').value,
-                unitType: document.getElementById('unitType').value,
-                depth: document.getElementById('unitDepth').value,
-                width: document.getElementById('unitWidth').value,
-                length: document.getElementById('unitLength').value,
-                volume: document.getElementById('unitVolume').textContent,
-                area: document.getElementById('unitArea').textContent,
-                date: document.getElementById('unitDate').value,
-                bottomElevation: document.getElementById('bottomElevation').value,
-                topElevation: document.getElementById('topElevation').value
-            };
+        // 自動填充混凝土數據
+        function autoFillConcreteData(targetVolume) {
+            const tbody = document.querySelector('#concreteDataTable tbody');
+            tbody.innerHTML = ''; // 清空現有數據
             
-            // 將規格添加到表格中
-            const tbody = document.querySelector('#groutingTable tbody');
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td>${specs.date}</td>
-                <td>${specs.unitNumber} (${specs.unitType})</td>
-                <td>${specs.depth}</td>
-                <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
-                <td>${specs.width} × ${specs.length} (${specs.volume}m³, ${specs.area}m²)</td>
-                <td>${specs.bottomElevation} ~ ${specs.topElevation}</td>
-                <td class="no-print">
-                    <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">刪除</button>
-                </td>
-            `;
-            tbody.appendChild(newRow);
-            updateChart();
+            let currentVolume = 0;
+            let rowCount = 1;
+            
+            // 持續添加行直到達到目標體積
+            while (currentVolume < targetVolume) {
+                const newRow = document.createElement('tr');
+                const remainingVolume = targetVolume - currentVolume;
+                const inputValue = Math.min(9, remainingVolume); // 使用9或剩餘體積中的較小值
+                
+                let rowHtml = `
+                    <td class="item-number">${rowCount}</td>
+                    <td><input type="number" class="form-control" step="0.01" value="${inputValue.toFixed(2)}" oninput="updateConcreteData()"></td>
+                    <td class="calculated-value">0.00</td>
+                    <td class="calculated-value">0.00</td>
+                    <td class="calculated-value">0.00</td>
+                    <td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>
+                `;
+                
+                newRow.innerHTML = rowHtml;
+                tbody.appendChild(newRow);
+                
+                currentVolume += inputValue;
+                rowCount++;
+            }
+            
+            // 更新計算值
             updateConcreteData();
         }
 
         // 更新圖表
         function updateChart() {
-            const rows = document.querySelectorAll('#groutingTable tbody tr');
+            const rows = document.querySelectorAll('#concreteDataTable tbody tr');
             const depths = [];
-            const groutingData = [];
+            const volumes = [];
+            const actualDepths = [];
+            const unitDepth = parseFloat(document.getElementById('unitDepth').value) || 0;
 
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                const depth = parseFloat(cells[2].textContent);
-                const groutingInput = row.querySelector('input[type="number"]');
-                if (depth && groutingInput.value) {
-                    depths.push(depth);
-                    groutingData.push(parseFloat(groutingInput.value));
+            // 添加起點 (單元深度, 0)
+            depths.push(unitDepth);
+            actualDepths.push(unitDepth);  // 確保實際澆置曲線也從單元深度開始
+            volumes.push(0);
+
+            // 收集其他數據點
+            let hasActualData = false;  // 用於追蹤是否有實際深度數據
+            rows.forEach((row) => {
+                const cumulativeVolume = parseFloat(row.querySelector('td:nth-child(3)').textContent) || 0;
+                const plannedDepth = parseFloat(row.querySelector('td:nth-child(4)').textContent) || 0;
+                const actualDepth = parseFloat(row.querySelector('td:nth-child(5)').textContent) || 0;
+                
+                if (cumulativeVolume > 0 || plannedDepth > 0) {
+                    depths.push(plannedDepth);
+                    if (actualDepth > 0) {
+                        actualDepths.push(actualDepth);
+                        hasActualData = true;  // 標記有實際深度數據
+                    } else {
+                        actualDepths.push(null);
+                    }
+                    volumes.push(cumulativeVolume);
                 }
             });
 
-            groutingChart.data.labels = depths;
-            groutingChart.data.datasets[0].data = groutingData;
-            groutingChart.update();
-        }
+            // 確保數據按累計體積升序排序
+            const sortedData = volumes.map((volume, index) => ({
+                volume: volume,
+                depth: depths[index],
+                actualDepth: actualDepths[index]
+            })).sort((a, b) => a.volume - b.volume);
 
-        // 檢查單元規格是否完整
-        function checkUnitSpecs() {
-            const width = parseFloat(document.getElementById('unitWidth').value) || 0;
-            const length = parseFloat(document.getElementById('unitLength').value) || 0;
-            const depth = parseFloat(document.getElementById('unitDepth').value) || 0;
-            const concreteTable = document.getElementById('concreteDataTable');
+            // 更新圖表數據
+            groutingChart.data.labels = sortedData.map(item => item.volume.toFixed(2));
+            groutingChart.data.datasets[0].data = sortedData.map(item => item.depth);
             
-            if (width <= 0 || length <= 0 || depth <= 0) {
-                concreteTable.classList.add('disabled');
-                return false;
+            // 如果沒有任何實際深度數據，則實際澆置曲線只顯示起點
+            if (!hasActualData) {
+                groutingChart.data.datasets[1].data = [unitDepth, ...Array(sortedData.length - 1).fill(null)];
             } else {
-                concreteTable.classList.remove('disabled');
-                return true;
+                groutingChart.data.datasets[1].data = sortedData.map(item => item.actualDepth);
             }
-        }
-
-        // 監聽單元規格輸入變化
-        function setupUnitSpecsListeners() {
-            const specsInputs = ['unitWidth', 'unitLength', 'unitDepth'];
-            specsInputs.forEach(id => {
-                document.getElementById(id).addEventListener('input', function() {
-                    checkUnitSpecs();
-                });
-            });
-
-            // 為表格添加點擊事件監聽
-            const concreteTable = document.getElementById('concreteDataTable');
-            concreteTable.addEventListener('click', function(e) {
-                if (e.target.tagName === 'INPUT' && !checkUnitSpecs()) {
-                    e.preventDefault();
-                    alert('請先完成單元規格的填寫（寬度、長度、深度必須大於0）');
-                }
-            });
+            
+            // 更新圖表
+            groutingChart.update();
         }
 
         // 更新混凝土量與深度數據
@@ -496,6 +499,9 @@
                     row.querySelector('td:nth-child(4)').textContent = '0.00';
                 }
             });
+
+            // 更新圖表
+            updateChart();
         }
 
         // 初始化表格的預設行
@@ -582,66 +588,203 @@
             row.querySelector('td:nth-child(5)').textContent = averageDepth.toFixed(2);
         }
 
-        // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            initChart();
-            initializeTableRows();
-            setupUnitSpecsListeners();
-            checkUnitSpecs(); // 初始檢查單元規格
-            // 添加事件監聽器以在輸入變化時更新圖表
-            document.getElementById('groutingTable').addEventListener('input', updateChart);
-        });
+        // 匯出單元資料
+        function exportUnitData() {
+            // 檢查單元編號是否為空
+            const unitNumber = document.getElementById('unitNumber').value.trim();
+            if (!unitNumber) {
+                alert('請先填入單元編號後再匯出資料');
+                return;
+            }
 
-        // 匯出Excel
-        function exportToExcel() {
-            const table = document.getElementById('groutingTable');
-            const wb = XLSX.utils.table_to_book(table, {sheet: "灌漿數據"});
-            XLSX.writeFile(wb, "連續壁灌漿表.xlsx");
+            // 獲取當前日期時間
+            const now = new Date();
+            const dateTimeStr = now.getFullYear() +
+                ('0' + (now.getMonth() + 1)).slice(-2) +
+                ('0' + now.getDate()).slice(-2) + '-' +
+                ('0' + now.getHours()).slice(-2) +
+                ('0' + now.getMinutes()).slice(-2) +
+                ('0' + now.getSeconds()).slice(-2);
+
+            // 準備CSV內容
+            let csvContent = '';
+
+            // 添加單元規格資料
+            csvContent += '單元規格\n';
+            csvContent += '日期,單元編號,單元類型,寬度(m),長度(m),深度(m),體積(m³),面積(m²)\n';
+            csvContent += [
+                document.getElementById('unitDate').value,
+                unitNumber,
+                document.getElementById('unitType').value,
+                document.getElementById('unitWidth').value,
+                document.getElementById('unitLength').value,
+                document.getElementById('unitDepth').value,
+                document.getElementById('unitVolume').textContent,
+                document.getElementById('unitArea').textContent
+            ].join(',') + '\n\n';
+
+            // 添加混凝土數據表格資料
+            csvContent += '混凝土量與深度數據\n';
+            const rows = document.querySelectorAll('#concreteDataTable tbody tr');
+            
+            // 獲取所有實際深度欄位的數量
+            const depthColumns = document.querySelector('#concreteDataTable thead tr:last-child').querySelectorAll('th').length - 5;
+            
+            // 添加表頭
+            let header = '項目,灌漿體積(m³),累計體積(m³),預計深度(m),實際平均深度(m)';
+            for (let i = 1; i <= depthColumns; i++) {
+                header += `,實際深度${i}(m)`;
+            }
+            csvContent += header + '\n';
+
+            // 添加數據行
+            rows.forEach(row => {
+                const rowData = [
+                    row.querySelector('.item-number').textContent,
+                    row.querySelector('td:nth-child(2) input').value,
+                    row.querySelector('td:nth-child(3)').textContent,
+                    row.querySelector('td:nth-child(4)').textContent,
+                    row.querySelector('td:nth-child(5)').textContent
+                ];
+
+                // 添加所有實際深度值
+                const depthInputs = row.querySelectorAll('td:nth-child(n+6) input');
+                depthInputs.forEach(input => {
+                    rowData.push(input.value);
+                });
+
+                csvContent += rowData.join(',') + '\n';
+            });
+
+            // 下載CSV文件
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${dateTimeStr}-${unitNumber}-連續壁灌漿記錄表.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
-        // 匯入Excel
-        function importFromExcel() {
+        // 匯入單元資料
+        function importUnitData() {
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = '.xlsx, .xls';
+            input.accept = '.csv,.txt';
             input.onchange = function(e) {
                 const file = e.target.files[0];
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
-                    
-                    // 清空現有表格
-                    const tbody = document.querySelector('#groutingTable tbody');
-                    tbody.innerHTML = '';
-                    
-                    // 添加新數據
-                    jsonData.slice(1).forEach(row => {
-                        if (row.length > 0) {
-                            const newRow = document.createElement('tr');
-                            newRow.innerHTML = `
-                                <td><input type="date" class="form-control" value="${row[0] || ''}"></td>
-                                <td><input type="text" class="form-control" value="${row[1] || ''}"></td>
-                                <td><input type="number" class="form-control" step="0.01" value="${row[2] || ''}"></td>
-                                <td><input type="number" class="form-control" step="0.01" value="${row[3] || ''}" oninput="updateConcreteData()"></td>
-                                <td><input type="text" class="form-control" value="${row[4] || ''}"></td>
-                                <td><input type="text" class="form-control" value="${row[5] || ''}"></td>
-                                <td class="no-print">
-                                    <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">刪除</button>
-                                </td>
-                            `;
-                            tbody.appendChild(newRow);
+                    try {
+                        const content = e.target.result;
+                        const lines = content.split('\n');
+                        
+                        // 解析單元規格
+                        let currentSection = '';
+                        let specsLine = null;
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (!line) continue;
+                            
+                            if (line === '單元規格') {
+                                currentSection = 'specs';
+                                continue;
+                            } else if (line === '混凝土量與深度數據') {
+                                currentSection = 'concrete';
+                                continue;
+                            }
+                            
+                            if (currentSection === 'specs' && !line.startsWith('日期')) {
+                                specsLine = line.split(',');
+                                break;
+                            }
                         }
-                    });
-                    updateChart();
-                    updateConcreteData();
+                        
+                        if (specsLine) {
+                            // 填充單元規格
+                            document.getElementById('unitDate').value = specsLine[0] || '';
+                            document.getElementById('unitNumber').value = specsLine[1] || '';
+                            document.getElementById('unitType').value = specsLine[2] || '公';
+                            document.getElementById('unitWidth').value = specsLine[3] || '';
+                            document.getElementById('unitLength').value = specsLine[4] || '';
+                            document.getElementById('unitDepth').value = specsLine[5] || '';
+                            // 觸發體積計算
+                            calculateVolume();
+                        }
+                        
+                        // 解析混凝土數據
+                        let concreteDataStart = false;
+                        let headerFound = false;
+                        const concreteData = [];
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (!line) continue;
+                            
+                            if (line === '混凝土量與深度數據') {
+                                concreteDataStart = true;
+                                continue;
+                            }
+                            
+                            if (concreteDataStart) {
+                                if (!headerFound) {
+                                    headerFound = true;
+                                    continue;
+                                }
+                                const rowData = line.split(',');
+                                if (rowData.length >= 5) {
+                                    concreteData.push(rowData);
+                                }
+                            }
+                        }
+                        
+                        // 填充混凝土數據表格
+                        if (concreteData.length > 0) {
+                            const tbody = document.querySelector('#concreteDataTable tbody');
+                            tbody.innerHTML = '';
+                            
+                            concreteData.forEach((rowData, index) => {
+                                const newRow = document.createElement('tr');
+                                let rowHtml = `
+                                    <td class="item-number">${rowData[0]}</td>
+                                    <td><input type="number" class="form-control" step="0.01" value="${rowData[1]}" oninput="updateConcreteData()"></td>
+                                    <td class="calculated-value">${rowData[2]}</td>
+                                    <td class="calculated-value">${rowData[3]}</td>
+                                    <td class="calculated-value">${rowData[4]}</td>
+                                `;
+                                
+                                // 添加實際深度輸入框
+                                for (let i = 5; i < rowData.length; i++) {
+                                    rowHtml += `<td><input type="number" class="form-control" step="0.01" value="${rowData[i]}" oninput="calculateAverageDepth(this)"></td>`;
+                                }
+                                
+                                newRow.innerHTML = rowHtml;
+                                tbody.appendChild(newRow);
+                            });
+                            
+                            // 更新圖表
+                            updateChart();
+                        }
+                    } catch (error) {
+                        alert('匯入數據格式錯誤：' + error.message);
+                    }
                 };
-                reader.readAsArrayBuffer(file);
+                reader.readAsText(file, 'UTF-8');
             };
             input.click();
         }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            // 添加體積輸入監聽器
+            ['unitWidth', 'unitLength', 'unitDepth'].forEach(id => {
+                document.getElementById(id).addEventListener('input', calculateVolume);
+            });
+        });
     </script>
 </body>
 </html> 
