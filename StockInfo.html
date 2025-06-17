@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>美股資訊查詢系統 - CWH懶人工程</title>
+    <title>匯率查詢 - CWH懶人工程</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body {
@@ -546,8 +546,10 @@
     <header>
         <div class="container">
             <div class="header-content">
-                <img src="http://cwh800729.github.io/CWH-LOGO" alt="logo" class="logo">
-                <h1 class="site-title">美股資訊查詢系統</h1>
+                <a href="http://cwh800729.github.io/index.html">
+                    <img src="http://cwh800729.github.io/CWH-LOGO" alt="logo" class="logo">
+                </a>
+                <h1 class="site-title">匯率查詢</h1>
                 <a href="http://cwh800729.github.io/index.html" class="back-link">
                     <i class="fas fa-arrow-left"></i> 返回首頁
                 </a>
@@ -557,91 +559,6 @@
 
     <main class="container">
         <div class="main-content">
-            <!-- 美股資訊查詢卡片 -->
-            <div class="card">
-                <h2><i class="fas fa-chart-line"></i> 美股資訊查詢</h2>
-                
-                <div class="form-group">
-                    <label for="stockSymbol">美股代號：</label>
-                    <input type="text" id="stockSymbol" placeholder="例如：AAPL, GOOGL, MSFT" maxlength="10">
-                </div>
-                
-                <div class="form-group">
-                    <label for="stockShares">股數：</label>
-                    <input type="number" id="stockShares" placeholder="請輸入股數" min="0" step="1">
-                </div>
-                
-                <div class="form-group">
-                    <label for="stockPrice">股價 (USD)：</label>
-                    <input type="number" id="stockPrice" placeholder="請輸入股價" min="0" step="0.01">
-                </div>
-                
-                <button class="btn btn-success" onclick="addStock()">
-                    <i class="fas fa-plus"></i> 新增股票
-                </button>
-                
-                <!-- 匯出匯入功能 -->
-                <div class="import-export-section">
-                    <h3><i class="fas fa-download"></i> 資料匯出匯入</h3>
-                    <div class="import-export-buttons">
-                        <button class="btn btn-secondary" onclick="exportStockData()">
-                            <i class="fas fa-download"></i> 匯出股票資料 (CSV)
-                        </button>
-                        <button class="btn btn-secondary" onclick="exportStockDataJSON()">
-                            <i class="fas fa-download"></i> 匯出股票資料 (JSON)
-                        </button>
-                        <div class="file-input-container">
-                            <input type="file" id="stockFileInput" class="file-input" accept=".csv,.json" onchange="importStockData(event)">
-                            <label for="stockFileInput" class="file-input-label">
-                                <i class="fas fa-upload"></i> 匯入股票資料
-                            </label>
-                        </div>
-                        <button class="btn btn-warning" onclick="clearAllStocks()">
-                            <i class="fas fa-trash"></i> 清空所有股票
-                        </button>
-                    </div>
-                    <div id="stockSuccessMessage" class="success-message"></div>
-                    <div id="stockErrorMessage" class="error-message"></div>
-                </div>
-                
-                <div class="table-container">
-                    <table id="stockTable">
-                        <thead>
-                            <tr>
-                                <th>股票代號</th>
-                                <th>股數</th>
-                                <th>股價 (USD)</th>
-                                <th>市值 (USD)</th>
-                                <th>最近配息</th>
-                                <th>下次配息</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stockTableBody">
-                            <tr class="empty-message">
-                                <td colspan="7">尚未新增任何股票</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="result-section" id="stockSummary" style="display: none;">
-                    <h3><i class="fas fa-calculator"></i> 投資組合摘要</h3>
-                    <div class="result-item">
-                        <span class="result-label">總市值：</span>
-                        <span class="result-value" id="totalMarketValue">$0.00</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">總股數：</span>
-                        <span class="result-value" id="totalShares">0</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">平均股價：</span>
-                        <span class="result-value" id="averagePrice">$0.00</span>
-                    </div>
-                </div>
-            </div>
-
             <!-- 匯率計算卡片 -->
             <div class="card">
                 <h2><i class="fas fa-exchange-alt"></i> 台幣換外幣匯率計算</h2>
@@ -799,21 +716,8 @@
     </footer>
 
     <script>
-        // 股票數據存儲
-        let stocks = [];
+        // 匯率數據存儲
         let exchanges = [];
-
-        // 模擬配息日期數據（實際應用中可以從API獲取）
-        const dividendData = {
-            'AAPL': { last: '2024-02-15', next: '2024-05-16' },
-            'GOOGL': { last: '2024-03-28', next: '2024-06-27' },
-            'MSFT': { last: '2024-03-14', next: '2024-06-13' },
-            'TSLA': { last: '2024-03-21', next: '2024-06-20' },
-            'AMZN': { last: '2024-02-01', next: '2024-05-02' },
-            'NVDA': { last: '2024-03-28', next: '2024-06-27' },
-            'META': { last: '2024-03-26', next: '2024-06-25' },
-            'NFLX': { last: '2024-01-23', next: '2024-04-23' }
-        };
 
         // 匯率模式切換
         let currentRateMode = 'manual';
@@ -1001,130 +905,7 @@
             }
         }
 
-        // 新增股票
-        function addStock() {
-            const symbol = document.getElementById('stockSymbol').value.trim().toUpperCase();
-            const shares = parseFloat(document.getElementById('stockShares').value);
-            const price = parseFloat(document.getElementById('stockPrice').value);
-
-            if (!symbol || !shares || !price) {
-                alert('請填寫完整的股票資訊！');
-                return;
-            }
-
-            if (shares <= 0 || price <= 0) {
-                alert('股數和股價必須大於0！');
-                return;
-            }
-
-            const marketValue = shares * price;
-            const dividend = dividendData[symbol] || { last: '無資料', next: '無資料' };
-
-            const stock = {
-                id: Date.now(),
-                symbol: symbol,
-                shares: shares,
-                price: price,
-                marketValue: marketValue,
-                lastDividend: dividend.last,
-                nextDividend: dividend.next
-            };
-
-            stocks.push(stock);
-            updateStockTable();
-            clearStockForm();
-            saveData();
-        }
-
-        // 更新股票表格
-        function updateStockTable() {
-            const tbody = document.getElementById('stockTableBody');
-            
-            if (stocks.length === 0) {
-                tbody.innerHTML = '<tr class="empty-message"><td colspan="7">尚未新增任何股票</td></tr>';
-                document.getElementById('stockSummary').style.display = 'none';
-                return;
-            }
-
-            tbody.innerHTML = '';
-            
-            stocks.forEach(stock => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><strong>${stock.symbol}</strong></td>
-                    <td>${stock.shares.toLocaleString()}</td>
-                    <td>$${stock.price.toFixed(2)}</td>
-                    <td>$${stock.marketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td class="dividend-date">${stock.lastDividend}</td>
-                    <td class="dividend-date">${stock.nextDividend}</td>
-                    <td>
-                        <button class="btn btn-danger" onclick="deleteStock(${stock.id})" style="padding: 5px 10px; font-size: 12px;">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-
-            // 添加總計行
-            const totalRow = document.createElement('tr');
-            totalRow.className = 'total-row';
-            const totalMarketValue = stocks.reduce((sum, stock) => sum + stock.marketValue, 0);
-            const totalShares = stocks.reduce((sum, stock) => sum + stock.shares, 0);
-            const averagePrice = totalShares > 0 ? totalMarketValue / totalShares : 0;
-            
-            totalRow.innerHTML = `
-                <td><strong>總計</strong></td>
-                <td><strong>${totalShares.toLocaleString()}</strong></td>
-                <td><strong>$${averagePrice.toFixed(2)}</strong></td>
-                <td><strong>$${totalMarketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
-                <td colspan="3"></td>
-            `;
-            tbody.appendChild(totalRow);
-
-            updateStockSummary();
-        }
-
-        // 更新股票摘要
-        function updateStockSummary() {
-            const totalMarketValue = stocks.reduce((sum, stock) => sum + stock.marketValue, 0);
-            const totalShares = stocks.reduce((sum, stock) => sum + stock.shares, 0);
-            const averagePrice = totalShares > 0 ? totalMarketValue / totalShares : 0;
-
-            document.getElementById('totalMarketValue').textContent = `$${totalMarketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            document.getElementById('totalShares').textContent = totalShares.toLocaleString();
-            document.getElementById('averagePrice').textContent = `$${averagePrice.toFixed(2)}`;
-            document.getElementById('stockSummary').style.display = 'block';
-        }
-
-        // 刪除股票
-        function deleteStock(id) {
-            if (confirm('確定要刪除這筆股票記錄嗎？')) {
-                stocks = stocks.filter(stock => stock.id !== id);
-                updateStockTable();
-                saveData();
-            }
-        }
-
-        // 清空股票表單
-        function clearStockForm() {
-            document.getElementById('stockSymbol').value = '';
-            document.getElementById('stockShares').value = '';
-            document.getElementById('stockPrice').value = '';
-        }
-
-        // 顯示訊息
-        function showMessage(elementId, message) {
-            const element = document.getElementById(elementId);
-            element.textContent = message;
-            element.style.display = 'block';
-            
-            setTimeout(() => {
-                element.style.display = 'none';
-            }, 5000);
-        }
-
-        // 修改新增匯率記錄函數，支援自動匯率
+        // 新增匯率記錄
         function addExchange() {
             const twdAmount = parseFloat(document.getElementById('twdAmount').value);
             let exchangeRate;
@@ -1275,44 +1056,7 @@
 
         // 保存數據到 localStorage
         function saveData() {
-            localStorage.setItem('stockData', JSON.stringify(stocks));
             localStorage.setItem('exchangeData', JSON.stringify(exchanges));
-        }
-
-        // 匯出股票資料 (CSV)
-        function exportStockData() {
-            if (stocks.length === 0) {
-                showMessage('stockErrorMessage', '沒有股票資料可以匯出！');
-                return;
-            }
-
-            const headers = ['股票代號', '股數', '股價 (USD)', '市值 (USD)', '最近配息', '下次配息'];
-            const csvContent = [
-                headers.join(','),
-                ...stocks.map(stock => [
-                    stock.symbol,
-                    stock.shares,
-                    stock.price,
-                    stock.marketValue,
-                    stock.lastDividend,
-                    stock.nextDividend
-                ].join(','))
-            ].join('\n');
-
-            downloadFile(csvContent, 'stock_data.csv', 'text/csv');
-            showMessage('stockSuccessMessage', '股票資料已成功匯出為 CSV 檔案！');
-        }
-
-        // 匯出股票資料 (JSON)
-        function exportStockDataJSON() {
-            if (stocks.length === 0) {
-                showMessage('stockErrorMessage', '沒有股票資料可以匯出！');
-                return;
-            }
-
-            const jsonContent = JSON.stringify(stocks, null, 2);
-            downloadFile(jsonContent, 'stock_data.json', 'application/json');
-            showMessage('stockSuccessMessage', '股票資料已成功匯出為 JSON 檔案！');
         }
 
         // 匯出匯率資料 (CSV)
@@ -1364,34 +1108,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // 匯入股票資料
-        function importStockData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const content = e.target.result;
-                const fileExtension = file.name.split('.').pop().toLowerCase();
-
-                try {
-                    let importData = [];
-                    if (fileExtension === 'json') {
-                        importData = JSON.parse(content);
-                    } else if (fileExtension === 'csv') {
-                        importData = parseCSV(content, 'stock');
-                    } else {
-                        throw new Error('不支援的檔案格式');
-                    }
-
-                    showStockImportPreview(importData);
-                } catch (error) {
-                    showMessage('stockErrorMessage', `匯入失敗：${error.message}`);
-                }
-            };
-            reader.readAsText(file);
-        }
-
         // 匯入匯率資料
         function importExchangeData(event) {
             const file = event.target.files[0];
@@ -1430,17 +1146,7 @@
                 const values = lines[i].split(',');
                 if (values.length !== headers.length) continue;
 
-                if (type === 'stock') {
-                    data.push({
-                        id: Date.now() + i,
-                        symbol: values[0].trim().toUpperCase(),
-                        shares: parseFloat(values[1]),
-                        price: parseFloat(values[2]),
-                        marketValue: parseFloat(values[3]),
-                        lastDividend: values[4] || '無資料',
-                        nextDividend: values[5] || '無資料'
-                    });
-                } else if (type === 'exchange') {
+                if (type === 'exchange') {
                     data.push({
                         id: Date.now() + i,
                         twdAmount: parseFloat(values[0]),
@@ -1454,23 +1160,6 @@
             }
 
             return data;
-        }
-
-        // 顯示股票匯入預覽
-        function showStockImportPreview(importData) {
-            const previewDiv = document.getElementById('stockImportPreview');
-            const contentDiv = document.getElementById('stockPreviewContent');
-            
-            contentDiv.innerHTML = `
-                <div class="preview-item">將匯入 ${importData.length} 筆股票資料：</div>
-                ${importData.slice(0, 5).map(stock => 
-                    `<div class="preview-item">• ${stock.symbol}: ${stock.shares} 股 @ $${stock.price}</div>`
-                ).join('')}
-                ${importData.length > 5 ? `<div class="preview-item">... 還有 ${importData.length - 5} 筆資料</div>` : ''}
-            `;
-            
-            previewDiv.style.display = 'block';
-            previewDiv.dataset.importData = JSON.stringify(importData);
         }
 
         // 顯示匯率匯入預覽
@@ -1491,17 +1180,6 @@
             previewDiv.dataset.importData = JSON.stringify(importData);
         }
 
-        // 確認股票匯入
-        function confirmStockImport() {
-            const previewDiv = document.getElementById('stockImportPreview');
-            const importData = JSON.parse(previewDiv.dataset.importData);
-            
-            stocks = importData;
-            updateStockTable();
-            cancelStockImport();
-            showMessage('stockSuccessMessage', `成功匯入 ${importData.length} 筆股票資料！`);
-        }
-
         // 確認匯率匯入
         function confirmExchangeImport() {
             const previewDiv = document.getElementById('exchangeImportPreview');
@@ -1513,26 +1191,10 @@
             showMessage('exchangeSuccessMessage', `成功匯入 ${importData.length} 筆匯率資料！`);
         }
 
-        // 取消股票匯入
-        function cancelStockImport() {
-            document.getElementById('stockImportPreview').style.display = 'none';
-            document.getElementById('stockFileInput').value = '';
-        }
-
         // 取消匯率匯入
         function cancelExchangeImport() {
             document.getElementById('exchangeImportPreview').style.display = 'none';
             document.getElementById('exchangeFileInput').value = '';
-        }
-
-        // 清空所有股票
-        function clearAllStocks() {
-            if (confirm('確定要清空所有股票資料嗎？此操作無法復原！')) {
-                stocks = [];
-                updateStockTable();
-                saveData();
-                showMessage('stockSuccessMessage', '所有股票資料已清空！');
-            }
         }
 
         // 清空所有匯率記錄
@@ -1548,13 +1210,7 @@
         // 頁面載入時初始化
         document.addEventListener('DOMContentLoaded', function() {
             // 從 localStorage 載入數據
-            const savedStocks = localStorage.getItem('stockData');
             const savedExchanges = localStorage.getItem('exchangeData');
-            
-            if (savedStocks) {
-                stocks = JSON.parse(savedStocks);
-                updateStockTable();
-            }
             
             if (savedExchanges) {
                 exchanges = JSON.parse(savedExchanges);
