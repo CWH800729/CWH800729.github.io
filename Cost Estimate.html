@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工地成本損耗記錄 - CWH懶人工程</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            width: 75px;
+            height: 75px;
+            border-radius: 16px;
+        }
+
+        .site-title {
+            margin: 0;
+            font-size: 2em;
+            color: #2c3e50;
+        }
+
+        .back-link {
+            margin-left: auto;
+            color: #3498db;
+            text-decoration: none;
+            font-size: 1.1em;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btn {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+        }
+
+        .btn-success:hover {
+            background-color: #229954;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: white;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .total-row {
+            background-color: #e8f4fd !important;
+            font-weight: bold;
+        }
+
+        .result-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+
+        .result-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+        }
+
+        .result-label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .result-value {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .result-value.warning {
+            color: #f39c12;
+        }
+
+        .result-value.danger {
+            color: #e74c3c;
+        }
+
+        .import-export-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .import-export-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+
+        .import-export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .file-input-container {
+            position: relative;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #17a2b8;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 14px;
+        }
+
+        .file-input-label:hover {
+            background-color: #138496;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .project-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status-active { background-color: #27ae60; }
+        .status-completed { background-color: #3498db; }
+        .status-overdue { background-color: #e74c3c; }
+
+        .payment-row {
+            background-color: #f8f9fa;
+        }
+
+        .payment-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+
+        .payment-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 3px rgba(52, 152, 219, 0.3);
+        }
+
+        .expandable-row {
+            cursor: pointer;
+        }
+
+        .expandable-row:hover {
+            background-color: #e3f2fd;
+        }
+
+        .payment-details {
+            display: none;
+            background-color: #f8f9fa;
+        }
+
+        .payment-details.show {
+            display: table-row;
+        }
+
+        .payment-table {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .payment-table th,
+        .payment-table td {
+            padding: 8px;
+            font-size: 14px;
+        }
+
+        .add-payment-btn {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .add-payment-btn:hover {
+            background-color: #138496;
+        }
+
+        @media (max-width: 768px) {
+            .form-row, .form-row-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .back-link {
+                margin-left: 0;
+                margin-top: 10px;
+            }
+
+            table {
+                font-size: 14px;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="http://cwh800729.github.io/index.html">
+                    <img src="http://cwh800729.github.io/CWH-LOGO" alt="logo" class="logo">
+                </a>
+                <h1 class="site-title">工地成本損耗記錄</h1>
+                <a href="http://cwh800729.github.io/index.html" class="back-link">
+                    <i class="fas fa-arrow-left"></i> 返回首頁
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="main-content">
+            <!-- 項目預算管理卡片 -->
+            <div class="card">
+                <h2><i class="fas fa-chart-line"></i> 項目預算管理</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="projectName">項目名稱：</label>
+                        <input type="text" id="projectName" placeholder="請輸入項目名稱" maxlength="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="contractBudget">合約預算 (NT$)：</label>
+                        <input type="number" id="contractBudget" placeholder="請輸入合約預算" min="0" step="0.01">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="remainingBudget">目前剩餘預算 (NT$)：</label>
+                        <input type="number" id="remainingBudget" placeholder="請輸入目前剩餘預算" min="0" step="0.01">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="projectStatus">項目狀態：</label>
+                        <select id="projectStatus">
+                            <option value="active">進行中</option>
+                            <option value="completed">已完成</option>
+                            <option value="overdue">逾期</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="projectDescription">項目描述：</label>
+                    <textarea id="projectDescription" placeholder="請輸入項目描述" rows="3" maxlength="500"></textarea>
+                </div>
+                
+                <button class="btn btn-success" onclick="addProject()">
+                    <i class="fas fa-plus"></i> 新增項目
+                </button>
+                
+                <!-- 匯出匯入功能 -->
+                <div class="import-export-section">
+                    <h3><i class="fas fa-download"></i> 資料匯出匯入</h3>
+                    <div class="import-export-buttons">
+                        <button class="btn btn-secondary" onclick="exportProjectData()">
+                            <i class="fas fa-download"></i> 匯出項目資料 (CSV)
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportProjectDataJSON()">
+                            <i class="fas fa-download"></i> 匯出項目資料 (JSON)
+                        </button>
+                        <div class="file-input-container">
+                            <input type="file" id="projectFileInput" class="file-input" accept=".csv,.json" onchange="importProjectData(event)">
+                            <label for="projectFileInput" class="file-input-label">
+                                <i class="fas fa-upload"></i> 匯入項目資料
+                            </label>
+                        </div>
+                        <button class="btn btn-warning" onclick="clearAllProjects()">
+                            <i class="fas fa-trash"></i> 清空所有記錄
+                        </button>
+                    </div>
+                    <div id="projectSuccessMessage" class="success-message"></div>
+                    <div id="projectErrorMessage" class="error-message"></div>
+                </div>
+                
+                <div class="table-container">
+                    <table id="projectTable">
+                        <thead>
+                            <tr>
+                                <th>項目名稱</th>
+                                <th>合約預算 (NT$)</th>
+                                <th>剩餘預算 (NT$)</th>
+                                <th>已使用金額 (NT$)</th>
+                                <th>使用率 (%)</th>
+                                <th>平均請款金額 (NT$)</th>
+                                <th>預計剩餘月數</th>
+                                <th>狀態</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectTableBody">
+                            <tr class="empty-message">
+                                <td colspan="9">尚未新增任何項目</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="result-section" id="projectSummary" style="display: none;">
+                    <h3><i class="fas fa-calculator"></i> 項目統計摘要</h3>
+                    <div class="result-item">
+                        <span class="result-label">總項目數：</span>
+                        <span class="result-value" id="totalProjects">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">總合約預算：</span>
+                        <span class="result-value" id="totalContractBudget">NT$ 0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">總剩餘預算：</span>
+                        <span class="result-value" id="totalRemainingBudget">NT$ 0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">總已使用金額：</span>
+                        <span class="result-value" id="totalUsedAmount">NT$ 0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">平均使用率：</span>
+                        <span class="result-value" id="averageUsageRate">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 陳維宏的工程應用網站. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // 項目數據存儲
+        let projects = [];
+
+        // 頁面載入時從 localStorage 載入數據
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedProjects = localStorage.getItem('projectData');
+            if (savedProjects) {
+                projects = JSON.parse(savedProjects);
+                updateProjectTable();
+            }
+        });
+
+        // 新增項目
+        function addProject() {
+            const projectName = document.getElementById('projectName').value.trim();
+            const contractBudget = parseFloat(document.getElementById('contractBudget').value);
+            const remainingBudget = parseFloat(document.getElementById('remainingBudget').value);
+            const projectStatus = document.getElementById('projectStatus').value;
+            const projectDescription = document.getElementById('projectDescription').value.trim();
+
+            if (!projectName || contractBudget <= 0) {
+                alert('請填寫項目名稱和合約預算！');
+                return;
+            }
+
+            if (remainingBudget > contractBudget) {
+                alert('剩餘預算不能大於合約預算！');
+                return;
+            }
+
+            const project = {
+                id: Date.now(),
+                projectName: projectName,
+                contractBudget: contractBudget,
+                remainingBudget: remainingBudget,
+                projectStatus: projectStatus,
+                projectDescription: projectDescription,
+                payments: [],
+                createdAt: new Date().toISOString()
+            };
+
+            projects.push(project);
+            updateProjectTable();
+            clearProjectForm();
+            saveData();
+            showMessage('projectSuccessMessage', '項目已成功新增！');
+        }
+
+        // 更新項目表格
+        function updateProjectTable() {
+            const tbody = document.getElementById('projectTableBody');
+            
+            if (projects.length === 0) {
+                tbody.innerHTML = '<tr class="empty-message"><td colspan="9">尚未新增任何項目</td></tr>';
+                document.getElementById('projectSummary').style.display = 'none';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            
+            projects.forEach(project => {
+                const usedAmount = project.contractBudget - project.remainingBudget;
+                const usageRate = (usedAmount / project.contractBudget * 100).toFixed(1);
+                const averagePayment = project.payments.length > 0 
+                    ? (usedAmount / project.payments.length).toFixed(2) 
+                    : '0.00';
+                const estimatedMonths = averagePayment > 0 
+                    ? Math.floor(project.remainingBudget / parseFloat(averagePayment))
+                    : 0;
+
+                const statusClass = `status-${project.projectStatus}`;
+                const statusText = {
+                    'active': '進行中',
+                    'completed': '已完成',
+                    'overdue': '逾期'
+                }[project.projectStatus];
+                
+                const row = document.createElement('tr');
+                row.className = 'expandable-row';
+                row.onclick = () => togglePaymentDetails(project.id);
+                row.innerHTML = `
+                    <td><strong>${project.projectName}</strong></td>
+                    <td>NT$ ${project.contractBudget.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>NT$ ${project.remainingBudget.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>NT$ ${usedAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>${usageRate}%</td>
+                    <td>NT$ ${averagePayment}</td>
+                    <td>${estimatedMonths} 個月</td>
+                    <td><span class="project-status ${statusClass}">${statusText}</span></td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="deleteProject(${project.id}); event.stopPropagation();">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="addPayment(${project.id}); event.stopPropagation();">
+                            <i class="fas fa-plus"></i> 請款
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+
+                // 添加請款詳情行
+                const paymentRow = document.createElement('tr');
+                paymentRow.className = 'payment-details';
+                paymentRow.id = `payment-${project.id}`;
+                paymentRow.innerHTML = `
+                    <td colspan="9">
+                        <div style="padding: 15px;">
+                            <h4>請款記錄</h4>
+                            <div class="form-row-3">
+                                <div class="form-group">
+                                    <label>請款日期：</label>
+                                    <input type="date" id="paymentDate-${project.id}" value="${new Date().toISOString().split('T')[0]}">
+                                </div>
+                                <div class="form-group">
+                                    <label>請款金額 (NT$)：</label>
+                                    <input type="number" id="paymentAmount-${project.id}" placeholder="請輸入請款金額" min="0" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label>請款說明：</label>
+                                    <input type="text" id="paymentDescription-${project.id}" placeholder="請輸入請款說明" maxlength="100">
+                                </div>
+                            </div>
+                            <button class="add-payment-btn" onclick="savePayment(${project.id})">
+                                <i class="fas fa-plus"></i> 新增請款記錄
+                            </button>
+                            
+                            <div style="margin-top: 15px;">
+                                <table class="payment-table">
+                                    <thead>
+                                        <tr>
+                                            <th>請款日期</th>
+                                            <th>請款金額 (NT$)</th>
+                                            <th>請款說明</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="paymentTable-${project.id}">
+                                        ${project.payments.map(payment => `
+                                            <tr>
+                                                <td>${payment.date}</td>
+                                                <td>NT$ ${payment.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                <td>${payment.description || '-'}</td>
+                                                <td>
+                                                    <button class="btn btn-danger btn-sm" onclick="deletePayment(${project.id}, ${payment.id})">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(paymentRow);
+            });
+
+            updateProjectSummary();
+        }
+
+        // 切換請款詳情顯示
+        function togglePaymentDetails(projectId) {
+            const paymentRow = document.getElementById(`payment-${projectId}`);
+            if (paymentRow) {
+                paymentRow.classList.toggle('show');
+            }
+        }
+
+        // 新增請款記錄
+        function addPayment(projectId) {
+            const paymentRow = document.getElementById(`payment-${projectId}`);
+            if (paymentRow) {
+                paymentRow.classList.add('show');
+            }
+        }
+
+        // 保存請款記錄
+        function savePayment(projectId) {
+            const project = projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            const date = document.getElementById(`paymentDate-${projectId}`).value;
+            const amount = parseFloat(document.getElementById(`paymentAmount-${projectId}`).value);
+            const description = document.getElementById(`paymentDescription-${projectId}`).value.trim();
+
+            if (!date || amount <= 0) {
+                alert('請填寫請款日期和金額！');
+                return;
+            }
+
+            if (amount > project.remainingBudget) {
+                alert('請款金額不能大於剩餘預算！');
+                return;
+            }
+
+            const payment = {
+                id: Date.now(),
+                date: date,
+                amount: amount,
+                description: description
+            };
+
+            project.payments.push(payment);
+            project.remainingBudget -= amount;
+            
+            updateProjectTable();
+            saveData();
+            showMessage('projectSuccessMessage', '請款記錄已成功新增！');
+        }
+
+        // 刪除請款記錄
+        function deletePayment(projectId, paymentId) {
+            if (confirm('確定要刪除這筆請款記錄嗎？')) {
+                const project = projects.find(p => p.id === projectId);
+                if (!project) return;
+
+                const payment = project.payments.find(p => p.id === paymentId);
+                if (payment) {
+                    project.remainingBudget += payment.amount;
+                    project.payments = project.payments.filter(p => p.id !== paymentId);
+                    updateProjectTable();
+                    saveData();
+                }
+            }
+        }
+
+        // 更新項目摘要
+        function updateProjectSummary() {
+            const totalProjects = projects.length;
+            const totalContractBudget = projects.reduce((sum, project) => sum + project.contractBudget, 0);
+            const totalRemainingBudget = projects.reduce((sum, project) => sum + project.remainingBudget, 0);
+            const totalUsedAmount = totalContractBudget - totalRemainingBudget;
+            const averageUsageRate = totalContractBudget > 0 ? (totalUsedAmount / totalContractBudget * 100).toFixed(1) : 0;
+
+            document.getElementById('totalProjects').textContent = totalProjects.toLocaleString();
+            document.getElementById('totalContractBudget').textContent = `NT$ ${totalContractBudget.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('totalRemainingBudget').textContent = `NT$ ${totalRemainingBudget.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('totalUsedAmount').textContent = `NT$ ${totalUsedAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('averageUsageRate').textContent = `${averageUsageRate}%`;
+            document.getElementById('projectSummary').style.display = 'block';
+        }
+
+        // 刪除項目
+        function deleteProject(id) {
+            if (confirm('確定要刪除這個項目嗎？所有請款記錄也會一併刪除！')) {
+                projects = projects.filter(project => project.id !== id);
+                updateProjectTable();
+                saveData();
+            }
+        }
+
+        // 清空項目表單
+        function clearProjectForm() {
+            document.getElementById('projectName').value = '';
+            document.getElementById('contractBudget').value = '';
+            document.getElementById('remainingBudget').value = '';
+            document.getElementById('projectStatus').value = 'active';
+            document.getElementById('projectDescription').value = '';
+        }
+
+        // 顯示訊息
+        function showMessage(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        // 保存數據到 localStorage
+        function saveData() {
+            localStorage.setItem('projectData', JSON.stringify(projects));
+        }
+
+        // 匯出項目資料 (CSV)
+        function exportProjectData() {
+            if (projects.length === 0) {
+                showMessage('projectErrorMessage', '沒有項目資料可以匯出！');
+                return;
+            }
+
+            const headers = ['項目名稱', '合約預算', '剩餘預算', '已使用金額', '使用率', '平均請款金額', '預計剩餘月數', '狀態', '項目描述'];
+            const csvContent = [
+                headers.join(','),
+                ...projects.map(project => {
+                    const usedAmount = project.contractBudget - project.remainingBudget;
+                    const usageRate = (usedAmount / project.contractBudget * 100).toFixed(1);
+                    const averagePayment = project.payments.length > 0 
+                        ? (usedAmount / project.payments.length).toFixed(2) 
+                        : '0.00';
+                    const estimatedMonths = averagePayment > 0 
+                        ? Math.floor(project.remainingBudget / parseFloat(averagePayment))
+                        : 0;
+                    
+                    return [
+                        project.projectName,
+                        project.contractBudget,
+                        project.remainingBudget,
+                        usedAmount,
+                        usageRate,
+                        averagePayment,
+                        estimatedMonths,
+                        project.projectStatus,
+                        project.projectDescription
+                    ].join(',');
+                })
+            ].join('\n');
+
+            downloadFile(csvContent, 'project_data.csv', 'text/csv');
+            showMessage('projectSuccessMessage', '項目資料已成功匯出為 CSV 檔案！');
+        }
+
+        // 匯出項目資料 (JSON)
+        function exportProjectDataJSON() {
+            if (projects.length === 0) {
+                showMessage('projectErrorMessage', '沒有項目資料可以匯出！');
+                return;
+            }
+
+            const jsonContent = JSON.stringify(projects, null, 2);
+            downloadFile(jsonContent, 'project_data.json', 'application/json');
+            showMessage('projectSuccessMessage', '項目資料已成功匯出為 JSON 檔案！');
+        }
+
+        // 下載檔案
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // 匯入項目資料
+        function importProjectData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+
+                try {
+                    let importData = [];
+                    if (fileExtension === 'json') {
+                        importData = JSON.parse(content);
+                    } else if (fileExtension === 'csv') {
+                        importData = parseProjectCSV(content);
+                    } else {
+                        throw new Error('不支援的檔案格式');
+                    }
+
+                    projects = importData;
+                    updateProjectTable();
+                    saveData();
+                    showMessage('projectSuccessMessage', `成功匯入 ${importData.length} 個項目！`);
+                } catch (error) {
+                    showMessage('projectErrorMessage', `匯入失敗：${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 解析項目 CSV
+        function parseProjectCSV(content) {
+            const lines = content.trim().split('\n');
+            const headers = lines[0].split(',');
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                if (values.length !== headers.length) continue;
+
+                data.push({
+                    id: Date.now() + i,
+                    projectName: values[0].trim(),
+                    contractBudget: parseFloat(values[1]),
+                    remainingBudget: parseFloat(values[2]),
+                    projectStatus: values[7].trim(),
+                    projectDescription: values[8] || '',
+                    payments: [],
+                    createdAt: new Date().toISOString()
+                });
+            }
+
+            return data;
+        }
+
+        // 清空所有項目
+        function clearAllProjects() {
+            if (confirm('確定要清空所有項目記錄嗎？此操作無法復原！')) {
+                projects = [];
+                updateProjectTable();
+                saveData();
+                showMessage('projectSuccessMessage', '所有項目記錄已清空！');
+            }
+        }
+    </script>
+</body>
+</html> 
