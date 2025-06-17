@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美股資訊查詢系統 - CWH懶人工程</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            width: 75px;
+            height: 75px;
+            border-radius: 16px;
+        }
+
+        .site-title {
+            margin: 0;
+            font-size: 2em;
+            color: #2c3e50;
+        }
+
+        .back-link {
+            margin-left: auto;
+            color: #3498db;
+            text-decoration: none;
+            font-size: 1.1em;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+        }
+
+        .btn-success:hover {
+            background-color: #229954;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: white;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .total-row {
+            background-color: #e8f4fd !important;
+            font-weight: bold;
+        }
+
+        .result-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+
+        .result-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+        }
+
+        .result-label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .result-value {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .dividend-info {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .dividend-info h4 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+
+        .dividend-date {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .exchange-rate-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .currency-selector {
+            grid-column: 1 / -1;
+            margin-bottom: 15px;
+        }
+
+        .currency-selector label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .currency-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .currency-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #f8f9fa;
+        }
+
+        .currency-option:hover {
+            background-color: #e9ecef;
+        }
+
+        .currency-option.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .currency-option input[type="radio"] {
+            margin: 0;
+        }
+
+        .currency-option .currency-flag {
+            font-size: 16px;
+        }
+
+        .currency-option .currency-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .currency-option .currency-code {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .rate-toggle {
+            display: flex;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 2px;
+            border: 1px solid #dee2e6;
+        }
+
+        .rate-toggle-btn {
+            padding: 8px 16px;
+            border: none;
+            background: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .rate-toggle-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .rate-toggle-btn:not(.active):hover {
+            background-color: #e9ecef;
+        }
+
+        .auto-rate-info {
+            background-color: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .auto-rate-info.show {
+            display: block;
+        }
+
+        .rate-source {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .rate-display {
+            font-size: 18px;
+            font-weight: bold;
+            color: #27ae60;
+            margin: 5px 0;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .back-link {
+                margin-left: 0;
+                margin-top: 10px;
+            }
+
+            .exchange-rate-form {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 14px;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .import-export-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .import-export-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+
+        .import-export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+
+        .file-input-container {
+            position: relative;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #17a2b8;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 14px;
+        }
+
+        .file-input-label:hover {
+            background-color: #138496;
+        }
+
+        .import-preview {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e8f4fd;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            display: none;
+        }
+
+        .import-preview h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+
+        .preview-item {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .preview-confirm {
+            margin-top: 10px;
+        }
+
+        .bulk-import-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border-radius: 5px;
+            border: 1px solid #ffeaa7;
+        }
+
+        .bulk-import-section h3 {
+            margin-top: 0;
+            color: #856404;
+            font-size: 1.1em;
+        }
+
+        .bulk-import-textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        .bulk-import-textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <img src="http://cwh800729.github.io/CWH-LOGO" alt="logo" class="logo">
+                <h1 class="site-title">美股資訊查詢系統</h1>
+                <a href="http://cwh800729.github.io/index.html" class="back-link">
+                    <i class="fas fa-arrow-left"></i> 返回首頁
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="main-content">
+            <!-- 美股資訊查詢卡片 -->
+            <div class="card">
+                <h2><i class="fas fa-chart-line"></i> 美股資訊查詢</h2>
+                
+                <div class="form-group">
+                    <label for="stockSymbol">美股代號：</label>
+                    <input type="text" id="stockSymbol" placeholder="例如：AAPL, GOOGL, MSFT" maxlength="10">
+                </div>
+                
+                <div class="form-group">
+                    <label for="stockShares">股數：</label>
+                    <input type="number" id="stockShares" placeholder="請輸入股數" min="0" step="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="stockPrice">股價 (USD)：</label>
+                    <input type="number" id="stockPrice" placeholder="請輸入股價" min="0" step="0.01">
+                </div>
+                
+                <button class="btn btn-success" onclick="addStock()">
+                    <i class="fas fa-plus"></i> 新增股票
+                </button>
+                
+                <!-- 匯出匯入功能 -->
+                <div class="import-export-section">
+                    <h3><i class="fas fa-download"></i> 資料匯出匯入</h3>
+                    <div class="import-export-buttons">
+                        <button class="btn btn-secondary" onclick="exportStockData()">
+                            <i class="fas fa-download"></i> 匯出股票資料 (CSV)
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportStockDataJSON()">
+                            <i class="fas fa-download"></i> 匯出股票資料 (JSON)
+                        </button>
+                        <div class="file-input-container">
+                            <input type="file" id="stockFileInput" class="file-input" accept=".csv,.json" onchange="importStockData(event)">
+                            <label for="stockFileInput" class="file-input-label">
+                                <i class="fas fa-upload"></i> 匯入股票資料
+                            </label>
+                        </div>
+                        <button class="btn btn-warning" onclick="clearAllStocks()">
+                            <i class="fas fa-trash"></i> 清空所有股票
+                        </button>
+                    </div>
+                    <div id="stockSuccessMessage" class="success-message"></div>
+                    <div id="stockErrorMessage" class="error-message"></div>
+                </div>
+                
+                <div class="table-container">
+                    <table id="stockTable">
+                        <thead>
+                            <tr>
+                                <th>股票代號</th>
+                                <th>股數</th>
+                                <th>股價 (USD)</th>
+                                <th>市值 (USD)</th>
+                                <th>最近配息</th>
+                                <th>下次配息</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockTableBody">
+                            <tr class="empty-message">
+                                <td colspan="7">尚未新增任何股票</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="result-section" id="stockSummary" style="display: none;">
+                    <h3><i class="fas fa-calculator"></i> 投資組合摘要</h3>
+                    <div class="result-item">
+                        <span class="result-label">總市值：</span>
+                        <span class="result-value" id="totalMarketValue">$0.00</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">總股數：</span>
+                        <span class="result-value" id="totalShares">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">平均股價：</span>
+                        <span class="result-value" id="averagePrice">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 匯率計算卡片 -->
+            <div class="card">
+                <h2><i class="fas fa-exchange-alt"></i> 台幣換外幣匯率計算</h2>
+                
+                <!-- 貨幣選擇 -->
+                <div class="currency-selector">
+                    <label>選擇兌換貨幣：</label>
+                    <div class="currency-options">
+                        <div class="currency-option active" onclick="selectCurrency('USD')">
+                            <input type="radio" name="currency" value="USD" checked>
+                            <span class="currency-flag">🇺🇸</span>
+                            <span class="currency-name">美金</span>
+                            <span class="currency-code">USD</span>
+                        </div>
+                        <div class="currency-option" onclick="selectCurrency('JPY')">
+                            <input type="radio" name="currency" value="JPY">
+                            <span class="currency-flag">🇯🇵</span>
+                            <span class="currency-name">日圓</span>
+                            <span class="currency-code">JPY</span>
+                        </div>
+                        <div class="currency-option" onclick="selectCurrency('VND')">
+                            <input type="radio" name="currency" value="VND">
+                            <span class="currency-flag">🇻🇳</span>
+                            <span class="currency-name">越南盾</span>
+                            <span class="currency-code">VND</span>
+                        </div>
+                        <div class="currency-option" onclick="selectCurrency('KRW')">
+                            <input type="radio" name="currency" value="KRW">
+                            <span class="currency-flag">🇰🇷</span>
+                            <span class="currency-name">韓元</span>
+                            <span class="currency-code">KRW</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 匯率選擇模式 -->
+                <div class="exchange-rate-options">
+                    <span style="font-weight: bold; color: #2c3e50;">匯率來源：</span>
+                    <div class="rate-toggle">
+                        <button class="rate-toggle-btn active" id="manualRateBtn" onclick="switchRateMode('manual')">
+                            <i class="fas fa-edit"></i> 手動輸入
+                        </button>
+                        <button class="rate-toggle-btn" id="autoRateBtn" onclick="switchRateMode('auto')">
+                            <i class="fas fa-sync-alt"></i> 即時匯率
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 自動匯率資訊 -->
+                <div class="auto-rate-info" id="autoRateInfo">
+                    <div id="rateLoading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <span>正在獲取即時匯率...</span>
+                    </div>
+                    <div id="rateResult" style="display: none;">
+                        <div class="rate-display" id="currentRateDisplay"></div>
+                        <div class="rate-source" id="rateSource"></div>
+                        <button class="btn btn-secondary" onclick="refreshRate()" style="margin-top: 10px; padding: 5px 10px; font-size: 12px;">
+                            <i class="fas fa-sync-alt"></i> 重新獲取
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="exchange-rate-form">
+                    <div class="form-group">
+                        <label for="twdAmount">台幣金額：</label>
+                        <input type="number" id="twdAmount" placeholder="請輸入台幣金額" min="0" step="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="exchangeRate" id="rateLabel">匯率 (TWD/USD)：</label>
+                        <input type="number" id="exchangeRate" placeholder="請輸入匯率" min="0" step="0.01" value="31.5">
+                    </div>
+                </div>
+                
+                <button class="btn btn-success" onclick="addExchange()">
+                    <i class="fas fa-plus"></i> 新增匯率記錄
+                </button>
+                
+                <!-- 匯出匯入功能 -->
+                <div class="import-export-section">
+                    <h3><i class="fas fa-download"></i> 資料匯出匯入</h3>
+                    <div class="import-export-buttons">
+                        <button class="btn btn-secondary" onclick="exportExchangeData()">
+                            <i class="fas fa-download"></i> 匯出匯率資料 (CSV)
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportExchangeDataJSON()">
+                            <i class="fas fa-download"></i> 匯出匯率資料 (JSON)
+                        </button>
+                        <div class="file-input-container">
+                            <input type="file" id="exchangeFileInput" class="file-input" accept=".csv,.json" onchange="importExchangeData(event)">
+                            <label for="exchangeFileInput" class="file-input-label">
+                                <i class="fas fa-upload"></i> 匯入匯率資料
+                            </label>
+                        </div>
+                        <button class="btn btn-warning" onclick="clearAllExchanges()">
+                            <i class="fas fa-trash"></i> 清空所有匯率記錄
+                        </button>
+                    </div>
+                    <div id="exchangeSuccessMessage" class="success-message"></div>
+                    <div id="exchangeErrorMessage" class="error-message"></div>
+                </div>
+
+                <div class="table-container">
+                    <table id="exchangeTable">
+                        <thead>
+                            <tr>
+                                <th>台幣金額</th>
+                                <th>匯率</th>
+                                <th id="foreignCurrencyColumn">美金金額</th>
+                                <th>日期</th>
+                                <th>匯率來源</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exchangeTableBody">
+                            <tr class="empty-message">
+                                <td colspan="6">尚未新增任何匯率記錄</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="result-section" id="exchangeSummary" style="display: none;">
+                    <h3><i class="fas fa-chart-bar"></i> 匯率統計</h3>
+                    <div class="result-item">
+                        <span class="result-label">總台幣金額：</span>
+                        <span class="result-value" id="totalTWD">NT$ 0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">總外幣金額：</span>
+                        <span class="result-value" id="totalUSD">$0.00</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">平均買外幣匯率：</span>
+                        <span class="result-value" id="averageRate">0.00</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">最高匯率：</span>
+                        <span class="result-value" id="maxRate">0.00</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">最低匯率：</span>
+                        <span class="result-value" id="minRate">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 陳維宏的工程應用網站. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // 股票數據存儲
+        let stocks = [];
+        let exchanges = [];
+
+        // 模擬配息日期數據（實際應用中可以從API獲取）
+        const dividendData = {
+            'AAPL': { last: '2024-02-15', next: '2024-05-16' },
+            'GOOGL': { last: '2024-03-28', next: '2024-06-27' },
+            'MSFT': { last: '2024-03-14', next: '2024-06-13' },
+            'TSLA': { last: '2024-03-21', next: '2024-06-20' },
+            'AMZN': { last: '2024-02-01', next: '2024-05-02' },
+            'NVDA': { last: '2024-03-28', next: '2024-06-27' },
+            'META': { last: '2024-03-26', next: '2024-06-25' },
+            'NFLX': { last: '2024-01-23', next: '2024-04-23' }
+        };
+
+        // 匯率模式切換
+        let currentRateMode = 'manual';
+        let currentAutoRate = null;
+        let currentCurrency = 'USD';
+
+        // 貨幣配置
+        const currencyConfig = {
+            'USD': {
+                name: '美金',
+                symbol: '$',
+                flag: '🇺🇸',
+                defaultRate: 31.5,
+                precision: 2
+            },
+            'JPY': {
+                name: '日圓',
+                symbol: '¥',
+                flag: '🇯🇵',
+                defaultRate: 0.22,
+                precision: 4
+            },
+            'VND': {
+                name: '越南盾',
+                symbol: '₫',
+                flag: '🇻🇳',
+                defaultRate: 0.0013,
+                precision: 6
+            },
+            'KRW': {
+                name: '韓元',
+                symbol: '₩',
+                flag: '🇰🇷',
+                defaultRate: 0.024,
+                precision: 4
+            }
+        };
+
+        // 選擇貨幣
+        function selectCurrency(currency) {
+            currentCurrency = currency;
+            
+            // 更新選中的貨幣選項
+            document.querySelectorAll('.currency-option').forEach(option => {
+                option.classList.remove('active');
+                option.querySelector('input[type="radio"]').checked = false;
+            });
+            
+            const selectedOption = document.querySelector(`.currency-option[onclick="selectCurrency('${currency}')"]`);
+            selectedOption.classList.add('active');
+            selectedOption.querySelector('input[type="radio"]').checked = true;
+            
+            // 更新標籤
+            const config = currencyConfig[currency];
+            document.getElementById('rateLabel').textContent = `匯率 (TWD/${currency})：`;
+            document.getElementById('foreignCurrencyColumn').textContent = `${config.name}金額`;
+            
+            // 更新匯率輸入框的預設值
+            document.getElementById('exchangeRate').value = config.defaultRate;
+            
+            // 如果當前是自動模式，重新獲取匯率
+            if (currentRateMode === 'auto') {
+                fetchCurrentRate();
+            }
+            
+            // 清空自動匯率快取
+            currentAutoRate = null;
+        }
+
+        function switchRateMode(mode) {
+            currentRateMode = mode;
+            
+            // 更新按鈕狀態
+            document.getElementById('manualRateBtn').classList.toggle('active', mode === 'manual');
+            document.getElementById('autoRateBtn').classList.toggle('active', mode === 'auto');
+            
+            // 更新匯率輸入框狀態
+            const rateInput = document.getElementById('exchangeRate');
+            const autoRateInfo = document.getElementById('autoRateInfo');
+            
+            if (mode === 'manual') {
+                rateInput.disabled = false;
+                rateInput.style.backgroundColor = '#fff';
+                autoRateInfo.classList.remove('show');
+            } else {
+                rateInput.disabled = true;
+                rateInput.style.backgroundColor = '#f8f9fa';
+                autoRateInfo.classList.add('show');
+                
+                // 如果還沒有獲取過匯率，立即獲取
+                if (!currentAutoRate) {
+                    fetchCurrentRate();
+                } else {
+                    // 顯示已獲取的匯率
+                    displayCurrentRate();
+                }
+            }
+        }
+
+        // 獲取即時匯率
+        async function fetchCurrentRate() {
+            const loadingDiv = document.getElementById('rateLoading');
+            const resultDiv = document.getElementById('rateResult');
+            
+            loadingDiv.style.display = 'block';
+            resultDiv.style.display = 'none';
+            
+            try {
+                // 使用免費的匯率API
+                const response = await fetch(`https://api.exchangerate-api.com/v4/latest/TWD`);
+                const data = await response.json();
+                
+                if (data && data.rates && data.rates[currentCurrency]) {
+                    currentAutoRate = {
+                        rate: 1 / data.rates[currentCurrency], // 轉換為台幣對目標貨幣匯率
+                        timestamp: new Date(),
+                        source: 'ExchangeRate-API',
+                        currency: currentCurrency
+                    };
+                    
+                    // 更新匯率輸入框
+                    const config = currencyConfig[currentCurrency];
+                    document.getElementById('exchangeRate').value = currentAutoRate.rate.toFixed(config.precision);
+                    
+                    displayCurrentRate();
+                } else {
+                    throw new Error(`無法獲取${currencyConfig[currentCurrency].name}匯率資料`);
+                }
+            } catch (error) {
+                console.error('獲取匯率失敗:', error);
+                
+                // 如果API失敗，使用備用方案
+                try {
+                    await fetchBackupRate();
+                } catch (backupError) {
+                    showMessage('exchangeErrorMessage', `無法獲取${currencyConfig[currentCurrency].name}即時匯率，請使用手動輸入模式`);
+                    switchRateMode('manual');
+                }
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // 備用匯率獲取方案
+        async function fetchBackupRate() {
+            // 使用另一個免費API作為備用
+            const response = await fetch(`https://api.frankfurter.app/latest?from=TWD&to=${currentCurrency}`);
+            const data = await response.json();
+            
+            if (data && data.rates && data.rates[currentCurrency]) {
+                currentAutoRate = {
+                    rate: 1 / data.rates[currentCurrency],
+                    timestamp: new Date(),
+                    source: 'Frankfurter API',
+                    currency: currentCurrency
+                };
+                
+                const config = currencyConfig[currentCurrency];
+                document.getElementById('exchangeRate').value = currentAutoRate.rate.toFixed(config.precision);
+                displayCurrentRate();
+            } else {
+                throw new Error(`備用API也無法獲取${currencyConfig[currentCurrency].name}匯率`);
+            }
+        }
+
+        // 顯示當前匯率
+        function displayCurrentRate() {
+            if (!currentAutoRate) return;
+            
+            const resultDiv = document.getElementById('rateResult');
+            const rateDisplay = document.getElementById('currentRateDisplay');
+            const rateSource = document.getElementById('rateSource');
+            const config = currencyConfig[currentCurrency];
+            
+            rateDisplay.textContent = `當前${config.name}匯率：${currentAutoRate.rate.toFixed(config.precision)}`;
+            rateSource.textContent = `資料來源：${currentAutoRate.source} | 更新時間：${currentAutoRate.timestamp.toLocaleString('zh-TW')}`;
+            
+            resultDiv.style.display = 'block';
+        }
+
+        // 重新獲取匯率
+        function refreshRate() {
+            if (currentRateMode === 'auto') {
+                fetchCurrentRate();
+            }
+        }
+
+        // 新增股票
+        function addStock() {
+            const symbol = document.getElementById('stockSymbol').value.trim().toUpperCase();
+            const shares = parseFloat(document.getElementById('stockShares').value);
+            const price = parseFloat(document.getElementById('stockPrice').value);
+
+            if (!symbol || !shares || !price) {
+                alert('請填寫完整的股票資訊！');
+                return;
+            }
+
+            if (shares <= 0 || price <= 0) {
+                alert('股數和股價必須大於0！');
+                return;
+            }
+
+            const marketValue = shares * price;
+            const dividend = dividendData[symbol] || { last: '無資料', next: '無資料' };
+
+            const stock = {
+                id: Date.now(),
+                symbol: symbol,
+                shares: shares,
+                price: price,
+                marketValue: marketValue,
+                lastDividend: dividend.last,
+                nextDividend: dividend.next
+            };
+
+            stocks.push(stock);
+            updateStockTable();
+            clearStockForm();
+            saveData();
+        }
+
+        // 更新股票表格
+        function updateStockTable() {
+            const tbody = document.getElementById('stockTableBody');
+            
+            if (stocks.length === 0) {
+                tbody.innerHTML = '<tr class="empty-message"><td colspan="7">尚未新增任何股票</td></tr>';
+                document.getElementById('stockSummary').style.display = 'none';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            
+            stocks.forEach(stock => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${stock.symbol}</strong></td>
+                    <td>${stock.shares.toLocaleString()}</td>
+                    <td>$${stock.price.toFixed(2)}</td>
+                    <td>$${stock.marketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="dividend-date">${stock.lastDividend}</td>
+                    <td class="dividend-date">${stock.nextDividend}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteStock(${stock.id})" style="padding: 5px 10px; font-size: 12px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // 添加總計行
+            const totalRow = document.createElement('tr');
+            totalRow.className = 'total-row';
+            const totalMarketValue = stocks.reduce((sum, stock) => sum + stock.marketValue, 0);
+            const totalShares = stocks.reduce((sum, stock) => sum + stock.shares, 0);
+            const averagePrice = totalShares > 0 ? totalMarketValue / totalShares : 0;
+            
+            totalRow.innerHTML = `
+                <td><strong>總計</strong></td>
+                <td><strong>${totalShares.toLocaleString()}</strong></td>
+                <td><strong>$${averagePrice.toFixed(2)}</strong></td>
+                <td><strong>$${totalMarketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                <td colspan="3"></td>
+            `;
+            tbody.appendChild(totalRow);
+
+            updateStockSummary();
+        }
+
+        // 更新股票摘要
+        function updateStockSummary() {
+            const totalMarketValue = stocks.reduce((sum, stock) => sum + stock.marketValue, 0);
+            const totalShares = stocks.reduce((sum, stock) => sum + stock.shares, 0);
+            const averagePrice = totalShares > 0 ? totalMarketValue / totalShares : 0;
+
+            document.getElementById('totalMarketValue').textContent = `$${totalMarketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('totalShares').textContent = totalShares.toLocaleString();
+            document.getElementById('averagePrice').textContent = `$${averagePrice.toFixed(2)}`;
+            document.getElementById('stockSummary').style.display = 'block';
+        }
+
+        // 刪除股票
+        function deleteStock(id) {
+            if (confirm('確定要刪除這筆股票記錄嗎？')) {
+                stocks = stocks.filter(stock => stock.id !== id);
+                updateStockTable();
+                saveData();
+            }
+        }
+
+        // 清空股票表單
+        function clearStockForm() {
+            document.getElementById('stockSymbol').value = '';
+            document.getElementById('stockShares').value = '';
+            document.getElementById('stockPrice').value = '';
+        }
+
+        // 顯示訊息
+        function showMessage(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        // 修改新增匯率記錄函數，支援自動匯率
+        function addExchange() {
+            const twdAmount = parseFloat(document.getElementById('twdAmount').value);
+            let exchangeRate;
+
+            if (currentRateMode === 'auto' && currentAutoRate) {
+                exchangeRate = currentAutoRate.rate;
+            } else {
+                exchangeRate = parseFloat(document.getElementById('exchangeRate').value);
+            }
+
+            if (!twdAmount || !exchangeRate) {
+                alert('請填寫完整的匯率資訊！');
+                return;
+            }
+
+            if (twdAmount <= 0 || exchangeRate <= 0) {
+                alert('台幣金額和匯率必須大於0！');
+                return;
+            }
+
+            const foreignAmount = twdAmount / exchangeRate;
+            const date = new Date().toLocaleDateString('zh-TW');
+            const config = currencyConfig[currentCurrency];
+
+            const exchange = {
+                id: Date.now(),
+                twdAmount: twdAmount,
+                exchangeRate: exchangeRate,
+                foreignAmount: foreignAmount,
+                foreignCurrency: currentCurrency,
+                date: date,
+                rateSource: currentRateMode === 'auto' ? '即時匯率' : '手動輸入'
+            };
+
+            exchanges.push(exchange);
+            updateExchangeTable();
+            clearExchangeForm();
+            saveData();
+            
+            // 顯示成功訊息
+            const sourceText = currentRateMode === 'auto' ? '即時匯率' : '手動輸入';
+            showMessage('exchangeSuccessMessage', `成功新增${config.name}匯率記錄！匯率來源：${sourceText}`);
+        }
+
+        // 更新匯率表格
+        function updateExchangeTable() {
+            const tbody = document.getElementById('exchangeTableBody');
+            
+            if (exchanges.length === 0) {
+                tbody.innerHTML = '<tr class="empty-message"><td colspan="6">尚未新增任何匯率記錄</td></tr>';
+                document.getElementById('exchangeSummary').style.display = 'none';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            
+            exchanges.forEach(exchange => {
+                // 確保舊記錄有foreignCurrency欄位
+                if (!exchange.foreignCurrency) {
+                    exchange.foreignCurrency = 'USD';
+                }
+                if (!exchange.foreignAmount && exchange.usdAmount) {
+                    exchange.foreignAmount = exchange.usdAmount;
+                }
+                
+                const config = currencyConfig[exchange.foreignCurrency] || currencyConfig['USD'];
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>NT$ ${exchange.twdAmount.toLocaleString()}</td>
+                    <td>${exchange.exchangeRate.toFixed(config.precision)}</td>
+                    <td>${config.symbol}${exchange.foreignAmount.toFixed(config.precision)}</td>
+                    <td>${exchange.date}</td>
+                    <td>${exchange.rateSource || '手動輸入'}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteExchange(${exchange.id})" style="padding: 5px 10px; font-size: 12px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            updateExchangeSummary();
+        }
+
+        // 更新匯率摘要
+        function updateExchangeSummary() {
+            const totalTWD = exchanges.reduce((sum, exchange) => sum + exchange.twdAmount, 0);
+            
+            // 按貨幣分組統計
+            const currencyGroups = {};
+            exchanges.forEach(exchange => {
+                // 確保舊記錄有foreignCurrency欄位
+                const currency = exchange.foreignCurrency || 'USD';
+                if (!currencyGroups[currency]) {
+                    currencyGroups[currency] = [];
+                }
+                currencyGroups[currency].push(exchange);
+            });
+
+            // 計算每種貨幣的總額
+            const currencyTotals = {};
+            Object.keys(currencyGroups).forEach(currency => {
+                currencyTotals[currency] = currencyGroups[currency].reduce((sum, exchange) => {
+                    const amount = exchange.foreignAmount || exchange.usdAmount || 0;
+                    return sum + amount;
+                }, 0);
+            });
+
+            // 計算加權平均匯率（台幣金額加總/外幣金額加總）
+            const totalForeignAmount = exchanges.reduce((sum, exchange) => {
+                const amount = exchange.foreignAmount || exchange.usdAmount || 0;
+                return sum + amount;
+            }, 0);
+            const weightedAverageRate = totalForeignAmount > 0 ? totalTWD / totalForeignAmount : 0;
+            const maxRate = Math.max(...exchanges.map(e => e.exchangeRate));
+            const minRate = Math.min(...exchanges.map(e => e.exchangeRate));
+
+            document.getElementById('totalTWD').textContent = `NT$ ${totalTWD.toLocaleString()}`;
+            
+            // 顯示所有貨幣的總額
+            const currencyText = Object.keys(currencyTotals).map(currency => {
+                const config = currencyConfig[currency] || currencyConfig['USD'];
+                return `${config.symbol}${currencyTotals[currency].toFixed(config.precision)}`;
+            }).join(' / ');
+            document.getElementById('totalUSD').textContent = currencyText;
+            
+            document.getElementById('averageRate').textContent = weightedAverageRate.toFixed(4);
+            document.getElementById('maxRate').textContent = maxRate.toFixed(4);
+            document.getElementById('minRate').textContent = minRate.toFixed(4);
+            document.getElementById('exchangeSummary').style.display = 'block';
+        }
+
+        // 刪除匯率記錄
+        function deleteExchange(id) {
+            if (confirm('確定要刪除這筆匯率記錄嗎？')) {
+                exchanges = exchanges.filter(exchange => exchange.id !== id);
+                updateExchangeTable();
+                saveData();
+            }
+        }
+
+        // 清空匯率表單
+        function clearExchangeForm() {
+            document.getElementById('twdAmount').value = '';
+            // 保留匯率值，方便下次使用
+        }
+
+        // 保存數據到 localStorage
+        function saveData() {
+            localStorage.setItem('stockData', JSON.stringify(stocks));
+            localStorage.setItem('exchangeData', JSON.stringify(exchanges));
+        }
+
+        // 匯出股票資料 (CSV)
+        function exportStockData() {
+            if (stocks.length === 0) {
+                showMessage('stockErrorMessage', '沒有股票資料可以匯出！');
+                return;
+            }
+
+            const headers = ['股票代號', '股數', '股價 (USD)', '市值 (USD)', '最近配息', '下次配息'];
+            const csvContent = [
+                headers.join(','),
+                ...stocks.map(stock => [
+                    stock.symbol,
+                    stock.shares,
+                    stock.price,
+                    stock.marketValue,
+                    stock.lastDividend,
+                    stock.nextDividend
+                ].join(','))
+            ].join('\n');
+
+            downloadFile(csvContent, 'stock_data.csv', 'text/csv');
+            showMessage('stockSuccessMessage', '股票資料已成功匯出為 CSV 檔案！');
+        }
+
+        // 匯出股票資料 (JSON)
+        function exportStockDataJSON() {
+            if (stocks.length === 0) {
+                showMessage('stockErrorMessage', '沒有股票資料可以匯出！');
+                return;
+            }
+
+            const jsonContent = JSON.stringify(stocks, null, 2);
+            downloadFile(jsonContent, 'stock_data.json', 'application/json');
+            showMessage('stockSuccessMessage', '股票資料已成功匯出為 JSON 檔案！');
+        }
+
+        // 匯出匯率資料 (CSV)
+        function exportExchangeData() {
+            if (exchanges.length === 0) {
+                showMessage('exchangeErrorMessage', '沒有匯率資料可以匯出！');
+                return;
+            }
+
+            const headers = ['台幣金額', '匯率', '外幣金額', '外幣種類', '日期', '匯率來源'];
+            const csvContent = [
+                headers.join(','),
+                ...exchanges.map(exchange => [
+                    exchange.twdAmount,
+                    exchange.exchangeRate,
+                    exchange.foreignAmount || exchange.usdAmount || 0,
+                    exchange.foreignCurrency || 'USD',
+                    exchange.date,
+                    exchange.rateSource || '手動輸入'
+                ].join(','))
+            ].join('\n');
+
+            downloadFile(csvContent, 'exchange_data.csv', 'text/csv');
+            showMessage('exchangeSuccessMessage', '匯率資料已成功匯出為 CSV 檔案！');
+        }
+
+        // 匯出匯率資料 (JSON)
+        function exportExchangeDataJSON() {
+            if (exchanges.length === 0) {
+                showMessage('exchangeErrorMessage', '沒有匯率資料可以匯出！');
+                return;
+            }
+
+            const jsonContent = JSON.stringify(exchanges, null, 2);
+            downloadFile(jsonContent, 'exchange_data.json', 'application/json');
+            showMessage('exchangeSuccessMessage', '匯率資料已成功匯出為 JSON 檔案！');
+        }
+
+        // 下載檔案
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // 匯入股票資料
+        function importStockData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+
+                try {
+                    let importData = [];
+                    if (fileExtension === 'json') {
+                        importData = JSON.parse(content);
+                    } else if (fileExtension === 'csv') {
+                        importData = parseCSV(content, 'stock');
+                    } else {
+                        throw new Error('不支援的檔案格式');
+                    }
+
+                    showStockImportPreview(importData);
+                } catch (error) {
+                    showMessage('stockErrorMessage', `匯入失敗：${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 匯入匯率資料
+        function importExchangeData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+
+                try {
+                    let importData = [];
+                    if (fileExtension === 'json') {
+                        importData = JSON.parse(content);
+                    } else if (fileExtension === 'csv') {
+                        importData = parseCSV(content, 'exchange');
+                    } else {
+                        throw new Error('不支援的檔案格式');
+                    }
+
+                    showExchangeImportPreview(importData);
+                } catch (error) {
+                    showMessage('exchangeErrorMessage', `匯入失敗：${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 解析 CSV
+        function parseCSV(content, type) {
+            const lines = content.trim().split('\n');
+            const headers = lines[0].split(',');
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                if (values.length !== headers.length) continue;
+
+                if (type === 'stock') {
+                    data.push({
+                        id: Date.now() + i,
+                        symbol: values[0].trim().toUpperCase(),
+                        shares: parseFloat(values[1]),
+                        price: parseFloat(values[2]),
+                        marketValue: parseFloat(values[3]),
+                        lastDividend: values[4] || '無資料',
+                        nextDividend: values[5] || '無資料'
+                    });
+                } else if (type === 'exchange') {
+                    data.push({
+                        id: Date.now() + i,
+                        twdAmount: parseFloat(values[0]),
+                        exchangeRate: parseFloat(values[1]),
+                        foreignAmount: parseFloat(values[2]),
+                        foreignCurrency: values[3] || 'USD',
+                        date: values[4] || new Date().toLocaleDateString('zh-TW'),
+                        rateSource: values[5] || '檔案匯入'
+                    });
+                }
+            }
+
+            return data;
+        }
+
+        // 顯示股票匯入預覽
+        function showStockImportPreview(importData) {
+            const previewDiv = document.getElementById('stockImportPreview');
+            const contentDiv = document.getElementById('stockPreviewContent');
+            
+            contentDiv.innerHTML = `
+                <div class="preview-item">將匯入 ${importData.length} 筆股票資料：</div>
+                ${importData.slice(0, 5).map(stock => 
+                    `<div class="preview-item">• ${stock.symbol}: ${stock.shares} 股 @ $${stock.price}</div>`
+                ).join('')}
+                ${importData.length > 5 ? `<div class="preview-item">... 還有 ${importData.length - 5} 筆資料</div>` : ''}
+            `;
+            
+            previewDiv.style.display = 'block';
+            previewDiv.dataset.importData = JSON.stringify(importData);
+        }
+
+        // 顯示匯率匯入預覽
+        function showExchangeImportPreview(importData) {
+            const previewDiv = document.getElementById('exchangeImportPreview');
+            const contentDiv = document.getElementById('exchangePreviewContent');
+            
+            contentDiv.innerHTML = `
+                <div class="preview-item">將匯入 ${importData.length} 筆匯率資料：</div>
+                ${importData.slice(0, 5).map(exchange => {
+                    const config = currencyConfig[exchange.foreignCurrency] || currencyConfig['USD'];
+                    return `<div class="preview-item">• NT$ ${exchange.twdAmount.toLocaleString()} @ ${exchange.exchangeRate} (${config.name})</div>`;
+                }).join('')}
+                ${importData.length > 5 ? `<div class="preview-item">... 還有 ${importData.length - 5} 筆資料</div>` : ''}
+            `;
+            
+            previewDiv.style.display = 'block';
+            previewDiv.dataset.importData = JSON.stringify(importData);
+        }
+
+        // 確認股票匯入
+        function confirmStockImport() {
+            const previewDiv = document.getElementById('stockImportPreview');
+            const importData = JSON.parse(previewDiv.dataset.importData);
+            
+            stocks = importData;
+            updateStockTable();
+            cancelStockImport();
+            showMessage('stockSuccessMessage', `成功匯入 ${importData.length} 筆股票資料！`);
+        }
+
+        // 確認匯率匯入
+        function confirmExchangeImport() {
+            const previewDiv = document.getElementById('exchangeImportPreview');
+            const importData = JSON.parse(previewDiv.dataset.importData);
+            
+            exchanges = importData;
+            updateExchangeTable();
+            cancelExchangeImport();
+            showMessage('exchangeSuccessMessage', `成功匯入 ${importData.length} 筆匯率資料！`);
+        }
+
+        // 取消股票匯入
+        function cancelStockImport() {
+            document.getElementById('stockImportPreview').style.display = 'none';
+            document.getElementById('stockFileInput').value = '';
+        }
+
+        // 取消匯率匯入
+        function cancelExchangeImport() {
+            document.getElementById('exchangeImportPreview').style.display = 'none';
+            document.getElementById('exchangeFileInput').value = '';
+        }
+
+        // 清空所有股票
+        function clearAllStocks() {
+            if (confirm('確定要清空所有股票資料嗎？此操作無法復原！')) {
+                stocks = [];
+                updateStockTable();
+                saveData();
+                showMessage('stockSuccessMessage', '所有股票資料已清空！');
+            }
+        }
+
+        // 清空所有匯率記錄
+        function clearAllExchanges() {
+            if (confirm('確定要清空所有匯率記錄嗎？此操作無法復原！')) {
+                exchanges = [];
+                updateExchangeTable();
+                saveData();
+                showMessage('exchangeSuccessMessage', '所有匯率記錄已清空！');
+            }
+        }
+
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 從 localStorage 載入數據
+            const savedStocks = localStorage.getItem('stockData');
+            const savedExchanges = localStorage.getItem('exchangeData');
+            
+            if (savedStocks) {
+                stocks = JSON.parse(savedStocks);
+                updateStockTable();
+            }
+            
+            if (savedExchanges) {
+                exchanges = JSON.parse(savedExchanges);
+                updateExchangeTable();
+            }
+        });
+    </script>
+</body>
+</html> 
