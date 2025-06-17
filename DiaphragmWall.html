@@ -107,40 +107,16 @@
         }
         .table th, .table td {
             white-space: nowrap;
-            padding: 0.5rem;
+            padding: 4px 8px;
+            text-align: center;
         }
-        .table th:nth-child(1), /* 項次 */
-        .table td:nth-child(1) {
-            width: 60px;
-        }
-        .table th:nth-child(2), /* 澆置體積 */
-        .table td:nth-child(2) {
-            width: 100px;
-        }
-        .table th:nth-child(3), /* 累計體積 */
-        .table td:nth-child(3) {
-            width: 100px;
-        }
-        .table th:nth-child(4), /* 理論剩餘 */
-        .table td:nth-child(4) {
-            width: 100px;
-        }
-        .table th:nth-child(5), /* 實際剩餘 */
-        .table td:nth-child(5) {
-            width: 100px;
-        }
-        .table th:nth-child(6), /* 預估深度 */
-        .table td:nth-child(6) {
-            width: 100px;
-        }
-        .table th:nth-child(7), /* 實際平均深度 */
-        .table td:nth-child(7) {
-            width: 100px;
-        }
-        .table th:nth-child(8), /* 實際深度 */
-        .table td:nth-child(8) {
-            width: 100px;
-        }
+        .table th:nth-child(1), .table td:nth-child(1) { width: 50px; }
+        .table th:nth-child(2), .table td:nth-child(2) { width: 90px; }
+        .table th:nth-child(3), .table td:nth-child(3) { width: 100px; }
+        .table th:nth-child(4), .table td:nth-child(4) { width: 100px; }
+        .table th:nth-child(5), .table td:nth-child(5) { width: 110px; }
+        .table th:nth-child(6), .table td:nth-child(6) { width: 110px; }
+        .table th.concrete-volume, .table td.concrete-volume { width: 120px; }
         .item-number {
             min-width: 60px;
             font-weight: bold;
@@ -274,37 +250,33 @@
             </div>
         </div>
 
-        <!-- 修改表格結構 -->
-        <div class="table-responsive">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5>混凝土量與深度數據</h5>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addDepthColumn()">
-                        <i class="fas fa-plus"></i> 新增深度欄位
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleConcreteVolume()">
-                        <i class="fas fa-eye"></i> 需求混凝土量
-                    </button>
-                </div>
-            </div>
-            <table id="concreteDataTable" class="table table-bordered">
+        <!-- 新的混凝土澆置記錄表格區塊 -->
+        <div class="table-responsive" id="newConcreteTableArea">
+            <table id="newConcreteTable" class="table table-bordered table-sm align-middle">
                 <thead>
                     <tr>
-                        <th rowspan="2">項次</th>
-                        <th rowspan="2">澆置體積 (m³)</th>
-                        <th rowspan="2">累計體積 (m³)</th>
-                        <th rowspan="2">理論深度 (m)</th>
-                        <th rowspan="2">實際平均深度 (m)</th>
-                        <th colspan="1">實際深度 (m)</th>
-                        <th rowspan="2" class="concrete-volume">理論剩餘 (m³)</th>
-                        <th rowspan="2" class="concrete-volume">實際需求混凝土量 (m³)</th>
-                    </tr>
-                    <tr>
-                        <th>實際深度 1</th>
+                        <th>項次</th>
+                        <th>澆置方數</th>
+                        <th>累計方數</th>
+                        <th>預估高度</th>
+                        <th>實際平均高度</th>
+                        <th>實際高度1</th>
+                        <th>實際高度2</th>
+                        <th>實際高度3</th>
+                        <th>實際高度4</th>
+                        <th>備註</th>
+                        <th class="actual-supply-col" style="display:none;">實際需補料</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
+        </div>
+
+        <!-- 新表格控制按鈕 -->
+        <div class="mb-2 d-flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="exportNewConcreteTable()">匯出資料</button>
+            <button class="btn btn-secondary btn-sm" onclick="importNewConcreteTable()">匯入資料</button>
+            <button class="btn btn-outline-info btn-sm" onclick="toggleActualSupplyCol()" id="toggleActualSupplyBtn">顯示實際需補料</button>
         </div>
     </div>
 
@@ -508,47 +480,31 @@
         }
 
         // 修改自動填充混凝土數據函數
-        function autoFillConcreteData(targetVolume) {
+        function autoFillConcreteData(volume) {
             const tbody = document.querySelector('#concreteDataTable tbody');
-            tbody.innerHTML = ''; // 清空現有數據
-            
-            let currentVolume = 0;
-            let rowCount = 1;
-            const depthColumns = document.querySelector('#concreteDataTable thead tr:last-child').querySelectorAll('th').length;
-            
-            // 持續添加行直到達到目標體積
-            while (currentVolume < targetVolume) {
-                const newRow = document.createElement('tr');
-                const remainingVolume = targetVolume - currentVolume;
-                const inputValue = Math.min(9, remainingVolume); // 使用9或剩餘體積中的較小值
-                
+            tbody.innerHTML = '';
+            const rowCount = Math.ceil(volume / 9);
+            const thead = document.querySelector('#concreteDataTable thead tr');
+            const depthColumns = thead.querySelectorAll('th').length - 6; // 6個基本欄位
+            for (let i = 0; i < rowCount; i++) {
                 let rowHtml = `
-                    <td class="item-number">${rowCount}</td>
-                    <td><input type="number" class="form-control" step="0.01" value="${inputValue.toFixed(2)}" oninput="updateConcreteData()"></td>
+                    <td class="item-number">${i + 1}</td>
+                    <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
                     <td class="calculated-value">0.00</td>
                     <td class="calculated-value">0.00</td>
                     <td class="calculated-value">0.00</td>
+                    <td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>
                 `;
-                
-                // 添加實際深度輸入框
-                for (let i = 0; i < depthColumns; i++) {
-                    rowHtml += `<td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>`;
+                if (depthColumns > 1) {
+                    for (let j = 1; j < depthColumns; j++) {
+                        rowHtml += `<td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>`;
+                    }
                 }
-                
-                // 添加混凝土量欄位
-                rowHtml += `
-                    <td class="calculated-value concrete-volume">0.00</td>
-                    <td class="calculated-value concrete-volume">0.00</td>
-                `;
-                
+                rowHtml += '<td class="calculated-value concrete-volume">0.00</td><td class="calculated-value concrete-volume">0.00</td>';
+                const newRow = document.createElement('tr');
                 newRow.innerHTML = rowHtml;
                 tbody.appendChild(newRow);
-                
-                currentVolume += inputValue;
-                rowCount++;
             }
-            
-            // 更新計算值
             updateConcreteData();
         }
 
@@ -690,24 +646,25 @@
             const tbody = document.querySelector('#concreteDataTable tbody');
             const newRow = document.createElement('tr');
             const rowNumber = tbody.children.length + 1;
-            
-            // 基本欄位
+            const thead = document.querySelector('#concreteDataTable thead tr');
+            const depthColumns = thead.querySelectorAll('th').length - 6;
             let rowHtml = `
                 <td class="item-number">${rowNumber}</td>
                 <td><input type="number" class="form-control" step="0.01" oninput="updateConcreteData()"></td>
-                <td class="calculated-value">0.00<br><small class="text-muted">理論剩餘: 0.00</small><br><small class="text-muted">實際需求混凝土量: 0.00</small></td>
                 <td class="calculated-value">0.00</td>
                 <td class="calculated-value">0.00</td>
+                <td class="calculated-value">0.00</td>
+                <td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>
             `;
-            
-            // 添加實際深度輸入框
-            const depthColumns = document.querySelector('#concreteDataTable thead tr:last-child').querySelectorAll('th').length;
-            for (let i = 0; i < depthColumns; i++) {
-                rowHtml += `<td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>`;
+            if (depthColumns > 1) {
+                for (let j = 1; j < depthColumns; j++) {
+                    rowHtml += `<td><input type="number" class="form-control" step="0.01" oninput="calculateAverageDepth(this)"></td>`;
+                }
             }
-            
+            rowHtml += '<td class="calculated-value concrete-volume">0.00</td><td class="calculated-value concrete-volume">0.00</td>';
             newRow.innerHTML = rowHtml;
             tbody.appendChild(newRow);
+            updateConcreteData();
         }
 
         // 修改匯出功能
@@ -864,7 +821,7 @@
 
                         // 計算實際深度欄位數量
                         const headerColumns = headerLine.split(',');
-                        const depthColumnCount = Math.max(0, headerColumns.length - 7); // 減去基本欄位數量，確保不小於0
+                        const depthColumnCount = Math.max(0, headerColumns.length - 6); // 減去基本欄位數量，確保不小於0
                         
                         // 更新表格標題
                         const thead = document.querySelector('#concreteDataTable thead tr:last-child');
@@ -936,6 +893,208 @@
                 concreteVolumeBtn.classList.remove('active');
             }, 100);
         });
+
+        // 參數設定
+        function getUnitVolume() {
+            return parseFloat(document.getElementById('unitVolume')?.textContent) || 0;
+        }
+        function getUnitArea() {
+            return parseFloat(document.getElementById('unitArea')?.textContent) || 0;
+        }
+        function getUnitDepth() {
+            return parseFloat(document.getElementById('unitDepth')?.value) || 0;
+        }
+
+        // 產生表格
+        function initNewConcreteTable() {
+            const tbody = document.querySelector('#newConcreteTable tbody');
+            tbody.innerHTML = '';
+            const unitVolume = getUnitVolume();
+            const rowCount = Math.max(2, Math.ceil(unitVolume / 9) + 1); // 至少2行
+            for (let i = 0; i < rowCount; i++) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${i}</td>
+                    <td><input type="number" class="form-control form-control-sm" step="0.01" oninput="updateNewConcreteTable()"></td>
+                    <td class="calculated-value">0.00</td>
+                    <td class="calculated-value">0.00</td>
+                    <td class="calculated-value">0.00</td>
+                    <td><input type="number" class="form-control form-control-sm" step="0.01" oninput="updateNewConcreteTable()"></td>
+                    <td><input type="number" class="form-control form-control-sm" step="0.01" oninput="updateNewConcreteTable()"></td>
+                    <td><input type="number" class="form-control form-control-sm" step="0.01" oninput="updateNewConcreteTable()"></td>
+                    <td><input type="number" class="form-control form-control-sm" step="0.01" oninput="updateNewConcreteTable()"></td>
+                    <td><input type="text" class="form-control form-control-sm"></td>
+                    <td class="actual-supply-col" style="display:none;">0.00</td>
+                `;
+                tbody.appendChild(tr);
+            }
+            updateNewConcreteTable();
+        }
+
+        // 更新計算欄位
+        function updateNewConcreteTable() {
+            const tbody = document.querySelector('#newConcreteTable tbody');
+            const unitArea = getUnitArea();
+            const unitDepth = getUnitDepth();
+            let cumulative = 0;
+            tbody.querySelectorAll('tr').forEach((tr, idx) => {
+                // 澆置方數
+                const pourInput = tr.children[1].querySelector('input');
+                const pour = parseFloat(pourInput?.value) || 0;
+                // 累計方數
+                cumulative += pour;
+                tr.children[2].textContent = cumulative.toFixed(2);
+                // 預估高度
+                let estHeight = unitDepth;
+                if (unitArea > 0) estHeight = unitDepth - (cumulative / unitArea);
+                tr.children[3].textContent = estHeight.toFixed(2);
+                // 實際高度1~4
+                let actuals = [];
+                for (let i = 5; i <= 8; i++) {
+                    const val = parseFloat(tr.children[i].querySelector('input')?.value);
+                    if (!isNaN(val)) actuals.push(val);
+                }
+                // 實際平均高度
+                let avg = actuals.length ? actuals.reduce((a,b)=>a+b,0)/actuals.length : 0;
+                tr.children[4].textContent = avg.toFixed(2);
+                // 備註不處理
+                // 實際需補料
+                const supplyCell = tr.querySelector('.actual-supply-col');
+                if (supplyCell) {
+                    const supply = (unitDepth - avg) * unitArea;
+                    supplyCell.textContent = isNaN(supply) ? '' : supply.toFixed(2);
+                }
+            });
+        }
+
+        // 補料欄顯示/隱藏
+        function toggleActualSupplyCol() {
+            const show = document.querySelector('.actual-supply-col')?.style.display === 'none';
+            document.querySelectorAll('.actual-supply-col').forEach(td => td.style.display = show ? '' : 'none');
+            document.querySelector('#newConcreteTable thead th.actual-supply-col').style.display = show ? '' : 'none';
+            document.getElementById('toggleActualSupplyBtn').textContent = show ? '隱藏實際需補料' : '顯示實際需補料';
+        }
+
+        // 匯出功能
+        function exportNewConcreteTable() {
+            // 取得單元規格
+            const unitDate = document.getElementById('unitDate').value;
+            const unitNumber = document.getElementById('unitNumber').value.trim();
+            const unitType = document.getElementById('unitType').value;
+            const unitWidth = document.getElementById('unitWidth').value;
+            const unitLength = document.getElementById('unitLength').value;
+            const unitDepth = document.getElementById('unitDepth').value;
+            const unitVolume = document.getElementById('unitVolume').textContent;
+            const unitArea = document.getElementById('unitArea').textContent;
+
+            // 檢查單元編號
+            if (!unitNumber) {
+                alert('請先填入單元編號後再匯出資料');
+                return;
+            }
+
+            // 生成日期時間字串 (格式：YYYYMMDD-HHmm)
+            const now = new Date();
+            const dateStr = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, '0') +
+                String(now.getDate()).padStart(2, '0') + '-' +
+                String(now.getHours()).padStart(2, '0') +
+                String(now.getMinutes()).padStart(2, '0');
+
+            // 準備CSV內容
+            let csv = '\ufeff'; // BOM for Excel
+            csv += '單元規格\n';
+            csv += '日期,單元編號,單元類型,單元寬度(m),單元長度(m),單元深度(m),單元體積(m³),單元面積(m²)\n';
+            csv += `${unitDate},${unitNumber},${unitType},${unitWidth},${unitLength},${unitDepth},${unitVolume},${unitArea}\n\n`;
+            csv += '混凝土澆置記錄表\n';
+            csv += '項次,澆置方數,累計方數,預估高度,實際平均高度,實際高度1,實際高度2,實際高度3,實際高度4,備註,實際需補料\n';
+            const unitAreaNum = parseFloat(unitArea) || 0;
+            const unitDepthNum = parseFloat(unitDepth) || 0;
+            document.querySelectorAll('#newConcreteTable tbody tr').forEach(tr => {
+                let row = [];
+                // 取得實際高度1~4
+                let actuals = [];
+                for (let i = 5; i <= 8; i++) {
+                    const input = tr.children[i].querySelector('input');
+                    actuals.push(parseFloat(input ? input.value : '0') || 0);
+                }
+                // 判斷是否全為0
+                const allZero = actuals.every(v => v === 0);
+                // 實際平均高度
+                const avg = actuals.filter(v => v > 0).length > 0 ? (actuals.reduce((a,b)=>a+b,0)/actuals.filter(v=>v>0).length) : 0;
+                for (let i = 0; i < 11; i++) {
+                    if (i === 1 || (i >= 5 && i <= 8) || i === 9) {
+                        // input 欄位
+                        const input = tr.children[i].querySelector('input');
+                        row.push(input ? input.value : '');
+                    } else if (i === 10) { // 實際需補料
+                        if (allZero) {
+                            row.push('-');
+                        } else {
+                            const supply = (unitDepthNum - avg) * unitAreaNum;
+                            row.push(isNaN(supply) ? '' : supply.toFixed(2));
+                        }
+                    } else {
+                        row.push(tr.children[i].textContent);
+                    }
+                }
+                csv += row.join(',') + '\n';
+            });
+            const fileName = `${dateStr}-${unitNumber}-連續壁記錄表.csv`;
+            const blob = new Blob([csv], {type:'text/csv'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = fileName;
+            a.click();
+        }
+        // 匯入功能
+        function importNewConcreteTable() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const lines = e.target.result.split('\n').filter(l=>l.trim());
+                    if (lines.length < 2) return;
+                    const tbody = document.querySelector('#newConcreteTable tbody');
+                    tbody.innerHTML = '';
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = lines[i].split(',');
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${cols[0]||''}</td>
+                            <td><input type="number" class="form-control form-control-sm" step="0.01" value="${cols[1]||''}" oninput="updateNewConcreteTable()"></td>
+                            <td class="calculated-value">${cols[2]||'0.00'}</td>
+                            <td class="calculated-value">${cols[3]||'0.00'}</td>
+                            <td class="calculated-value">${cols[4]||'0.00'}</td>
+                            <td><input type="number" class="form-control form-control-sm" step="0.01" value="${cols[5]||''}" oninput="updateNewConcreteTable()"></td>
+                            <td><input type="number" class="form-control form-control-sm" step="0.01" value="${cols[6]||''}" oninput="updateNewConcreteTable()"></td>
+                            <td><input type="number" class="form-control form-control-sm" step="0.01" value="${cols[7]||''}" oninput="updateNewConcreteTable()"></td>
+                            <td><input type="number" class="form-control form-control-sm" step="0.01" value="${cols[8]||''}" oninput="updateNewConcreteTable()"></td>
+                            <td><input type="text" class="form-control form-control-sm" value="${cols[9]||''}"></td>
+                            <td class="actual-supply-col" style="display:none;">${cols[10]||'0.00'}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                    updateNewConcreteTable();
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+        // 單元體積/面積/深度變動時自動重建表格
+        ['unitVolume','unitArea','unitDepth'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', initNewConcreteTable);
+                el.addEventListener('change', initNewConcreteTable);
+            }
+        });
+        // 頁面載入時自動產生表格
+        window.addEventListener('DOMContentLoaded', initNewConcreteTable);
     </script>
 </body>
 </html> 
