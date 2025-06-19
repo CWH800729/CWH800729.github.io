@@ -6,6 +6,7 @@
   <title>雨溝高程表</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     body {
       font-family: 'Segoe UI', 'Microsoft JhengHei', Arial, sans-serif;
@@ -204,6 +205,54 @@
     .slope-pos { color: #388e3c; font-weight: bold; }
     .slope-neg { color: #d32f2f; font-weight: bold; }
     .slope-zero { color: #666; font-weight: bold; }
+    /* 圖片點擊樣式 */
+    .clickable-image {
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .clickable-image:hover {
+      transform: scale(1.05);
+    }
+
+    .clickable-image:active {
+      transform: scale(0.95);
+    }
+
+    .click-count {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background-color: #e74c3c;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .click-count.show {
+      opacity: 1;
+    }
+
+    .image-container {
+      position: relative;
+      display: inline-block;
+    }
+
+    .logo-link {
+      pointer-events: none;
+    }
+
+    .logo-link.active {
+      pointer-events: auto;
+    }
   </style>
 </head>
 <body>
@@ -213,9 +262,12 @@
       <div class="mode-indicator" id="modeIndicator">目前模式：EL</div>
     </div>
     <div class="title-container">
-      <a href="https://CWH800729.github.io/index.html" class="logo-link">
-        <img src="https://CWH800729.github.io/CWH-LOGO" alt="CWH LOGO" class="logo-img">
-      </a>
+      <div class="image-container">
+        <a href="https://CWH800729.github.io/index.html" class="logo-link" id="logoLink">
+          <img src="https://CWH800729.github.io/CWH-LOGO" alt="CWH LOGO" class="logo-img clickable-image" id="logoImage">
+        </a>
+        <div class="click-count" id="clickCount">0</div>
+      </div>
       <h2>雨溝高程輸入表（橫向排列）<span id="importedFilename" style="font-size: 0.7em; color: #666; margin-left: 12px;"></span></h2>
     </div>
     <div style="margin-bottom: 1.2em; display: flex; gap: 2em; align-items: center;">
@@ -739,6 +791,30 @@
       input.addEventListener('input', updateTableAndChart);
     });
     updateTableAndChart();
+
+    // LOGO點擊計數功能
+    let clickCount = 0;
+    const logoImage = document.getElementById('logoImage');
+    const clickCountElement = document.getElementById('clickCount');
+    const logoLink = document.getElementById('logoLink');
+
+    logoImage.addEventListener('click', function(e) {
+      e.preventDefault();
+      clickCount++;
+      clickCountElement.textContent = clickCount;
+      clickCountElement.classList.add('show');
+      
+      if (clickCount >= 3) {
+        logoLink.classList.add('active');
+        setTimeout(() => {
+          window.location.href = logoLink.href;
+        }, 100);
+      }
+      
+      setTimeout(() => {
+        clickCountElement.classList.remove('show');
+      }, 1000);
+    });
   </script>
 </body>
 </html>
