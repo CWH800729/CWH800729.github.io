@@ -642,28 +642,37 @@
                 const usedAmount = project.contractBudget - project.remainingBudget;
                 const usageRate = (usedAmount / project.contractBudget * 100).toFixed(1);
                 const averagePayment = calculateMonthlyAveragePayment(project);
+                const averagePaymentDisplay = formatAveragePayment(project);
                 const estimatedMonths = averagePayment > 0 
-                    ? (project.remainingBudget / parseFloat(averagePayment.replace(/,/g, ''))).toFixed(1)
+                    ? (project.remainingBudget / averagePayment).toFixed(1)
                     : 0;
 
                 const row = document.createElement('tr');
-                row.className = 'expandable-row';
                 row.onclick = () => togglePaymentDetails(project.id);
                 row.innerHTML = `
-                    <td><strong>${project.projectTitle}</strong></td>
-                    <td><strong>${project.projectName}</strong></td>
-                    <td>${project.contractBudget.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
+                    <td>
+                        <span class="text-display">${project.projectTitle}</span>
+                        <input type="text" class="text-input" value="${project.projectTitle}" style="display: none;">
+                    </td>
+                    <td>
+                        <span class="text-display">${project.projectName}</span>
+                        <input type="text" class="text-input" value="${project.projectName}" style="display: none;">
+                    </td>
+                    <td>
+                        <span class="budget-display">${project.contractBudget.toLocaleString('en-US', {maximumFractionDigits: 0})}</span>
+                        <input type="number" class="budget-input" value="${project.contractBudget}" min="0" step="0.01" style="display: none;">
+                    </td>
                     <td>${project.remainingBudget.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
                     <td>${usedAmount.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
                     <td>${usageRate}%</td>
-                    <td>${averagePayment}</td>
+                    <td>${averagePaymentDisplay}</td>
                     <td>${estimatedMonths} 個月</td>
                     <td>
+                        <button class="btn btn-primary btn-sm" onclick="toggleProjectEdit(${project.id}); event.stopPropagation();" id="editBtn-${project.id}">
+                            <i class="fas fa-edit"></i> 編輯
+                        </button>
                         <button class="btn btn-danger btn-sm" onclick="deleteProject(${project.id}); event.stopPropagation();">
                             <i class="fas fa-trash"></i>
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="addPayment(${project.id}); event.stopPropagation();">
-                            <i class="fas fa-plus"></i> 請款
                         </button>
                     </td>
                 `;
@@ -892,8 +901,9 @@
                     const usedAmount = project.contractBudget - project.remainingBudget;
                     const usageRate = (usedAmount / project.contractBudget * 100).toFixed(1);
                     const averagePayment = calculateMonthlyAveragePayment(project);
+                    const averagePaymentDisplay = formatAveragePayment(project);
                     const estimatedMonths = averagePayment > 0 
-                        ? (project.remainingBudget / parseFloat(averagePayment.replace(/,/g, ''))).toFixed(1)
+                        ? (project.remainingBudget / averagePayment).toFixed(1)
                         : 0;
                     
                     return [
@@ -903,7 +913,7 @@
                         project.remainingBudget,
                         usedAmount,
                         usageRate,
-                        averagePayment,
+                        averagePaymentDisplay,
                         estimatedMonths,
                         project.projectDescription
                     ].join(',');
@@ -1066,10 +1076,10 @@
             }
         }
 
-        // 計算按月份的平均請款金額
+        // 計算按月份的平均請款金額（返回純數字）
         function calculateMonthlyAveragePayment(project) {
             if (!project.payments || project.payments.length === 0) {
-                return '0';
+                return 0;
             }
 
             // 按日期排序請款記錄
@@ -1088,12 +1098,75 @@
             
             // 如果只有一個月，直接返回總金額
             if (monthsDiff <= 1) {
-                return totalAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+                return totalAmount;
             }
             
             // 計算月平均
-            const monthlyAverage = totalAmount / monthsDiff;
-            return monthlyAverage.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            return totalAmount / monthsDiff;
+        }
+
+        // 格式化平均請款金額顯示
+        function formatAveragePayment(project) {
+            const average = calculateMonthlyAveragePayment(project);
+            return average.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        }
+
+        // 切換項目編輯模式
+        function toggleProjectEdit(projectId) {
+            const project = projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            const row = document.querySelector(`tr[onclick="togglePaymentDetails(${projectId})"]`);
+            if (!row) return;
+
+            const editBtn = document.getElementById(`editBtn-${projectId}`);
+            const textDisplays = row.querySelectorAll('.text-display');
+            const textInputs = row.querySelectorAll('.text-input');
+            const budgetDisplays = row.querySelectorAll('.budget-display');
+            const budgetInputs = row.querySelectorAll('.budget-input');
+
+            // 檢查是否已在編輯模式
+            const isEditing = textInputs[0] && textInputs[0].style.display !== 'none';
+
+            if (isEditing) {
+                // 確認編輯並退出編輯模式
+                const newTitle = textInputs[0].value.trim();
+                const newName = textInputs[1].value.trim();
+                const newBudget = parseFloat(budgetInputs[0].value);
+
+                if (!newTitle || !newName || isNaN(newBudget) || newBudget < 0) {
+                    showMessage('projectErrorMessage', '請填寫有效的項目標題、項目名稱和合約預算！');
+                    return;
+                }
+
+                // 更新項目資料
+                project.projectTitle = newTitle;
+                project.projectName = newName;
+                project.contractBudget = newBudget;
+
+                // 更新顯示
+                textDisplays[0].textContent = newTitle;
+                textDisplays[1].textContent = newName;
+                budgetDisplays[0].textContent = newBudget.toLocaleString('en-US', {maximumFractionDigits: 0});
+
+                // 隱藏輸入欄位
+                textInputs.forEach(input => input.style.display = 'none');
+                budgetInputs.forEach(input => input.style.display = 'none');
+
+                // 更新按鈕
+                editBtn.innerHTML = '<i class="fas fa-edit"></i> 編輯';
+                editBtn.className = 'btn btn-primary btn-sm';
+
+                showMessage('projectSuccessMessage', '項目資料已更新！');
+            } else {
+                // 進入編輯模式
+                textInputs.forEach(input => input.style.display = 'inline-block');
+                budgetInputs.forEach(input => input.style.display = 'inline-block');
+
+                // 更新按鈕
+                editBtn.innerHTML = '<i class="fas fa-check"></i> 確認';
+                editBtn.className = 'btn btn-success btn-sm';
+            }
         }
     </script>
 </body>
