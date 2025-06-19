@@ -641,11 +641,9 @@
             projects.forEach(project => {
                 const usedAmount = project.contractBudget - project.remainingBudget;
                 const usageRate = (usedAmount / project.contractBudget * 100).toFixed(1);
-                const averagePayment = project.payments.length > 0 
-                    ? (usedAmount / project.payments.length).toFixed(2) 
-                    : '0.00';
+                const averagePayment = calculateMonthlyAveragePayment(project);
                 const estimatedMonths = averagePayment > 0 
-                    ? Math.floor(project.remainingBudget / parseFloat(averagePayment))
+                    ? (project.remainingBudget / parseFloat(averagePayment.replace(/,/g, ''))).toFixed(1)
                     : 0;
 
                 const row = document.createElement('tr');
@@ -659,7 +657,7 @@
                     <td>${usedAmount.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
                     <td>${usageRate}%</td>
                     <td>${averagePayment}</td>
-                    <td>${estimatedMonths.toFixed(1)} 個月</td>
+                    <td>${estimatedMonths} 個月</td>
                     <td>
                         <button class="btn btn-danger btn-sm" onclick="deleteProject(${project.id}); event.stopPropagation();">
                             <i class="fas fa-trash"></i>
@@ -890,11 +888,9 @@
                 ...projects.map(project => {
                     const usedAmount = project.contractBudget - project.remainingBudget;
                     const usageRate = (usedAmount / project.contractBudget * 100).toFixed(1);
-                    const averagePayment = project.payments.length > 0 
-                        ? (usedAmount / project.payments.length).toFixed(2) 
-                        : '0.00';
+                    const averagePayment = calculateMonthlyAveragePayment(project);
                     const estimatedMonths = averagePayment > 0 
-                        ? Math.floor(project.remainingBudget / parseFloat(averagePayment))
+                        ? (project.remainingBudget / parseFloat(averagePayment.replace(/,/g, ''))).toFixed(1)
                         : 0;
                     
                     return [
@@ -1065,6 +1061,36 @@
                 saveData();
                 showMessage('projectSuccessMessage', '所有項目記錄已清空！');
             }
+        }
+
+        // 計算按月份的平均請款金額
+        function calculateMonthlyAveragePayment(project) {
+            if (!project.payments || project.payments.length === 0) {
+                return '0';
+            }
+
+            // 按日期排序請款記錄
+            const sortedPayments = [...project.payments].sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // 計算總請款金額
+            const totalAmount = sortedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+            
+            // 計算月份數
+            const firstDate = new Date(sortedPayments[0].date);
+            const lastDate = new Date(sortedPayments[sortedPayments.length - 1].date);
+            
+            // 計算月份差（包含首尾月份）
+            const monthsDiff = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + 
+                              (lastDate.getMonth() - firstDate.getMonth()) + 1;
+            
+            // 如果只有一個月，直接返回總金額
+            if (monthsDiff <= 1) {
+                return totalAmount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            }
+            
+            // 計算月平均
+            const monthlyAverage = totalAmount / monthsDiff;
+            return monthlyAverage.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
         }
     </script>
 </body>
