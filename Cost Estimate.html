@@ -531,7 +531,7 @@
                                 <th>剩餘預算 (NT$)</th>
                                 <th>已使用金額 (NT$)</th>
                                 <th>使用率 (%)</th>
-                                <th>平均請款金額 (NT$)</th>
+                                <th>平均請款金額 (NT$)<br><small style="font-weight: normal; color: #666;">💡 按請款日期範圍計算</small></th>
                                 <th>預計剩餘月數</th>
                                 <th>操作</th>
                             </tr>
@@ -691,6 +691,9 @@
                                 <div class="form-group">
                                     <label>請款金額 (NT$)：</label>
                                     <input type="number" id="paymentAmount-${project.id}" placeholder="請輸入請款金額" min="0" step="0.01">
+                                    <small style="color: #666; font-size: 12px;">
+                                        提示：如需使用平均請款金額，請在請款說明中標註"平均值"以避免混淆
+                                    </small>
                                 </div>
                                 <div class="form-group">
                                     <label>請款說明：</label>
