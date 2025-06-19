@@ -198,12 +198,31 @@
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #ddd;
+            font-size: 16px;
         }
 
         th {
             background-color: #f8f9fa;
             font-weight: bold;
             color: #2c3e50;
+        }
+
+        td:nth-child(3),
+        td:nth-child(4),
+        td:nth-child(5),
+        td:nth-child(6),
+        td:nth-child(7),
+        td:nth-child(8) {
+            text-align: right;
+        }
+
+        th:nth-child(3),
+        th:nth-child(4),
+        th:nth-child(5),
+        th:nth-child(6),
+        th:nth-child(7),
+        th:nth-child(8) {
+            text-align: right;
         }
 
         tr:hover {
@@ -445,6 +464,11 @@
             <div class="card">
                 <h2><i class="fas fa-chart-line"></i> 項目預算管理</h2>
                 
+                <div class="form-group">
+                    <label for="projectTitle">標題：</label>
+                    <input type="text" id="projectTitle" placeholder="請輸入標題" maxlength="100">
+                </div>
+                
                 <div class="form-row">
                     <div class="form-group">
                         <label for="projectName">項目名稱：</label>
@@ -464,18 +488,9 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="projectStatus">項目狀態：</label>
-                        <select id="projectStatus">
-                            <option value="active">進行中</option>
-                            <option value="completed">已完成</option>
-                            <option value="overdue">逾期</option>
-                        </select>
+                        <label for="projectDescription">項目描述：</label>
+                        <textarea id="projectDescription" placeholder="請輸入項目描述" rows="3" maxlength="500"></textarea>
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="projectDescription">項目描述：</label>
-                    <textarea id="projectDescription" placeholder="請輸入項目描述" rows="3" maxlength="500"></textarea>
                 </div>
                 
                 <button class="btn btn-success" onclick="addProject()">
@@ -510,6 +525,7 @@
                     <table id="projectTable">
                         <thead>
                             <tr>
+                                <th>案子標題</th>
                                 <th>項目名稱</th>
                                 <th>合約預算 (NT$)</th>
                                 <th>剩餘預算 (NT$)</th>
@@ -517,7 +533,6 @@
                                 <th>使用率 (%)</th>
                                 <th>平均請款金額 (NT$)</th>
                                 <th>預計剩餘月數</th>
-                                <th>狀態</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
@@ -577,14 +592,14 @@
 
         // 新增項目
         function addProject() {
+            const projectTitle = document.getElementById('projectTitle').value.trim();
             const projectName = document.getElementById('projectName').value.trim();
             const contractBudget = parseFloat(document.getElementById('contractBudget').value);
             const remainingBudget = parseFloat(document.getElementById('remainingBudget').value);
-            const projectStatus = document.getElementById('projectStatus').value;
             const projectDescription = document.getElementById('projectDescription').value.trim();
 
-            if (!projectName || contractBudget <= 0) {
-                alert('請填寫項目名稱和合約預算！');
+            if (!projectTitle || !projectName || contractBudget <= 0) {
+                alert('請填寫案子標題、項目名稱和合約預算！');
                 return;
             }
 
@@ -595,10 +610,10 @@
 
             const project = {
                 id: Date.now(),
+                projectTitle: projectTitle,
                 projectName: projectName,
                 contractBudget: contractBudget,
                 remainingBudget: remainingBudget,
-                projectStatus: projectStatus,
                 projectDescription: projectDescription,
                 payments: [],
                 createdAt: new Date().toISOString()
@@ -633,25 +648,18 @@
                     ? Math.floor(project.remainingBudget / parseFloat(averagePayment))
                     : 0;
 
-                const statusClass = `status-${project.projectStatus}`;
-                const statusText = {
-                    'active': '進行中',
-                    'completed': '已完成',
-                    'overdue': '逾期'
-                }[project.projectStatus];
-                
                 const row = document.createElement('tr');
                 row.className = 'expandable-row';
                 row.onclick = () => togglePaymentDetails(project.id);
                 row.innerHTML = `
+                    <td><strong>${project.projectTitle}</strong></td>
                     <td><strong>${project.projectName}</strong></td>
-                    <td>NT$ ${project.contractBudget.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td>NT$ ${project.remainingBudget.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td>NT$ ${usedAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>${project.contractBudget.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
+                    <td>${project.remainingBudget.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
+                    <td>${usedAmount.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
                     <td>${usageRate}%</td>
-                    <td>NT$ ${averagePayment}</td>
-                    <td>${estimatedMonths} 個月</td>
-                    <td><span class="project-status ${statusClass}">${statusText}</span></td>
+                    <td>${averagePayment}</td>
+                    <td>${estimatedMonths.toFixed(1)} 個月</td>
                     <td>
                         <button class="btn btn-danger btn-sm" onclick="deleteProject(${project.id}); event.stopPropagation();">
                             <i class="fas fa-trash"></i>
@@ -667,6 +675,12 @@
                 const paymentRow = document.createElement('tr');
                 paymentRow.className = 'payment-details';
                 paymentRow.id = `payment-${project.id}`;
+                
+                // 按日期排序請款記錄（從新到舊）
+                const sortedPayments = [...project.payments].sort((a, b) => 
+                    new Date(b.date) - new Date(a.date)
+                );
+                
                 paymentRow.innerHTML = `
                     <td colspan="9">
                         <div style="padding: 15px;">
@@ -700,10 +714,10 @@
                                         </tr>
                                     </thead>
                                     <tbody id="paymentTable-${project.id}">
-                                        ${project.payments.map(payment => `
+                                        ${sortedPayments.map(payment => `
                                             <tr>
                                                 <td>${payment.date}</td>
-                                                <td>NT$ ${payment.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                <td>${payment.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                                 <td>${payment.description || '-'}</td>
                                                 <td>
                                                     <button class="btn btn-danger btn-sm" onclick="deletePayment(${project.id}, ${payment.id})">
@@ -745,31 +759,54 @@
             const project = projects.find(p => p.id === projectId);
             if (!project) return;
 
-            const date = document.getElementById(`paymentDate-${projectId}`).value;
-            const amount = parseFloat(document.getElementById(`paymentAmount-${projectId}`).value);
-            const description = document.getElementById(`paymentDescription-${projectId}`).value.trim();
+            const dateInput = document.getElementById(`paymentDate-${projectId}`);
+            const amountInput = document.getElementById(`paymentAmount-${projectId}`);
+            const descriptionInput = document.getElementById(`paymentDescription-${projectId}`);
 
-            if (!date || amount <= 0) {
-                alert('請填寫請款日期和金額！');
+            if (!dateInput.value || !amountInput.value) {
+                showMessage('projectErrorMessage', '請填寫請款日期和金額！');
                 return;
             }
 
-            if (amount > project.remainingBudget) {
-                alert('請款金額不能大於剩餘預算！');
-                return;
-            }
-
-            const payment = {
+            const newPayment = {
                 id: Date.now(),
-                date: date,
-                amount: amount,
-                description: description
+                date: dateInput.value,
+                amount: parseFloat(amountInput.value),
+                description: descriptionInput.value
             };
 
-            project.payments.push(payment);
-            project.remainingBudget -= amount;
+            project.payments.push(newPayment);
+            
+            // 按日期排序（從新到舊）
+            project.payments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            // 更新請款記錄表格
+            const paymentTable = document.getElementById(`paymentTable-${projectId}`);
+            paymentTable.innerHTML = project.payments.map(payment => `
+                <tr>
+                    <td>${payment.date}</td>
+                    <td>${payment.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>${payment.description || '-'}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="deletePayment(${projectId}, ${payment.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            project.remainingBudget -= newPayment.amount;
             
             updateProjectTable();
+            
+            // 保持請款詳情展開狀態
+            setTimeout(() => {
+                const paymentRow = document.getElementById(`payment-${projectId}`);
+                if (paymentRow) {
+                    paymentRow.classList.add('show');
+                }
+            }, 100);
+            
             saveData();
             showMessage('projectSuccessMessage', '請款記錄已成功新增！');
         }
@@ -817,10 +854,10 @@
 
         // 清空項目表單
         function clearProjectForm() {
+            document.getElementById('projectTitle').value = '';
             document.getElementById('projectName').value = '';
             document.getElementById('contractBudget').value = '';
             document.getElementById('remainingBudget').value = '';
-            document.getElementById('projectStatus').value = 'active';
             document.getElementById('projectDescription').value = '';
         }
 
@@ -847,7 +884,7 @@
                 return;
             }
 
-            const headers = ['項目名稱', '合約預算', '剩餘預算', '已使用金額', '使用率', '平均請款金額', '預計剩餘月數', '狀態', '項目描述'];
+            const headers = ['案子標題', '項目名稱', '合約預算', '剩餘預算', '已使用金額', '使用率', '平均請款金額', '預計剩餘月數', '項目描述'];
             const csvContent = [
                 headers.join(','),
                 ...projects.map(project => {
@@ -861,6 +898,7 @@
                         : 0;
                     
                     return [
+                        project.projectTitle,
                         project.projectName,
                         project.contractBudget,
                         project.remainingBudget,
@@ -868,13 +906,38 @@
                         usageRate,
                         averagePayment,
                         estimatedMonths,
-                        project.projectStatus,
                         project.projectDescription
                     ].join(',');
                 })
             ].join('\n');
 
-            downloadFile(csvContent, 'project_data.csv', 'text/csv');
+            // 添加請款記錄到 CSV
+            if (projects.some(project => project.payments.length > 0)) {
+                csvContent += '\n\n請款記錄\n';
+                csvContent += '案子標題,項目名稱,請款日期,請款金額,請款說明\n';
+                
+                projects.forEach(project => {
+                    project.payments.forEach(payment => {
+                        csvContent += [
+                            project.projectTitle,
+                            project.projectName,
+                            payment.date,
+                            payment.amount,
+                            payment.description || ''
+                        ].join(',') + '\n';
+                    });
+                });
+            }
+
+            // 匯出檔案名稱格式
+            const now = new Date();
+            const dateTime = now.toISOString()
+                .slice(0, 16)
+                .replace(/[-:T]/g, ''); // 只保留年月日時分
+            const projectTitle = projects[0]?.projectTitle || '項目資料';
+            const filename = `${dateTime}-${projectTitle}.csv`;
+            
+            downloadFile(csvContent, filename, 'text/csv');
             showMessage('projectSuccessMessage', '項目資料已成功匯出為 CSV 檔案！');
         }
 
@@ -886,7 +949,15 @@
             }
 
             const jsonContent = JSON.stringify(projects, null, 2);
-            downloadFile(jsonContent, 'project_data.json', 'application/json');
+            // JSON 匯出檔案名稱格式
+            const now = new Date();
+            const dateTime = now.toISOString()
+                .slice(0, 16)
+                .replace(/[-:T]/g, ''); // 只保留年月日時分
+            const projectTitle = projects[0]?.projectTitle || '項目資料';
+            const filename = `${dateTime}-${projectTitle}.json`;
+            
+            downloadFile(jsonContent, filename, 'application/json');
             showMessage('projectSuccessMessage', '項目資料已成功匯出為 JSON 檔案！');
         }
 
@@ -939,21 +1010,48 @@
             const lines = content.trim().split('\n');
             const headers = lines[0].split(',');
             const data = [];
+            let currentLine = 1;
 
-            for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',');
-                if (values.length !== headers.length) continue;
+            // 解析項目資料
+            while (currentLine < lines.length && lines[currentLine].trim() !== '請款記錄') {
+                const values = lines[currentLine].split(',');
+                if (values.length >= headers.length) {
+                    data.push({
+                        id: Date.now() + currentLine,
+                        projectTitle: values[0].trim(),
+                        projectName: values[1].trim(),
+                        contractBudget: parseFloat(values[2]),
+                        remainingBudget: parseFloat(values[3]),
+                        projectDescription: values[8] || '',
+                        payments: [],
+                        createdAt: new Date().toISOString()
+                    });
+                }
+                currentLine++;
+            }
 
-                data.push({
-                    id: Date.now() + i,
-                    projectName: values[0].trim(),
-                    contractBudget: parseFloat(values[1]),
-                    remainingBudget: parseFloat(values[2]),
-                    projectStatus: values[7].trim(),
-                    projectDescription: values[8] || '',
-                    payments: [],
-                    createdAt: new Date().toISOString()
-                });
+            // 解析請款記錄
+            if (currentLine < lines.length && lines[currentLine].trim() === '請款記錄') {
+                currentLine += 2; // 跳過標題行
+                
+                while (currentLine < lines.length) {
+                    const values = lines[currentLine].split(',');
+                    if (values.length >= 5) {
+                        const projectTitle = values[0].trim();
+                        const projectName = values[1].trim();
+                        const project = data.find(p => p.projectTitle === projectTitle && p.projectName === projectName);
+                        
+                        if (project) {
+                            project.payments.push({
+                                id: Date.now() + currentLine,
+                                date: values[2].trim(),
+                                amount: parseFloat(values[3]),
+                                description: values[4].trim()
+                            });
+                        }
+                    }
+                    currentLine++;
+                }
             }
 
             return data;
