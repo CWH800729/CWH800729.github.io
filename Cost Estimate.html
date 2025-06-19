@@ -1129,14 +1129,24 @@
             const project = projects.find(p => p.id === projectId);
             if (!project) return;
 
-            const row = document.querySelector(`tr[onclick="togglePaymentDetails(${projectId})"]`);
-            if (!row) return;
+            // 使用更可靠的方式找到對應的行
+            const rows = document.querySelectorAll('#projectTableBody tr');
+            let targetRow = null;
+            
+            for (let row of rows) {
+                if (row.querySelector(`#editBtn-${projectId}`)) {
+                    targetRow = row;
+                    break;
+                }
+            }
+            
+            if (!targetRow) return;
 
             const editBtn = document.getElementById(`editBtn-${projectId}`);
-            const textDisplays = row.querySelectorAll('.text-display');
-            const textInputs = row.querySelectorAll('.text-input');
-            const budgetDisplays = row.querySelectorAll('.budget-display');
-            const budgetInputs = row.querySelectorAll('.budget-input');
+            const textDisplays = targetRow.querySelectorAll('.text-display');
+            const textInputs = targetRow.querySelectorAll('.text-input');
+            const budgetDisplays = targetRow.querySelectorAll('.budget-display');
+            const budgetInputs = targetRow.querySelectorAll('.budget-input');
 
             // 檢查是否已在編輯模式
             const isEditing = textInputs[0] && textInputs[0].style.display !== 'none';
