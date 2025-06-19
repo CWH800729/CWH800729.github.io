@@ -596,10 +596,9 @@
         <div class="container">
             <div class="header-content">
                 <div class="image-container">
-                    <a href="http://cwh800729.github.io/index.html" class="logo-link" id="logoLink">
-                        <img src="http://cwh800729.github.io/CWH-LOGO" alt="logo" class="logo clickable-image" id="logoImage">
+                    <a href="http://cwh800729.github.io/index.html">
+                        <img src="http://cwh800729.github.io/CWH-LOGO" alt="logo" class="logo">
                     </a>
-                    <div class="click-count" id="clickCount">0</div>
                 </div>
                 <h1 class="site-title">匯率查詢</h1>
                 <a href="http://cwh800729.github.io/index.html" class="back-link">
@@ -1268,30 +1267,6 @@
                 exchanges = JSON.parse(savedExchanges);
                 updateExchangeTable();
             }
-        });
-
-        // LOGO點擊計數功能
-        let clickCount = 0;
-        const logoImage = document.getElementById('logoImage');
-        const clickCountElement = document.getElementById('clickCount');
-        const logoLink = document.getElementById('logoLink');
-
-        logoImage.addEventListener('click', function(e) {
-            e.preventDefault();
-            clickCount++;
-            clickCountElement.textContent = clickCount;
-            clickCountElement.classList.add('show');
-            
-            if (clickCount >= 3) {
-                logoLink.classList.add('active');
-                setTimeout(() => {
-                    window.location.href = logoLink.href;
-                }, 100);
-            }
-            
-            setTimeout(() => {
-                clickCountElement.classList.remove('show');
-            }, 1000);
         });
     </script>
 </body>
