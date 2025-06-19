@@ -487,6 +487,24 @@
             width: 100%;
             display: block;
         }
+
+        /* 編輯模式樣式 */
+        tr.editing {
+            cursor: default !important;
+            background-color: #f8f9fa;
+        }
+
+        tr.editing:hover {
+            background-color: #f8f9fa;
+        }
+
+        tr:not(.editing) {
+            cursor: pointer;
+        }
+
+        tr:not(.editing):hover {
+            background-color: #e3f2fd;
+        }
     </style>
 </head>
 <body>
@@ -732,6 +750,22 @@
                     </td>
                 `;
                 tbody.appendChild(row);
+
+                // 如果之前在編輯模式，恢復編輯模式狀態
+                if (row.classList.contains('editing')) {
+                    const textDisplays = row.querySelectorAll('.text-display');
+                    const textInputs = row.querySelectorAll('.text-input');
+                    const budgetDisplays = row.querySelectorAll('.budget-display');
+                    const budgetInputs = row.querySelectorAll('.budget-input');
+                    const editBtn = row.querySelector(`#editBtn-${project.id}`);
+
+                    textDisplays.forEach(display => display.style.display = 'none');
+                    budgetDisplays.forEach(display => display.style.display = 'none');
+                    textInputs.forEach(input => input.style.display = 'block');
+                    budgetInputs.forEach(input => input.style.display = 'block');
+                    editBtn.innerHTML = '<i class="fas fa-check"></i> 確認';
+                    row.onclick = null;
+                }
 
                 // 添加請款詳情行
                 const paymentRow = document.createElement('tr');
@@ -1237,23 +1271,32 @@
 
                 // 更新按鈕
                 editBtn.innerHTML = '<i class="fas fa-edit"></i> 編輯';
-                editBtn.className = 'btn btn-primary btn-sm';
 
-                // 更新整個表格以顯示正確的數字
-                updateProjectTable();
+                // 移除編輯模式標記
+                targetRow.classList.remove('editing');
+
+                // 重新啟用點擊展開功能
+                targetRow.onclick = () => togglePaymentDetails(projectId);
+
+                // 保存更新
                 saveData();
-
-                showMessage('projectSuccessMessage', '項目資料已更新！');
+                updateProjectTable();
             } else {
-                // 進入編輯模式：顯示輸入欄位，隱藏文字
+                // 進入編輯模式
+                // 標記行正在編輯中
+                targetRow.classList.add('editing');
+
+                // 暫時禁用點擊展開功能
+                targetRow.onclick = null;
+
+                // 顯示輸入欄位，隱藏文字
                 textDisplays.forEach(display => display.style.display = 'none');
                 budgetDisplays.forEach(display => display.style.display = 'none');
-                textInputs.forEach(input => input.style.display = 'inline-block');
-                budgetInputs.forEach(input => input.style.display = 'inline-block');
+                textInputs.forEach(input => input.style.display = 'block');
+                budgetInputs.forEach(input => input.style.display = 'block');
 
                 // 更新按鈕
                 editBtn.innerHTML = '<i class="fas fa-check"></i> 確認';
-                editBtn.className = 'btn btn-success btn-sm';
             }
         }
     </script>
