@@ -589,6 +589,18 @@
         .logo-link.active {
             pointer-events: auto;
         }
+
+        .imported-file-info {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .imported-file-info i {
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
@@ -711,6 +723,27 @@
                     </div>
                     <div id="exchangeSuccessMessage" class="success-message"></div>
                     <div id="exchangeErrorMessage" class="error-message"></div>
+                    
+                    <!-- 匯入檔案名稱顯示 -->
+                    <div id="importedFileName" class="imported-file-info" style="display: none;">
+                        <i class="fas fa-file-alt"></i>
+                        <span>已匯入檔案：</span>
+                        <span id="fileNameDisplay" style="font-weight: bold; color: #27ae60;"></span>
+                    </div>
+                    
+                    <!-- 匯入預覽區塊 -->
+                    <div id="exchangeImportPreview" class="import-preview">
+                        <h4><i class="fas fa-eye"></i> 匯入預覽</h4>
+                        <div id="exchangePreviewContent"></div>
+                        <div class="preview-confirm">
+                            <button class="btn btn-success" onclick="confirmExchangeImport()">
+                                <i class="fas fa-check"></i> 確認匯入
+                            </button>
+                            <button class="btn btn-secondary" onclick="cancelExchangeImport()">
+                                <i class="fas fa-times"></i> 取消
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="table-container">
@@ -1130,7 +1163,13 @@
                 ].join(','))
             ].join('\n');
 
-            downloadFile(csvContent, 'exchange_data.csv', 'text/csv');
+            const today = new Date();
+            const dateString = today.getFullYear().toString() + 
+                             (today.getMonth() + 1).toString().padStart(2, '0') + 
+                             today.getDate().toString().padStart(2, '0');
+            const filename = `${dateString}-換匯記錄.csv`;
+
+            downloadFile(csvContent, filename, 'text/csv');
             showMessage('exchangeSuccessMessage', '匯率資料已成功匯出為 CSV 檔案！');
         }
 
@@ -1142,7 +1181,13 @@
             }
 
             const jsonContent = JSON.stringify(exchanges, null, 2);
-            downloadFile(jsonContent, 'exchange_data.json', 'application/json');
+            const today = new Date();
+            const dateString = today.getFullYear().toString() + 
+                             (today.getMonth() + 1).toString().padStart(2, '0') + 
+                             today.getDate().toString().padStart(2, '0');
+            const filename = `${dateString}-換匯記錄.json`;
+
+            downloadFile(jsonContent, filename, 'application/json');
             showMessage('exchangeSuccessMessage', '匯率資料已成功匯出為 JSON 檔案！');
         }
 
@@ -1179,6 +1224,9 @@
                         throw new Error('不支援的檔案格式');
                     }
 
+                    // 顯示匯入檔案名稱
+                    showImportedFileName(file.name);
+                    
                     showExchangeImportPreview(importData);
                 } catch (error) {
                     showMessage('exchangeErrorMessage', `匯入失敗：${error.message}`);
@@ -1187,30 +1235,103 @@
             reader.readAsText(file);
         }
 
-        // 解析 CSV
+        // 顯示匯入檔案名稱
+        function showImportedFileName(fileName) {
+            const fileNameDiv = document.getElementById('importedFileName');
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+            
+            fileNameDisplay.textContent = fileName;
+            fileNameDiv.style.display = 'block';
+        }
+
+        // 隱藏匯入檔案名稱
+        function hideImportedFileName() {
+            document.getElementById('importedFileName').style.display = 'none';
+        }
+
+        // 解析 CSV - 改進版本，支援引號和特殊字符
         function parseCSV(content, type) {
             const lines = content.trim().split('\n');
-            const headers = lines[0].split(',');
+            if (lines.length < 2) {
+                throw new Error('CSV檔案格式不正確，至少需要標題行和一行資料');
+            }
+            
+            const headers = parseCSVLine(lines[0]);
             const data = [];
 
             for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',');
-                if (values.length !== headers.length) continue;
+                if (lines[i].trim() === '') continue; // 跳過空行
+                
+                const values = parseCSVLine(lines[i]);
+                if (values.length !== headers.length) {
+                    console.warn(`第${i+1}行欄位數量不匹配，跳過該行`);
+                    continue;
+                }
 
                 if (type === 'exchange') {
-                    data.push({
-                        id: Date.now() + i,
-                        twdAmount: parseFloat(values[0]),
-                        exchangeRate: parseFloat(values[1]),
-                        foreignAmount: parseFloat(values[2]),
-                        foreignCurrency: values[3] || 'USD',
-                        date: values[4] || new Date().toLocaleDateString('zh-TW'),
-                        rateSource: values[5] || '檔案匯入'
-                    });
+                    try {
+                        const exchange = {
+                            id: Date.now() + i,
+                            twdAmount: parseFloat(values[0]) || 0,
+                            exchangeRate: parseFloat(values[1]) || 0,
+                            foreignAmount: parseFloat(values[2]) || 0,
+                            foreignCurrency: values[3] || 'USD',
+                            date: values[4] || new Date().toLocaleDateString('zh-TW'),
+                            rateSource: values[5] || '檔案匯入'
+                        };
+                        
+                        // 驗證資料
+                        if (exchange.twdAmount <= 0 || exchange.exchangeRate <= 0) {
+                            console.warn(`第${i+1}行資料無效，跳過該行`);
+                            continue;
+                        }
+                        
+                        data.push(exchange);
+                    } catch (error) {
+                        console.warn(`第${i+1}行資料解析失敗：`, error);
+                        continue;
+                    }
                 }
             }
 
+            if (data.length === 0) {
+                throw new Error('沒有有效的匯率資料可以匯入');
+            }
+
             return data;
+        }
+
+        // 解析CSV單行，支援引號
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    if (inQuotes && line[i + 1] === '"') {
+                        // 雙引號轉義
+                        current += '"';
+                        i++;
+                    } else {
+                        // 切換引號狀態
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    // 欄位分隔符
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            // 加入最後一個欄位
+            result.push(current.trim());
+            
+            return result;
         }
 
         // 顯示匯率匯入預覽
@@ -1238,6 +1359,7 @@
             
             exchanges = importData;
             updateExchangeTable();
+            saveData(); // 保存到localStorage
             cancelExchangeImport();
             showMessage('exchangeSuccessMessage', `成功匯入 ${importData.length} 筆匯率資料！`);
         }
@@ -1246,6 +1368,8 @@
         function cancelExchangeImport() {
             document.getElementById('exchangeImportPreview').style.display = 'none';
             document.getElementById('exchangeFileInput').value = '';
+            // 不隱藏檔案名稱，讓它常駐顯示
+            // hideImportedFileName();
         }
 
         // 清空所有匯率記錄
@@ -1255,6 +1379,22 @@
                 updateExchangeTable();
                 saveData();
                 showMessage('exchangeSuccessMessage', '所有匯率記錄已清空！');
+            }
+        }
+
+        // 顯示訊息
+        function showMessage(elementId, message) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = message;
+                element.style.display = 'block';
+                
+                // 只有成功和錯誤訊息會自動隱藏，檔案名稱不隱藏
+                if (elementId !== 'importedFileName') {
+                    setTimeout(() => {
+                        element.style.display = 'none';
+                    }, 3000);
+                }
             }
         }
 
