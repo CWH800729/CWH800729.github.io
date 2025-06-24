@@ -22,10 +22,11 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 10px;
         }
         
         .file-input-section {
@@ -109,6 +110,7 @@
             border-radius: 4px;
             cursor: pointer;
             margin: 5px;
+            font-size: 16px;
         }
         
         .btn:hover {
@@ -117,6 +119,7 @@
         
         .btn-secondary {
             background-color: #6c757d;
+            font-size: 16px;
         }
         
         .btn-secondary:hover {
@@ -128,7 +131,7 @@
             border-collapse: collapse;
             margin-top: 20px;
             background-color: white;
-            font-size: 12px;
+            font-size: 14px;
         }
         
         th, td {
@@ -136,6 +139,7 @@
             padding: 8px;
             text-align: left;
             min-width: 60px;
+            font-size: 14px;
         }
         
         /* 行數欄位特別窄 */
@@ -251,8 +255,9 @@
             padding: 4px;
             width: 100%;
             box-sizing: border-box;
-            font-size: 12px;
-            min-width: 80px;
+            font-size: 14px;
+            min-width: 60px;
+            max-width: 120px;
         }
         
         .editable-cell:focus {
@@ -290,6 +295,7 @@
             border-radius: 4px;
             cursor: pointer;
             margin: 5px;
+            font-size: 16px;
         }
         
         .household-btn:hover {
@@ -369,7 +375,7 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 16px;
         }
         
         .btn-toggle:hover {
@@ -481,7 +487,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>輕隔間計算表格</h1>
+        <div class="header-content" style="display: flex; align-items: center; gap: 20px; margin-bottom: 10px;">
+            <img src="https://CWH800729.github.io/CWH-LOGO" alt="CWH-LOGO" style="width: 75px; height: 75px; border-radius: 16px;" />
+            <h1 style="margin: 0; color: #333;">輕隔間計算表格</h1>
+        </div>
         
         <!-- 檔案上傳區域 -->
         <div class="file-input-section">
@@ -575,6 +584,11 @@
                 </table>
             </div>
             
+            <!-- 匯出Excel按鈕移到表格下方 -->
+            <div style="text-align:right; margin-top:10px;">
+                <button class="btn" onclick="exportToExcel()">匯出Excel</button>
+            </div>
+            
             <!-- 新增行按鈕 -->
             <div class="add-row-section">
                 <div class="add-row-controls">
@@ -594,6 +608,7 @@
         <!-- 結果顯示區域 -->
         <div class="result-section">
             <h3>計算結果</h3>
+            <button class="btn" onclick="updateAllResults()" style="margin-bottom:10px;">更新結果</button>
             <div id="results"></div>
         </div>
     </div>
@@ -697,35 +712,16 @@
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
-            
             tableData.forEach((row, index) => {
-                // 更新行號
                 row.rowNumber = index + 1;
-                
-                // 檢查戶別和空間別的變化
                 const prevRow = index > 0 ? tableData[index - 1] : null;
                 const nextRow = index < tableData.length - 1 ? tableData[index + 1] : null;
-                
-                let rowClass = '';
                 let householdBorder = '';
                 let spaceBorder = '';
-                
-                // 檢查戶別變化
-                if (prevRow && prevRow.household !== row.household) {
-                    householdBorder = 'border-top: 3px double #007bff;';
-                }
-                if (nextRow && nextRow.household !== row.household) {
-                    householdBorder += 'border-bottom: 3px double #007bff;';
-                }
-                
-                // 檢查空間別變化
-                if (prevRow && prevRow.spaceType !== row.spaceType) {
-                    spaceBorder = 'border-top: 3px solid #000;';
-                }
-                if (nextRow && nextRow.spaceType !== row.spaceType) {
-                    spaceBorder += 'border-bottom: 3px solid #000;';
-                }
-                
+                if (prevRow && prevRow.household !== row.household) householdBorder = 'border-top: 3px double #007bff;';
+                if (nextRow && nextRow.household !== row.household) householdBorder += 'border-bottom: 3px double #007bff;';
+                if (prevRow && prevRow.spaceType !== row.spaceType) spaceBorder = 'border-top: 3px solid #000;';
+                if (nextRow && nextRow.spaceType !== row.spaceType) spaceBorder += 'border-bottom: 3px solid #000;';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${row.rowNumber}</td>
@@ -734,20 +730,18 @@
                     <td>${row.material}</td>
                     <td><input type="text" class="editable-cell" value="${row.notes}" onchange="updateCell(${index}, 'notes', this.value)" placeholder="輸入註記"></td>
                     <td><input type="text" class="editable-cell" value="${row.attribute}" onchange="updateCell(${index}, 'attribute', this.value)" placeholder="輸入屬性"></td>
-                    <td>${row.quantity}</td>
-                    <td>${row.wallLength}</td>
-                    <td>${row.wallHeight}</td>
+                    <td><input type="text" class="editable-cell" inputmode="numeric" pattern="[0-9.]*" value="${row.quantity}" onchange="updateCell(${index}, 'quantity', this.value)"></td>
+                    <td><input type="text" class="editable-cell" inputmode="numeric" pattern="[0-9.]*" value="${row.wallLength}" onchange="updateCell(${index}, 'wallLength', this.value)"></td>
+                    <td><input type="text" class="editable-cell" inputmode="numeric" pattern="[0-9.]*" value="${row.wallHeight}" onchange="updateCell(${index}, 'wallHeight', this.value)"></td>
                     <td><input type="text" class="editable-cell" value="${row.openingName}" onchange="updateOpeningName(${index}, this.value)" placeholder="輸入開孔名稱"></td>
-                    <td>${row.openingLength}</td>
-                    <td>${row.openingHeight}</td>
-                    <td>${row.thickness}</td>
-                    <td>${row.area.toFixed(2)}</td>
-                    <td>${row.formula}</td>
+                    <td><input type="text" class="editable-cell" inputmode="numeric" pattern="[0-9.]*" value="${row.openingLength}" onchange="updateCell(${index}, 'openingLength', this.value)"></td>
+                    <td><input type="text" class="editable-cell" inputmode="numeric" pattern="[0-9.]*" value="${row.openingHeight}" onchange="updateCell(${index}, 'openingHeight', this.value)"></td>
+                    <td><input type="text" class="editable-cell" inputmode="numeric" pattern="[0-9.]*" value="${row.thickness}" onchange="updateCell(${index}, 'thickness', this.value)"></td>
+                    <td>${row.area !== undefined ? row.area.toFixed(2) : ''}</td>
+                    <td>${row.formula || ''}</td>
                 `;
                 tbody.appendChild(tr);
             });
-            
-            updateResults();
         }
         
         // 更新計算結果
@@ -1178,6 +1172,25 @@
                     newRowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }, 100);
+        }
+        
+        // 新增：更新所有面積與公式的函數
+        function updateAllResults() {
+            tableData.forEach((row, index) => {
+                // 轉型
+                row.quantity = parseFloat(row.quantity) || 0;
+                row.wallLength = parseFloat(row.wallLength) || 0;
+                row.wallHeight = parseFloat(row.wallHeight) || 0;
+                row.openingLength = parseFloat(row.openingLength) || 0;
+                row.openingHeight = parseFloat(row.openingHeight) || 0;
+                row.thickness = parseFloat(row.thickness) || 0;
+                // 計算
+                const area = (row.quantity * row.wallLength * (row.wallHeight - row.thickness) - (row.openingLength * row.openingHeight)) / 10000;
+                row.area = parseFloat(area.toFixed(2));
+                row.formula = `${row.quantity}×${row.wallLength}cm×(${row.wallHeight}cm-${row.thickness}cm)-(${row.openingLength}cm×${row.openingHeight}cm)÷10000=${row.area.toFixed(2)}m²`;
+            });
+            renderTable();
+            updateResults();
         }
     </script>
 </body>
