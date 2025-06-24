@@ -25,7 +25,6 @@
             background-color: #fff;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             padding: 20px 0;
-            margin-bottom: 30px;
         }
 
         .header-content {
@@ -142,6 +141,68 @@
                 flex-direction: column;
                 text-align: center;
             }
+        }
+
+        /* Navigation Bar Styles */
+        .main-nav {
+            background-color: #333;
+            margin-bottom: 30px;
+        }
+
+        .main-nav .container {
+            padding: 0 20px;
+        }
+
+        .nav-links {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        .nav-links li a, .dropbtn {
+            color: white;
+            padding: 15px 20px;
+            display: block;
+            text-decoration: none;
+            border: none;
+            background: none;
+            font-family: 'Microsoft JhengHei', sans-serif;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        .nav-links li a:hover, .dropdown:hover .dropbtn {
+            background-color: #555;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #ddd;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
         }
 
         /* 水溝高程換算卡片樣式 */
@@ -266,6 +327,22 @@
             </div>
         </div>
     </header>
+
+    <nav class="main-nav">
+        <div class="container">
+            <ul class="nav-links">
+                <li><a href="index.html">首頁</a></li>
+                <li class="dropdown">
+                    <a href="javascript:void(0)" class="dropbtn">數量計算 <i class="fa fa-caret-down"></i></a>
+                    <div class="dropdown-content">
+                        <a href="PartitionCalculation.html">輕隔間計算</a>
+                    </div>
+                </li>
+                <li><a href="PicSheet.html">放樣圖管理</a></li>
+                <li><a href="V9.html">日報表</a></li>
+            </ul>
+        </div>
+    </nav>
 
     <main class="container">
         <div class="main-content">
