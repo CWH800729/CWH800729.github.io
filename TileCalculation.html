@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>牆磚計算表格</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            font-size: 15px;
+        }
+        
+        .container {
+            width: 100%;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 15px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .file-input-section {
+            margin-bottom: 30px;
+            padding: 0;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 2px dashed #ddd;
+            overflow: hidden;
+        }
+        
+        .file-input-section:hover {
+            border-color: #007bff;
+        }
+        
+        .import-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .import-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .import-content {
+            padding: 20px;
+            transition: max-height 0.3s ease;
+        }
+        
+        .import-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .import-section {
+            flex: 1;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .import-section h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .import-section label {
+            display: block;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .file-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 15px;
+        }
+        
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+            font-size: 15px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            min-width: 60px;
+        }
+        
+        /* 行數欄位特別窄 */
+        th:first-child, td:first-child {
+            min-width: 40px;
+            max-width: 50px;
+            text-align: center;
+        }
+        
+        /* 數量欄位較窄 */
+        th:nth-child(7), td:nth-child(7) {
+            min-width: 50px;
+            max-width: 60px;
+            text-align: center;
+        }
+        
+        /* 牆長、牆高、版厚欄位適中 */
+        th:nth-child(8), td:nth-child(8),
+        th:nth-child(9), td:nth-child(9),
+        th:nth-child(13), td:nth-child(13) {
+            min-width: 70px;
+            max-width: 80px;
+            text-align: center;
+        }
+        
+        /* 開口長、開口高欄位適中 */
+        th:nth-child(11), td:nth-child(11),
+        th:nth-child(12), td:nth-child(12) {
+            min-width: 70px;
+            max-width: 80px;
+            text-align: center;
+        }
+        
+        /* 面積欄位適中 */
+        th:nth-child(14), td:nth-child(14) {
+            min-width: 70px;
+            max-width: 80px;
+            text-align: center;
+        }
+        
+        /* 計算式欄位較寬 */
+        th:last-child, td:last-child {
+            min-width: 250px;
+            max-width: 400px;
+            word-wrap: break-word;
+        }
+        
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #e9ecef;
+        }
+        
+        .calculation-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e7f3ff;
+            border-radius: 5px;
+        }
+        
+        .result-section {
+            margin-top: 20px;
+            padding: 18px;
+            background-color: #d4edda;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .info {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 15px;
+        }
+        
+        .table-container {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        /* 可編輯欄位適中寬度 */
+        .editable-cell {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 6px;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 15px;
+            min-width: 80px;
+        }
+        
+        .editable-cell:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .household-input-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .household-input-section label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .household-input-section input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+            width: 200px;
+        }
+        
+        .household-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .household-btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .import-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .import-section h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .import-section label {
+            display: block;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .door-window-table {
+            margin-top: 20px;
+            padding: 0;
+            background-color: #fff3cd;
+            border-radius: 5px;
+            border: 1px solid #ffeaa7;
+            overflow: hidden;
+        }
+        
+        .door-window-table h4 {
+            margin: 0;
+            color: #856404;
+        }
+        
+        .door-window-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        .door-window-table th, .door-window-table td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+        }
+        
+        .door-window-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .door-window-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: #fff3cd;
+            border-bottom: 1px solid #ffeaa7;
+        }
+        
+        .door-window-content {
+            padding: 15px;
+            transition: max-height 0.3s ease;
+        }
+        
+        .btn-toggle {
+            background-color: #007bff;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn-toggle:hover {
+            background-color: #0056b3;
+        }
+        
+        .add-row-section {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 15px;
+        }
+        
+        .add-row-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            font-size: 15px;
+        }
+        
+        .insert-input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 120px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .insert-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .btn-insert {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .btn-insert:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .btn-insert:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .insert-icon {
+            font-size: 20px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        .insert-text {
+            font-size: 14px;
+        }
+        
+        .btn-add {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .btn-add:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .btn-add:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .add-icon {
+            font-size: 20px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        .add-text {
+            font-size: 14px;
+        }
+        
+        /* 移除所有 number input 的上下箭頭 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 30px;">
+            <img src="CWH-LOGO" alt="CWH LOGO" style="max-height:48px; height:auto; width:auto; display:block;" />
+            <h1 style="margin:0;">牆磚計算表格</h1>
+        </div>
+        
+        <!-- 檔案上傳區域 -->
+        <div class="file-input-section">
+            <div class="import-header">
+                <h3>資料匯入</h3>
+                <button class="btn-toggle" onclick="toggleImportSection()" id="toggleImportBtn">展開</button>
+            </div>
+            
+            <div id="importContent" class="import-content" style="display: none;">
+                <div class="import-row">
+                    <!-- 牆磚資料匯入（必需） -->
+                    <div class="import-section">
+                        <h4>牆磚資料（必需）</h4>
+                        <input type="file" id="txtFile" class="file-input" accept=".txt" onchange="loadTxtFile()" />
+                        <label for="txtFile">格式：牆長(cm),材質,版厚(cm)</label>
+                    </div>
+                    
+                    <!-- 門窗表匯入（非必需） -->
+                    <div class="import-section">
+                        <h4>門窗表資料（非必需）</h4>
+                        <input type="file" id="doorWindowFile" class="file-input" accept=".txt" onchange="loadDoorWindowFile()" />
+                        <label for="doorWindowFile">格式：窗編號,開口長(cm),開口寬(cm)</label>
+                    </div>
+                </div>
+                
+                <div class="button-row">
+                    <button class="btn btn-secondary" onclick="clearData()">清除資料</button>
+                    <button class="btn" onclick="exportToExcel()">匯出Excel</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 計算表格 -->
+        <div class="calculation-section">
+            <h3>牆磚計算表格</h3>
+            
+            <!-- 戶別輸入區域 -->
+            <div class="household-input-section">
+                <label for="householdInput">預設戶別:</label>
+                <input type="text" id="householdInput" placeholder="請輸入戶別" onchange="updateHousehold()" />
+                <button class="btn" onclick="applyHouseholdToEmpty()">套用到空白欄位</button>
+            </div>
+            
+            <!-- 門窗表顯示區域 -->
+            <div id="doorWindowTableSection" class="door-window-table" style="display: none;">
+                <div class="door-window-header">
+                    <h4>門窗表資料</h4>
+                    <button class="btn-toggle" onclick="toggleDoorWindowTable()" id="toggleDoorWindowBtn">隱藏</button>
+                </div>
+                <div id="doorWindowTableContent" class="door-window-content">
+                    <div class="table-container">
+                        <table id="doorWindowTable">
+                            <thead>
+                                <tr>
+                                    <th>窗編號</th>
+                                    <th>開口長(cm)</th>
+                                    <th>開口寬(cm)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="doorWindowTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="calculationTable">
+                    <thead>
+                        <tr>
+                            <th>行數</th>
+                            <th>戶別</th>
+                            <th>空間別</th>
+                            <th>介面材質</th>
+                            <th>註記</th>
+                            <th>屬性（磚型）</th>
+                            <th>數量</th>
+                            <th>牆長(cm)</th>
+                            <th>牆高(cm)</th>
+                            <th>開孔名稱</th>
+                            <th>開口長(cm)</th>
+                            <th>開口高(cm)</th>
+                            <th>開口內折深度(cm)</th>
+                            <th>開口面積(m²)</th>
+                            <th>開口內折面積(m²)</th>
+                            <th>版厚(cm)</th>
+                            <th>面積(m²)</th>
+                            <th>計算式</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- 表格內容將由JavaScript動態生成 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 新增行按鈕 -->
+            <div class="add-row-section">
+                <div class="add-row-controls">
+                    <input type="number" id="insertRowNumber" class="insert-input" placeholder="插入位置" min="1" />
+                    <button class="btn-insert" onclick="insertRow()" title="在指定位置插入行">
+                        <span class="insert-icon">↳</span>
+                        <span class="insert-text">插入行</span>
+                    </button>
+                    <button class="btn-add" onclick="addNewRow()" title="在最後新增一行">
+                        <span class="add-icon">+</span>
+                        <span class="add-text">新增行</span>
+                    </button>
+                </div>
+            </div>
+            <div style="text-align:right; margin-top:10px;">
+                <button class="btn" onclick="exportToExcel()">匯出Excel</button>
+            </div>
+        </div>
+        
+        <!-- 結果顯示區域 -->
+        <div class="result-section">
+            <h3>計算結果</h3>
+            <div style="text-align:right; margin-bottom:10px;">
+                <button class="btn" onclick="updateResults()">更新結果</button>
+            </div>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        let tableData = [];
+        let doorWindowData = []; // 門窗表資料
+        
+        // 載入TXT檔案
+        function loadTxtFile() {
+            const fileInput = document.getElementById('txtFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    let content = e.target.result;
+                    
+                    // 檢查是否有BOM標記，如果有則移除
+                    if (content.charCodeAt(0) === 0xFEFF) {
+                        content = content.slice(1);
+                    }
+                    
+                    parseTxtContent(content);
+                    showMessage('檔案載入成功', 'success');
+                } catch (error) {
+                    showMessage('檔案解析錯誤: ' + error.message, 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                showMessage('檔案讀取錯誤', 'error');
+            };
+            
+            // 使用UTF-8編碼讀取
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        // 解析TXT內容
+        function parseTxtContent(content) {
+            console.log('讀取到的檔案內容:', content); // 調試用
+            
+            const lines = content.split('\n');
+            tableData = [];
+            
+            lines.forEach((line, index) => {
+                if (line.trim()) {
+                    console.log(`第${index + 1}行:`, line); // 調試用
+                    
+                    // 解析TXT檔案，每行包含：牆長(cm),材質,版厚梁高(cm)
+                    const parts = line.split(',').map(part => part.trim());
+                    
+                    if (parts.length >= 3) {
+                        const wallLength = parseFloat(parts[0]) || 0; // cm
+                        const material = parts[1] || '';
+                        const thickness = parseFloat(parts[2]) || 0; // cm
+                        
+                        console.log(`解析結果: 牆長=${wallLength}, 材質=${material}, 版厚=${thickness}`); // 調試用
+                        
+                        // 預設牆高為270cm（2.7m）
+                        const wallHeight = 270; // cm
+                        
+                        // 預設開口尺寸為0
+                        const openingLength = 0; // cm
+                        const openingHeight = 0; // cm
+                        const quantity = 1;
+                        
+                        // 計算面積 = 數量*牆長*(牆高-版厚)-(開口長*開口高) ÷ 10000 = 平方公尺
+                        const area = (quantity * wallLength * (wallHeight - thickness) - (openingLength * openingHeight)) / 10000; // 轉換為平方公尺
+                        
+                        tableData.push({
+                            rowNumber: index + 1,
+                            household: '',
+                            spaceType: '',
+                            material: material,
+                            notes: '',
+                            attribute: '',
+                            quantity: quantity,
+                            wallLength: wallLength, // cm
+                            wallHeight: wallHeight, // cm
+                            openingName: '',
+                            openingLength: openingLength, // cm
+                            openingHeight: openingHeight, // cm
+                            openingFoldDepth: 5, // cm
+                            openingArea: 0, // m²
+                            openingFoldArea: 0, // m²
+                            thickness: thickness, // cm
+                            area: parseFloat(area.toFixed(2)), // 平方公尺，取小數點後兩位
+                            formula: `${quantity}×${wallLength}cm×(${wallHeight}cm-${thickness}cm)-(${openingLength}cm×${openingHeight}cm)÷10000=${area.toFixed(2)}m²`
+                        });
+                    }
+                }
+            });
+            
+            renderTable();
+        }
+        
+        // 渲染表格
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            tableData.forEach((row, index) => {
+                // 更新行號
+                row.rowNumber = index + 1;
+                
+                // 檢查戶別和空間別的變化
+                const prevRow = index > 0 ? tableData[index - 1] : null;
+                const nextRow = index < tableData.length - 1 ? tableData[index + 1] : null;
+                
+                let rowClass = '';
+                let householdBorder = '';
+                let spaceBorder = '';
+                
+                // 檢查戶別變化
+                if (prevRow && prevRow.household !== row.household) {
+                    householdBorder = 'border-top: 3px double #007bff;';
+                }
+                if (nextRow && nextRow.household !== row.household) {
+                    householdBorder += 'border-bottom: 3px double #007bff;';
+                }
+                
+                // 檢查空間別變化
+                if (prevRow && prevRow.spaceType !== row.spaceType) {
+                    spaceBorder = 'border-top: 3px solid #000;';
+                }
+                if (nextRow && nextRow.spaceType !== row.spaceType) {
+                    spaceBorder += 'border-bottom: 3px solid #000;';
+                }
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.rowNumber}</td>
+                    <td style="${householdBorder}"><input type="text" class="editable-cell" value="${row.household}" onchange="updateCell(${index}, 'household', this.value)" placeholder="輸入戶別"></td>
+                    <td style="${spaceBorder}"><input type="text" class="editable-cell" value="${row.spaceType}" onchange="updateCell(${index}, 'spaceType', this.value)" placeholder="輸入空間別"></td>
+                    <td>${row.material}</td>
+                    <td><input type="text" class="editable-cell" value="${row.notes}" onchange="updateCell(${index}, 'notes', this.value)" placeholder="輸入註記"></td>
+                    <td><input type="text" class="editable-cell" value="${row.attribute}" onchange="updateCell(${index}, 'attribute', this.value)" placeholder="輸入屬性（磚型）"></td>
+                    <td><input type="number" class="editable-cell" value="${row.quantity}" onchange="updateCell(${index}, 'quantity', this.value)" min="1" placeholder="數量"></td>
+                    <td><input type="number" class="editable-cell" value="${row.wallLength}" onchange="updateCell(${index}, 'wallLength', this.value)" min="0" placeholder="牆長"></td>
+                    <td><input type="number" class="editable-cell" value="${row.wallHeight}" onchange="updateCell(${index}, 'wallHeight', this.value)" min="0" placeholder="牆高"></td>
+                    <td><input type="text" class="editable-cell" value="${row.openingName}" onchange="updateOpeningName(${index}, this.value)" placeholder="輸入開孔名稱"></td>
+                    <td>${row.openingLength}</td>
+                    <td>${row.openingHeight}</td>
+                    <td><input type="number" class="editable-cell" value="${row.openingFoldDepth}" onchange="updateCell(${index}, 'openingFoldDepth', this.value)" placeholder="輸入深度"></td>
+                    <td>${row.openingArea.toFixed(2)}</td>
+                    <td>${row.openingFoldArea.toFixed(2)}</td>
+                    <td>${row.thickness}</td>
+                    <td>${row.area.toFixed(2)}</td>
+                    <td>${row.formula}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        // 更新計算結果
+        function updateResults() {
+            const resultsDiv = document.getElementById('results');
+            let totalQuantity = 0;
+            let totalArea = 0;
+            let totalWallLength = 0;
+            let lightPartitionArea = 0; // 牆磚面積
+            let rcArea = 0; // RC面積
+            
+            tableData.forEach(row => {
+                totalQuantity += parseFloat(row.quantity) || 0;
+                totalArea += row.area;
+                totalWallLength += parseFloat(row.wallLength) || 0;
+                
+                // 根據材質分類面積
+                const material = row.material.toLowerCase();
+                if (material.includes('石膏板') || material.includes('矽酸鈣板') || material.includes('輕質隔間板') || material.includes('防火板')) {
+                    lightPartitionArea += row.area;
+                } else if (material.includes('水泥板') || material.includes('rc') || material.includes('混凝土')) {
+                    rcArea += row.area;
+                } else {
+                    // 其他材質歸類為牆磚
+                    lightPartitionArea += row.area;
+                }
+            });
+            
+            // 依據磚型（屬性）分類面積
+            const brickTypeAreaMap = {};
+            tableData.forEach(row => {
+                const type = row.attribute ? row.attribute : '未填';
+                if (!brickTypeAreaMap[type]) brickTypeAreaMap[type] = 0;
+                brickTypeAreaMap[type] += row.area;
+            });
+
+            resultsDiv.innerHTML = `
+                <p><strong>總數量:</strong> ${totalQuantity.toFixed(2)}</p>
+                <p><strong>總面積:</strong> ${totalArea.toFixed(2)} m²</p>
+                <p><strong>牆磚面積:</strong> ${lightPartitionArea.toFixed(2)} m²</p>
+                <p><strong>RC面積:</strong> ${rcArea.toFixed(2)} m²</p>
+                <p><strong>總牆長:</strong> ${totalWallLength.toFixed(2)} cm</p>
+                <p><strong>項目數量:</strong> ${tableData.length}</p>
+                <div style="margin-top:15px;">
+                    <strong>各磚型面積彙總：</strong>
+                    <table style="margin-top:5px; border-collapse:collapse; font-size:13px;">
+                        <tr><th style='border:1px solid #aaa; padding:4px;'>磚型</th><th style='border:1px solid #aaa; padding:4px;'>面積(m²)</th></tr>
+                        ${Object.entries(brickTypeAreaMap).map(([type, area]) => `<tr><td style='border:1px solid #aaa; padding:4px;'>${type}</td><td style='border:1px solid #aaa; padding:4px;'>${area.toFixed(2)}</td></tr>`).join('')}
+                    </table>
+                </div>
+            `;
+        }
+        
+        // 清除資料
+        function clearData() {
+            tableData = [];
+            doorWindowData = [];
+            document.getElementById('tableBody').innerHTML = '';
+            document.getElementById('doorWindowTableBody').innerHTML = '';
+            document.getElementById('doorWindowTableSection').style.display = 'none';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('txtFile').value = '';
+            document.getElementById('doorWindowFile').value = '';
+            
+            // 確保匯入區塊保持展開狀態
+            const importContent = document.getElementById('importContent');
+            const toggleImportBtn = document.getElementById('toggleImportBtn');
+            importContent.style.display = 'block';
+            toggleImportBtn.textContent = '縮小';
+            
+            showMessage('資料已清除', 'success');
+        }
+        
+        // 匯出Excel
+        function exportToExcel() {
+            if (tableData.length === 0) {
+                showMessage('沒有資料可以匯出', 'error');
+                return;
+            }
+            
+            // 使用BOM確保Excel正確識別UTF-8編碼
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            
+            // 添加標題行
+            const headers = [
+                '行數', '戶別', '空間別', '介面材質', '註記', '屬性（磚型）',
+                '數量', '牆長(cm)', '牆高(cm)', '開孔名稱', '開口長(cm)', '開口高(cm)',
+                '開口內折深度(cm)', '開口面積(m²)', '開口內折面積(m²)', '版厚(cm)', '面積(m²)', '計算式'
+            ];
+            csvContent += headers.join(',') + '\n';
+            
+            // 添加資料行
+            tableData.forEach(row => {
+                const rowData = [
+                    row.rowNumber,
+                    row.household,
+                    row.spaceType,
+                    row.material,
+                    row.notes,
+                    row.attribute,
+                    row.quantity,
+                    row.wallLength,
+                    row.wallHeight,
+                    row.openingName,
+                    row.openingLength,
+                    row.openingHeight,
+                    row.openingFoldDepth,
+                    row.openingArea,
+                    row.openingFoldArea,
+                    row.thickness,
+                    row.area,
+                    row.formula
+                ];
+                csvContent += rowData.join(',') + '\n';
+            });
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "牆磚計算表格.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showMessage('已匯出Excel檔案', 'success');
+        }
+        
+        // 測試編碼功能
+        function testEncoding() {
+            const testContent = "350,石膏板,12\n420,矽酸鈣板,15\n280,水泥板,18";
+            console.log('測試內容:', testContent);
+            console.log('測試內容長度:', testContent.length);
+            console.log('測試內容字符編碼:');
+            for (let i = 0; i < testContent.length; i++) {
+                console.log(`位置${i}: '${testContent[i]}' (編碼: ${testContent.charCodeAt(i)})`);
+            }
+            
+            parseTxtContent(testContent);
+            showMessage('編碼測試完成，請查看瀏覽器控制台', 'success');
+        }
+        
+        // 顯示訊息
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(messageDiv, container.firstChild);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+        
+        // 頁面載入時的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            showMessage('牆磚計算表格已準備就緒，請上傳TXT檔案', 'success');
+        });
+        
+        // 更新單元格內容
+        function updateCell(rowIndex, field, value) {
+            if (tableData[rowIndex]) {
+                tableData[rowIndex][field] = value;
+                console.log(`更新第${rowIndex + 1}行 ${field}: ${value}`);
+                
+                // 如果更新的是戶別或空間別，重新渲染表格以更新框線
+                if (field === 'household' || field === 'spaceType') {
+                    renderTable();
+                }
+
+                // 如果更新的是影響計算的欄位，則重新計算
+                if (['quantity', 'wallLength', 'wallHeight', 'thickness', 'openingLength', 'openingHeight', 'openingFoldDepth'].includes(field)) {
+                    recalculateRow(rowIndex);
+                    renderTable();
+                }
+            }
+        }
+        
+        // 更新戶別輸入框
+        function updateHousehold() {
+            const householdInput = document.getElementById('householdInput');
+            console.log('戶別輸入框更新:', householdInput.value);
+        }
+        
+        // 套用戶別到空白欄位
+        function applyHouseholdToEmpty() {
+            const householdInput = document.getElementById('householdInput');
+            const defaultHousehold = householdInput.value.trim();
+            
+            if (!defaultHousehold) {
+                showMessage('請先輸入戶別', 'error');
+                return;
+            }
+            
+            let updatedCount = 0;
+            tableData.forEach((row, index) => {
+                if (!row.household || row.household.trim() === '') {
+                    row.household = defaultHousehold;
+                    updatedCount++;
+                }
+            });
+            
+            if (updatedCount > 0) {
+                renderTable();
+                showMessage(`已套用戶別到 ${updatedCount} 個空白欄位`, 'success');
+            } else {
+                showMessage('沒有空白欄位需要套用', 'info');
+            }
+        }
+        
+        // 載入門窗表檔案
+        function loadDoorWindowFile() {
+            const fileInput = document.getElementById('doorWindowFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    let content = e.target.result;
+                    
+                    // 檢查是否有BOM標記，如果有則移除
+                    if (content.charCodeAt(0) === 0xFEFF) {
+                        content = content.slice(1);
+                    }
+                    
+                    parseDoorWindowContent(content);
+                    showMessage('門窗表檔案載入成功', 'success');
+                } catch (error) {
+                    showMessage('門窗表檔案解析錯誤: ' + error.message, 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                showMessage('門窗表檔案讀取錯誤', 'error');
+            };
+            
+            // 使用UTF-8編碼讀取
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        // 解析門窗表內容
+        function parseDoorWindowContent(content) {
+            console.log('讀取到的門窗表內容:', content);
+            
+            const lines = content.split('\n');
+            doorWindowData = [];
+            
+            lines.forEach((line, index) => {
+                if (line.trim()) {
+                    console.log(`門窗表第${index + 1}行:`, line);
+                    
+                    // 解析門窗表檔案，每行包含：窗編號,開口長(cm),開口寬(cm)
+                    const parts = line.split(',').map(part => part.trim());
+                    
+                    if (parts.length >= 3) {
+                        const windowCode = parts[0] || '';
+                        const openingLength = parseFloat(parts[1]) || 0; // cm
+                        const openingWidth = parseFloat(parts[2]) || 0; // cm
+                        
+                        console.log(`門窗表解析結果: 窗編號=${windowCode}, 開口長=${openingLength}, 開口寬=${openingWidth}`);
+                        
+                        doorWindowData.push({
+                            windowCode: windowCode,
+                            openingLength: openingLength,
+                            openingWidth: openingWidth
+                        });
+                    }
+                }
+            });
+            
+            renderDoorWindowTable();
+            updatePartitionTableWithDoors(); // 更新牆磚表格中的門窗資料
+        }
+        
+        // 渲染門窗表
+        function renderDoorWindowTable() {
+            const tbody = document.getElementById('doorWindowTableBody');
+            const section = document.getElementById('doorWindowTableSection');
+            const content = document.getElementById('doorWindowTableContent');
+            const btn = document.getElementById('toggleDoorWindowBtn');
+            
+            tbody.innerHTML = '';
+            
+            if (doorWindowData.length > 0) {
+                doorWindowData.forEach((row, index) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.windowCode}</td>
+                        <td>${row.openingLength}</td>
+                        <td>${row.openingWidth}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                section.style.display = 'block';
+                content.style.display = 'block';
+                btn.textContent = '隱藏';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+        
+        // 更新牆磚表格中的門窗資料
+        function updatePartitionTableWithDoors() {
+            if (doorWindowData.length === 0) return;
+            
+            tableData.forEach((row, index) => {
+                // 檢查開孔名稱是否在門窗表中
+                const doorWindow = doorWindowData.find(dw => dw.windowCode === row.openingName);
+                if (doorWindow) {
+                    row.openingLength = doorWindow.openingLength;
+                    row.openingHeight = doorWindow.openingWidth; // 開口寬度對應到開口高度
+                    
+                    // 重新計算面積
+                    const area = (row.quantity * row.wallLength * (row.wallHeight - row.thickness) - (row.openingLength * row.openingHeight)) / 10000;
+                    row.area = parseFloat(area.toFixed(2));
+                    row.formula = `${row.quantity}×${row.wallLength}cm×(${row.wallHeight}cm-${row.thickness}cm)-(${row.openingLength}cm×${row.openingHeight}cm)÷10000=${row.area.toFixed(2)}m²`;
+                }
+            });
+            
+            renderTable();
+        }
+        
+        // 更新開孔名稱
+        function updateOpeningName(rowIndex, value) {
+            if (tableData[rowIndex]) {
+                tableData[rowIndex].openingName = value;
+                console.log(`更新第${rowIndex + 1}行 開孔名稱: ${value}`);
+                
+                // 檢查是否有對應的門窗資料
+                if (doorWindowData.length > 0) {
+                    const doorWindow = doorWindowData.find(dw => dw.windowCode === value);
+                    if (doorWindow) {
+                        tableData[rowIndex].openingLength = doorWindow.openingLength;
+                        tableData[rowIndex].openingHeight = doorWindow.openingWidth; // 開口寬度對應到開口高度
+                        
+                        recalculateRow(rowIndex);
+                        
+                        // 重新渲染表格以顯示更新的資料
+                        renderTable();
+                        showMessage(`已套用門窗資料: ${value}`, 'success');
+                    }
+                }
+            }
+        }
+        
+        // 隱藏/展開門窗表
+        function toggleDoorWindowTable() {
+            const content = document.getElementById('doorWindowTableContent');
+            const btn = document.getElementById('toggleDoorWindowBtn');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                btn.textContent = '隱藏';
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '展開';
+            }
+        }
+        
+        // 縮小/展開資料匯入區塊
+        function toggleImportSection() {
+            const content = document.getElementById('importContent');
+            const btn = document.getElementById('toggleImportBtn');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                btn.textContent = '縮小';
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '展開';
+            }
+        }
+        
+        // 重新計算單行數據
+        function recalculateRow(rowIndex) {
+            const row = tableData[rowIndex];
+            if (!row) return;
+
+            // 確保數值正確
+            row.quantity = parseFloat(row.quantity) || 1;
+            row.wallLength = parseFloat(row.wallLength) || 0;
+            row.wallHeight = parseFloat(row.wallHeight) || 0;
+            row.thickness = parseFloat(row.thickness) || 0;
+            row.openingLength = parseFloat(row.openingLength) || 0;
+            row.openingHeight = parseFloat(row.openingHeight) || 0;
+            row.openingFoldDepth = parseFloat(row.openingFoldDepth) || 5;
+
+            // 開口面積(m²) = (開口長 * 開口高) / 10000
+            const openingArea = (row.openingLength * row.openingHeight) / 10000;
+            row.openingArea = parseFloat(openingArea.toFixed(2));
+
+            // 開口內折面積(m²) = ((開口長 + 開口高) * 2 * 開口內折深度) / 10000
+            const openingFoldArea = ((row.openingLength + row.openingHeight) * 2 * row.openingFoldDepth) / 10000;
+            row.openingFoldArea = parseFloat(openingFoldArea.toFixed(2));
+
+            // 牆面淨面積(m²) = 牆長*牆高-開口面積+開口內折面積
+            const area = (row.wallLength * row.wallHeight) / 10000 - row.openingArea + row.openingFoldArea;
+            row.area = parseFloat(area.toFixed(2));
+
+            // 更新計算式
+            row.formula = `${row.wallLength}cm×${row.wallHeight}cm÷10000-${row.openingArea}m²+${row.openingFoldArea}m²=${row.area.toFixed(2)}m²`;
+        }
+        
+        // 新增行
+        function addNewRow() {
+            const newRowNumber = tableData.length + 1;
+            const newRow = {
+                rowNumber: newRowNumber,
+                household: '',
+                spaceType: '',
+                material: '',
+                notes: '',
+                attribute: '',
+                quantity: 1,
+                wallLength: 0,
+                wallHeight: 270, // 預設牆高270cm
+                openingName: '',
+                openingLength: 0,
+                openingHeight: 0,
+                openingFoldDepth: 5,
+                openingArea: 0,
+                openingFoldArea: 0,
+                thickness: 0,
+                area: 0,
+                formula: ''
+            };
+            
+            tableData.push(newRow);
+            renderTable();
+            showMessage(`已新增第 ${newRowNumber} 行`, 'success');
+            
+            // 自動滾動到新增的行
+            setTimeout(() => {
+                const tableBody = document.getElementById('tableBody');
+                const lastRow = tableBody.lastElementChild;
+                if (lastRow) {
+                    lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        }
+        
+        // 插入行
+        function insertRow() {
+            const insertRowNumber = document.getElementById('insertRowNumber').value;
+            const newRowNumber = parseInt(insertRowNumber, 10);
+            
+            if (newRowNumber < 1 || newRowNumber > tableData.length + 1) {
+                showMessage('請輸入有效的行號', 'error');
+                return;
+            }
+            
+            const newRow = {
+                rowNumber: newRowNumber,
+                household: '',
+                spaceType: '',
+                material: '',
+                notes: '',
+                attribute: '',
+                quantity: 1,
+                wallLength: 0,
+                wallHeight: 270, // 預設牆高270cm
+                openingName: '',
+                openingLength: 0,
+                openingHeight: 0,
+                openingFoldDepth: 5,
+                openingArea: 0,
+                openingFoldArea: 0,
+                thickness: 0,
+                area: 0,
+                formula: ''
+            };
+            
+            tableData.splice(newRowNumber - 1, 0, newRow);
+            renderTable();
+            showMessage(`已插入第 ${newRowNumber} 行`, 'success');
+            
+            // 自動滾動到新增的行
+            setTimeout(() => {
+                const tableBody = document.getElementById('tableBody');
+                const newRowElement = tableBody.children[newRowNumber - 1];
+                if (newRowElement) {
+                    newRowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html> 
