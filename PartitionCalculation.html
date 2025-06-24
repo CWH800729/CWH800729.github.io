@@ -381,6 +381,66 @@
             text-align: center;
         }
         
+        .add-row-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .insert-input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 120px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .insert-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .btn-insert {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .btn-insert:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .btn-insert:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .insert-icon {
+            font-size: 20px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        .insert-text {
+            font-size: 14px;
+        }
+        
         .btn-add {
             background-color: #28a745;
             color: white;
@@ -517,10 +577,17 @@
             
             <!-- 新增行按鈕 -->
             <div class="add-row-section">
-                <button class="btn-add" onclick="addNewRow()" title="新增一行">
-                    <span class="add-icon">+</span>
-                    <span class="add-text">新增行</span>
-                </button>
+                <div class="add-row-controls">
+                    <input type="number" id="insertRowNumber" class="insert-input" placeholder="插入位置" min="1" />
+                    <button class="btn-insert" onclick="insertRow()" title="在指定位置插入行">
+                        <span class="insert-icon">↳</span>
+                        <span class="insert-text">插入行</span>
+                    </button>
+                    <button class="btn-add" onclick="addNewRow()" title="在最後新增一行">
+                        <span class="add-icon">+</span>
+                        <span class="add-text">新增行</span>
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -635,11 +702,35 @@
                 // 更新行號
                 row.rowNumber = index + 1;
                 
+                // 檢查戶別和空間別的變化
+                const prevRow = index > 0 ? tableData[index - 1] : null;
+                const nextRow = index < tableData.length - 1 ? tableData[index + 1] : null;
+                
+                let rowClass = '';
+                let householdBorder = '';
+                let spaceBorder = '';
+                
+                // 檢查戶別變化
+                if (prevRow && prevRow.household !== row.household) {
+                    householdBorder = 'border-top: 3px double #007bff;';
+                }
+                if (nextRow && nextRow.household !== row.household) {
+                    householdBorder += 'border-bottom: 3px double #007bff;';
+                }
+                
+                // 檢查空間別變化
+                if (prevRow && prevRow.spaceType !== row.spaceType) {
+                    spaceBorder = 'border-top: 3px solid #000;';
+                }
+                if (nextRow && nextRow.spaceType !== row.spaceType) {
+                    spaceBorder += 'border-bottom: 3px solid #000;';
+                }
+                
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${row.rowNumber}</td>
-                    <td><input type="text" class="editable-cell" value="${row.household}" onchange="updateCell(${index}, 'household', this.value)" placeholder="輸入戶別"></td>
-                    <td><input type="text" class="editable-cell" value="${row.spaceType}" onchange="updateCell(${index}, 'spaceType', this.value)" placeholder="輸入空間別"></td>
+                    <td style="${householdBorder}"><input type="text" class="editable-cell" value="${row.household}" onchange="updateCell(${index}, 'household', this.value)" placeholder="輸入戶別"></td>
+                    <td style="${spaceBorder}"><input type="text" class="editable-cell" value="${row.spaceType}" onchange="updateCell(${index}, 'spaceType', this.value)" placeholder="輸入空間別"></td>
                     <td>${row.material}</td>
                     <td><input type="text" class="editable-cell" value="${row.notes}" onchange="updateCell(${index}, 'notes', this.value)" placeholder="輸入註記"></td>
                     <td><input type="text" class="editable-cell" value="${row.attribute}" onchange="updateCell(${index}, 'attribute', this.value)" placeholder="輸入屬性"></td>
@@ -800,6 +891,11 @@
             if (tableData[rowIndex]) {
                 tableData[rowIndex][field] = value;
                 console.log(`更新第${rowIndex + 1}行 ${field}: ${value}`);
+                
+                // 如果更新的是戶別或空間別，重新渲染表格以更新框線
+                if (field === 'household' || field === 'spaceType') {
+                    renderTable();
+                }
             }
         }
         
@@ -1038,6 +1134,48 @@
                 const lastRow = tableBody.lastElementChild;
                 if (lastRow) {
                     lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        }
+        
+        // 插入行
+        function insertRow() {
+            const insertRowNumber = document.getElementById('insertRowNumber').value;
+            const newRowNumber = parseInt(insertRowNumber, 10);
+            
+            if (newRowNumber < 1 || newRowNumber > tableData.length + 1) {
+                showMessage('請輸入有效的行號', 'error');
+                return;
+            }
+            
+            const newRow = {
+                rowNumber: newRowNumber,
+                household: '',
+                spaceType: '',
+                material: '',
+                notes: '',
+                attribute: '',
+                quantity: 1,
+                wallLength: 0,
+                wallHeight: 270, // 預設牆高270cm
+                openingName: '',
+                openingLength: 0,
+                openingHeight: 0,
+                thickness: 0,
+                area: 0,
+                formula: ''
+            };
+            
+            tableData.splice(newRowNumber - 1, 0, newRow);
+            renderTable();
+            showMessage(`已插入第 ${newRowNumber} 行`, 'success');
+            
+            // 自動滾動到新增的行
+            setTimeout(() => {
+                const tableBody = document.getElementById('tableBody');
+                const newRowElement = tableBody.children[newRowNumber - 1];
+                if (newRowElement) {
+                    newRowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }, 100);
         }
