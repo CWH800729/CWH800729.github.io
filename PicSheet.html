@@ -523,6 +523,27 @@
         .preview-custom-titles input.title-sub {
             font-size: 1.25em;
         }
+        .preview-custom-titles .title-options {
+            margin: 10px 0;
+            text-align: center;
+        }
+        .preview-custom-titles .title-checkbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            color: #2c3e50;
+        }
+        .preview-custom-titles .title-checkbox input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            cursor: pointer;
+        }
+        .preview-custom-titles .title-checkbox span {
+            font-weight: 500;
+        }
         .preview-custom-titles .print-title {
             display: none;
         }
@@ -770,9 +791,8 @@
                 width: 100%;
             }
             .print-page {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                grid-template-rows: repeat(3, 1fr);
+                display: flex;
+                flex-wrap: wrap;
                 gap: 1cm;
                 width: 100%;
                 page-break-after: always;
@@ -783,38 +803,43 @@
             .print-photo-cell {
                 page-break-inside: avoid;
                 break-inside: avoid;
-                height: calc((297mm - 2cm - 2cm) / 3); /* A4 高度減去上下邊距，除以3行 */
                 display: flex;
                 flex-direction: column;
                 margin-bottom: 0;
+                overflow: hidden;
             }
             .print-photo-cell img {
                 width: 100%;
-                height: calc((297mm - 2cm - 2cm) / 3 - 60px); /* 減去欄位高度 */
+                max-height: 60%; /* 限制圖片最大高度為60% */
                 object-fit: contain;
                 margin-bottom: 5px;
+                flex-shrink: 1; /* 允許圖片縮小 */
             }
             .print-photo-fields {
                 width: 100%;
                 border: 1px solid #000;
-                flex-shrink: 0;
+                flex-shrink: 0; /* 欄位區塊不縮小 */
+                min-height: 40px; /* 確保欄位有最小高度 */
             }
             .print-field-row {
                 display: flex;
                 border-bottom: 1px solid #000;
-                min-height: 20px;
+                min-height: 18px; /* 稍微縮小行高 */
+            }
+            .print-field-row:last-child {
+                border-bottom: none; /* 最後一行不加底線 */
             }
             .print-field-label {
                 width: 80px;
                 padding: 2px 5px;
                 border-right: 1px solid #000;
                 font-weight: bold;
-                font-size: 10pt;
+                font-size: 9pt; /* 稍微縮小字體 */
             }
             .print-field-value {
                 flex: 1;
                 padding: 2px 5px;
-                font-size: 10pt;
+                font-size: 9pt; /* 稍微縮小字體 */
             }
             .no-print {
                 display: none !important;
@@ -922,6 +947,12 @@
             <div class="preview-custom-titles">
                 <input type="text" class="title-main" placeholder="請輸入主標題" oninput="updatePreviewTitles()">
                 <input type="text" class="title-sub" placeholder="請輸入副標題" oninput="updatePreviewTitles()">
+                <div class="title-options">
+                    <label class="title-checkbox">
+                        <input type="checkbox" id="showTitleOnEveryPage" checked>
+                        <span>每頁都顯示標題</span>
+                    </label>
+                </div>
                 <div class="print-title">
                     <div class="title-main"></div>
                     <div class="title-sub"></div>
@@ -981,8 +1012,8 @@
 
             <div class="control-panel">
                 <div class="column-selector">
-                    <label for="columnCount">欄數：</label>
-                    <input type="number" id="columnCount" min="1" max="8" value="2" onchange="setPhotoTableColumns()">
+                    <label for="columnCount">欄×列：</label>
+                    <input type="text" id="columnCount" value="2*3" placeholder="例如：2*3" onchange="setPhotoTableColumns()">
                 </div>
                 <button class="batch-upload-btn" onclick="document.getElementById('batchUpload').click()">
                     <i class="fas fa-folder-open"></i> 批量匯入照片
@@ -1319,88 +1350,137 @@
             const printContainer = document.createElement('div');
             printContainer.className = 'print-content';
             
-            // 添加標題到列印內容
+            // 獲取標題內容和設定
             const mainTitle = document.querySelector('.preview-custom-titles input.title-main').value;
             const subTitle = document.querySelector('.preview-custom-titles input.title-sub').value;
-            if (mainTitle || subTitle) {
-                const titlesDiv = document.createElement('div');
-                titlesDiv.className = 'preview-custom-titles';
-                titlesDiv.innerHTML = `
-                    <div class="print-title">
-                        ${mainTitle ? `<div class="title-main">${mainTitle}</div>` : ''}
-                        ${subTitle ? `<div class="title-sub">${subTitle}</div>` : ''}
-                    </div>
-                `;
-                printContainer.appendChild(titlesDiv);
-            }
+            const showTitleOnEveryPage = document.getElementById('showTitleOnEveryPage').checked;
+            let hasTitles = false;
             
             // 獲取所有照片單元格
             const cells = document.querySelectorAll('.photo-cell');
             const cellsWithImages = Array.from(cells).filter(cell => cell.querySelector('img'));
             
-            // 計算需要多少頁
-            const cellsPerPage = 6; // 2x3 網格
+            // 取得使用者設定的欄×列格式
+            const columnRowFormat = document.getElementById('columnCount').value;
+            const { columns: columnCount, rows: rowCount } = parseColumnRowFormat(columnRowFormat);
+            const cellsPerPage = columnCount * rowCount;
             const totalPages = Math.ceil(cellsWithImages.length / cellsPerPage);
+            
+            // 計算A4紙張可用尺寸 (A4: 210mm x 297mm)
+            const pageWidthMM = 210;
+            const pageHeightMM = 297;
+            const marginMM = 20; // 2cm = 20mm (1cm上下左右)
+            const gapMM = 10; // 1cm = 10mm
+            
+            // 計算標題高度（如果有標題且要在每頁顯示，或只在第一頁顯示）
+            const titleHeightMM = (mainTitle || subTitle) ? 35 : 0; // 主標題+副標題+間距約35mm
+            
+            // 計算可用空間（扣除標題高度）
+            const usableWidthMM = pageWidthMM - marginMM - (gapMM * (columnCount - 1));
+            const usableHeightMM = pageHeightMM - marginMM - titleHeightMM - (gapMM * (rowCount - 1));
+            
+            // 計算每個格子的最佳尺寸
+            const cellWidthMM = usableWidthMM / columnCount;
+            const cellHeightMM = usableHeightMM / rowCount;
             
             // 為每頁創建內容
             for (let page = 0; page < totalPages; page++) {
+                // 決定是否在當前頁面顯示標題
+                const shouldShowTitle = (mainTitle || subTitle) && (showTitleOnEveryPage || page === 0);
+                
+                if (shouldShowTitle) {
+                    hasTitles = true;
+                    const titlesDiv = document.createElement('div');
+                    titlesDiv.className = 'preview-custom-titles';
+                    titlesDiv.innerHTML = `
+                        <div class="print-title">
+                            ${mainTitle ? `<div class="title-main">${mainTitle}</div>` : ''}
+                            ${subTitle ? `<div class="title-sub">${subTitle}</div>` : ''}
+                        </div>
+                    `;
+                    printContainer.appendChild(titlesDiv);
+                }
+                
                 const pageStart = page * cellsPerPage;
                 const pageCells = cellsWithImages.slice(pageStart, pageStart + cellsPerPage);
                 
-                // 如果這頁的單元格少於6個，添加空白單元格
+                // 如果這頁的單元格少於cellsPerPage個，添加空白單元格
                 while (pageCells.length < cellsPerPage) {
                     const emptyCell = document.createElement('div');
                     emptyCell.className = 'print-photo-cell';
+                    emptyCell.style.width = `${cellWidthMM}mm`;
+                    emptyCell.style.height = `${cellHeightMM}mm`;
                     pageCells.push(emptyCell);
                 }
                 
-                // 建立每頁的 grid 容器
+                // 建立每頁的容器
                 const pageDiv = document.createElement('div');
                 pageDiv.className = 'print-page';
+                // 使用flexbox佈局，讓格子能自動換行
+                pageDiv.style.display = 'flex';
+                pageDiv.style.flexWrap = 'wrap';
+                pageDiv.style.gap = '1cm';
+                pageDiv.style.width = '100%';
+                pageDiv.style.justifyContent = 'flex-start';
+                
                 // 處理這頁的每個單元格
-                pageCells.forEach(cell => {
+                pageCells.forEach((cell, index) => {
                     const printCell = document.createElement('div');
                     printCell.className = 'print-photo-cell';
+                    printCell.style.width = `${cellWidthMM}mm`;
+                    printCell.style.height = `${cellHeightMM}mm`;
+                    printCell.style.flexShrink = '0';
+                    printCell.style.overflow = 'hidden';
                     
                     if (cell.querySelector('img')) {
-                        // 複製圖片
-                        const printImg = document.createElement('img');
-                        printImg.src = cell.querySelector('img').src;
-                        printCell.appendChild(printImg);
-                        
-                        // 複製欄位
-                        const fieldsDiv = cell.querySelector('.photo-cell-fields');
-                        if (fieldsDiv) {
-                            const printFields = document.createElement('div');
-                            printFields.className = 'print-photo-fields';
-                            
+                        // 複製欄位區塊（如有）
+                        let fieldsDiv = null;
+                        let fieldsHeightPx = 0;
+                        if (cell.querySelector('.photo-cell-fields')) {
+                            fieldsDiv = document.createElement('div');
+                            fieldsDiv.className = 'print-photo-fields';
                             // 複製每個欄位
-                            const fieldRows = fieldsDiv.querySelectorAll('.photo-cell-field-row');
+                            const fieldRows = cell.querySelectorAll('.photo-cell-field-row');
                             fieldRows.forEach(row => {
                                 const printRow = document.createElement('div');
                                 printRow.className = 'print-field-row';
-                                
                                 const label = row.querySelector('.photo-cell-field-label');
                                 const valueInput = row.querySelector('input.photo-cell-field-value');
                                 const value = valueInput ? valueInput.value : '';
-                                
                                 if (label) {
                                     const printLabel = document.createElement('div');
                                     printLabel.className = 'print-field-label';
                                     printLabel.textContent = label.textContent;
-                                    
                                     const printValue = document.createElement('div');
                                     printValue.className = 'print-field-value';
                                     printValue.textContent = value;
-                                    
                                     printRow.appendChild(printLabel);
                                     printRow.appendChild(printValue);
-                                    printFields.appendChild(printRow);
+                                    fieldsDiv.appendChild(printRow);
                                 }
                             });
-                            
-                            printCell.appendChild(printFields);
+                            // 先加到cell以便計算高度
+                            printCell.appendChild(fieldsDiv);
+                            // 計算欄位區塊高度
+                            fieldsHeightPx = fieldsDiv.offsetHeight || 40; // 若無法取得則預設40px
                         }
+                        
+                        // 複製圖片
+                        const printImg = document.createElement('img');
+                        printImg.src = cell.querySelector('img').src;
+                        printImg.style.width = '100%';
+                        printImg.style.objectFit = 'contain';
+                        printImg.style.display = 'block';
+                        
+                        // 圖片高度 = cellHeightMM - 欄位區塊高度 (mm)
+                        // 1mm ≈ 3.78px
+                        let imgHeightMM = cellHeightMM;
+                        if (fieldsDiv) {
+                            imgHeightMM = cellHeightMM - (fieldsHeightPx / 3.78);
+                            if (imgHeightMM < 10) imgHeightMM = 10; // 最小10mm
+                        }
+                        printImg.style.height = `${imgHeightMM}mm`;
+                        printCell.insertBefore(printImg, fieldsDiv || null);
                     }
                     pageDiv.appendChild(printCell);
                 });
@@ -1591,7 +1671,26 @@
             setPhotoTableColumns();
         }
 
-        // 新增 setPhotoTableColumns，根據欄數重建表格
+        // 新增解析欄×列格式的函數
+        function parseColumnRowFormat(format) {
+            if (!format || typeof format !== 'string') {
+                return { columns: 2, rows: 3 };
+            }
+            
+            const match = format.trim().match(/^(\d+)\*(\d+)$/);
+            if (match) {
+                const columns = parseInt(match[1]);
+                const rows = parseInt(match[2]);
+                if (columns >= 1 && columns <= 8 && rows >= 1 && rows <= 6) {
+                    return { columns, rows };
+                }
+            }
+            
+            // 如果格式錯誤，返回預設值
+            return { columns: 2, rows: 3 };
+        }
+
+        // 修改 setPhotoTableColumns，根據欄×列重建表格
         function setPhotoTableColumns() {
             const table = document.getElementById('photoTable');
             const cells = Array.from(table.querySelectorAll('.photo-cell'));
@@ -1612,7 +1711,9 @@
             });
 
             const table = document.getElementById('photoTable');
-            const columnCount = parseInt(document.getElementById('columnCount').value) || 2;
+            const columnRowFormat = document.getElementById('columnCount').value;
+            const { columns: columnCount, rows: rowCount } = parseColumnRowFormat(columnRowFormat);
+            
             // 取得目前自訂欄位
             const customFields = Array.from(document.querySelectorAll('.custom-field'));
             const activeFields = customFields.map(field => ({
@@ -1622,11 +1723,11 @@
             }));
             console.log('當前啟用的欄位:', activeFields);
 
-            // 計算需要的 row
-            const rowCount = Math.ceil(images.length / columnCount) || 1;
+            // 計算需要的總行數
+            const totalRows = Math.ceil(images.length / columnCount) || 1;
             // 清空表格
             table.innerHTML = '';
-            for (let r = 0; r < rowCount; r++) {
+            for (let r = 0; r < totalRows; r++) {
                 const tr = table.insertRow();
                 for (let c = 0; c < columnCount; c++) {
                     const idx = r * columnCount + c;
@@ -1799,6 +1900,7 @@
             // 獲取標題
             const mainTitle = document.querySelector('.preview-custom-titles input.title-main').value;
             const subTitle = document.querySelector('.preview-custom-titles input.title-sub').value;
+            const showTitleOnEveryPage = document.getElementById('showTitleOnEveryPage').checked;
 
             // 創建設定對象
             const config = {
@@ -1808,6 +1910,7 @@
                 selectedFields: selectedFields,
                 mainTitle: mainTitle,
                 subTitle: subTitle,
+                showTitleOnEveryPage: showTitleOnEveryPage,
                 exportDate: new Date().toISOString()
             };
 
@@ -1912,6 +2015,9 @@
                     }
                     if (config.subTitle) {
                         document.querySelector('.preview-custom-titles input.title-sub').value = config.subTitle;
+                    }
+                    if (config.showTitleOnEveryPage !== undefined) {
+                        document.getElementById('showTitleOnEveryPage').checked = config.showTitleOnEveryPage;
                     }
                     updatePreviewTitles();
 
