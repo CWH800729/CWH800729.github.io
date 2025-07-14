@@ -1143,6 +1143,11 @@
                         throw new Error('不支援的檔案格式');
                     }
 
+                    // 檢查匯入的資料是否有效
+                    if (!Array.isArray(importData) || importData.length === 0) {
+                        throw new Error('匯入的資料格式不正確或沒有項目資料');
+                    }
+
                     projects = importData;
                     updateProjectTable();
                     saveData();
@@ -1155,6 +1160,7 @@
                     
                     showMessage('projectSuccessMessage', `成功匯入檔案「${file.name}」，共 ${importData.length} 個項目！`);
                 } catch (error) {
+                    console.error('匯入錯誤:', error);
                     showMessage('projectErrorMessage', `匯入檔案「${file.name}」失敗：${error.message}`);
                 }
             };
@@ -1164,6 +1170,10 @@
         // 解析項目 CSV
         function parseProjectCSV(content) {
             const lines = content.trim().split('\n');
+            if (lines.length < 2) {
+                throw new Error('CSV 檔案格式不正確，至少需要標題行和一行資料');
+            }
+            
             const headers = lines[0].split(',');
             const data = [];
             let currentLine = 1;
@@ -1171,17 +1181,30 @@
             // 解析項目資料
             while (currentLine < lines.length && lines[currentLine].trim() !== '請款記錄') {
                 const values = lines[currentLine].split(',');
-                if (values.length >= headers.length) {
+                // 檢查是否有足夠的欄位（至少需要前5個必要欄位）
+                if (values.length >= 5) {
+                    const projectTitle = values[0].trim();
+                    const projectName = values[1].trim();
+                    
+                    // 檢查必要欄位是否為空
+                    if (!projectTitle || !projectName) {
+                        console.warn(`跳過第 ${currentLine} 行：項目標題或名稱為空`);
+                        currentLine++;
+                        continue;
+                    }
+                    
                     data.push({
                         id: Date.now() + currentLine,
-                        projectTitle: values[0].trim(),
-                        projectName: values[1].trim(),
-                        contractBudget: parseFloat(values[2]),
-                        remainingBudget: parseFloat(values[3]),
+                        projectTitle: projectTitle,
+                        projectName: projectName,
+                        contractBudget: parseFloat(values[2]) || 0,
+                        remainingBudget: parseFloat(values[3]) || 0,
                         projectDescription: values[8] || '',
                         payments: [],
                         createdAt: new Date().toISOString()
                     });
+                } else {
+                    console.warn(`跳過第 ${currentLine} 行：欄位數量不足 (${values.length})`);
                 }
                 currentLine++;
             }
@@ -1201,15 +1224,20 @@
                             project.payments.push({
                                 id: Date.now() + currentLine,
                                 date: values[2].trim(),
-                                amount: parseFloat(values[3]),
-                                description: values[4].trim()
+                                amount: parseFloat(values[3]) || 0,
+                                description: values[4].trim() || ''
                             });
+                        } else {
+                            console.warn(`找不到對應的項目：${projectTitle} - ${projectName}`);
                         }
+                    } else {
+                        console.warn(`跳過請款記錄第 ${currentLine} 行：欄位數量不足 (${values.length})`);
                     }
                     currentLine++;
                 }
             }
 
+            console.log(`成功解析 ${data.length} 個項目`);
             return data;
         }
 
