@@ -554,6 +554,94 @@
         .logo-link.active {
             pointer-events: auto;
         }
+
+        /* 工具提示樣式 */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: #333;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* 項目行工具提示樣式 */
+        .project-row {
+            position: relative;
+        }
+
+        .project-row .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: #333;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1000;
+            top: 100%;
+            left: 50%;
+            margin-left: -150px;
+            margin-top: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .project-row .tooltiptext::after {
+            content: "";
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent transparent #333 transparent;
+        }
+
+        .project-row:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -769,6 +857,7 @@
                     : 0;
 
                 const row = document.createElement('tr');
+                row.className = 'project-row';
                 row.onclick = () => togglePaymentDetails(project.id);
                 row.innerHTML = `
                     <td style="position: relative;">
@@ -798,7 +887,14 @@
                         <button class="btn btn-danger btn-sm" onclick="deleteProject(${project.id}); event.stopPropagation();">
                             <i class="fas fa-trash"></i>
                         </button>
+                        <div class="description-edit-container" style="display: none; margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #2c3e50;">項目描述：</label>
+                            <textarea id="description-edit-${project.id}" placeholder="請輸入項目描述" rows="3" maxlength="500" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px; resize: vertical;">${project.projectDescription || ''}</textarea>
+                        </div>
                     </td>
+                    <span class="tooltiptext">
+                        ${project.projectDescription || '此項目尚未添加描述'}
+                    </span>
                 `;
                 tbody.appendChild(row);
 
@@ -1055,7 +1151,7 @@
                         usageRate,
                         averagePaymentDisplay,
                         estimatedMonths,
-                        project.projectDescription
+                        project.projectDescription || ''
                     ].join(',');
                 })
             ].join('\n');
@@ -1319,6 +1415,7 @@
                 const newName = textInputs[1].value.trim();
                 const newBudget = parseFloat(budgetInputs[0].value);
                 const newUsedAmount = parseFloat(budgetInputs[1].value);
+                const newDescription = document.getElementById(`description-edit-${projectId}`).value.trim();
 
                 if (!newTitle || !newName || isNaN(newBudget) || newBudget < 0 || isNaN(newUsedAmount) || newUsedAmount < 0) {
                     showMessage('projectErrorMessage', '請填寫有效的項目標題、項目名稱、合約預算和已使用金額！');
@@ -1335,6 +1432,7 @@
                 project.projectName = newName;
                 project.contractBudget = newBudget;
                 project.remainingBudget = newBudget - newUsedAmount;
+                project.projectDescription = newDescription;
 
                 // 更新顯示
                 textDisplays[0].textContent = newTitle;
@@ -1347,6 +1445,12 @@
                 budgetDisplays.forEach(display => display.style.display = 'inline-block');
                 textInputs.forEach(input => input.style.display = 'none');
                 budgetInputs.forEach(input => input.style.display = 'none');
+
+                // 隱藏項目描述編輯區域
+                const descriptionContainer = targetRow.querySelector('.description-edit-container');
+                if (descriptionContainer) {
+                    descriptionContainer.style.display = 'none';
+                }
 
                 // 更新按鈕
                 editBtn.innerHTML = '<i class="fas fa-edit"></i> 編輯';
@@ -1373,6 +1477,12 @@
                 budgetDisplays.forEach(display => display.style.display = 'none');
                 textInputs.forEach(input => input.style.display = 'block');
                 budgetInputs.forEach(input => input.style.display = 'block');
+
+                // 顯示項目描述編輯區域
+                const descriptionContainer = targetRow.querySelector('.description-edit-container');
+                if (descriptionContainer) {
+                    descriptionContainer.style.display = 'block';
+                }
 
                 // 更新按鈕
                 editBtn.innerHTML = '<i class="fas fa-check"></i> 確認';
