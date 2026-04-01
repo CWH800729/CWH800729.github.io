@@ -1703,7 +1703,17 @@
         })
         .filter(item => item && item.keyword);
 
-      const activeKeywords = [...keywordMap, ...liveCustomKeywords];
+      // 比對優先順序：
+      // 1) 使用者關鍵字清單優先於內建關鍵字
+      // 2) 關鍵字越長越先比對，避免短詞過早命中
+      const activeKeywords = [...liveCustomKeywords, ...keywordMap]
+        .map(item => ({
+          keyword: (item.keyword || "").trim(),
+          category: (item.category || "").trim(),
+          vendor: (item.vendor || "").trim()
+        }))
+        .filter(item => item.keyword)
+        .sort((a, b) => b.keyword.length - a.keyword.length);
 
       for (let row of defectBody.children) {
         const descCell = row.cells[1];
@@ -2648,9 +2658,10 @@
     document.getElementById('importFileInput').addEventListener('change', async function(e) {
       const file = e.target.files[0];
       if (!file) return;
+      let processingMsg = null;
 
       try {
-        const processingMsg = document.createElement('div');
+        processingMsg = document.createElement('div');
         processingMsg.style.cssText = `
           position: fixed;
           top: 50%;
@@ -2815,8 +2826,6 @@
         if (defectData.ownerPhone) {
           document.getElementById('ownerPhone').value = defectData.ownerPhone;
         }
-
-        document.body.removeChild(processingMsg);
         
         // 更新所有相關顯示
         updateDefectCount();
@@ -2835,9 +2844,13 @@
       } catch (error) {
         console.error('匯入失敗:', error);
         alert('匯入過程發生錯誤，請重試。');
-        if (document.body.contains(processingMsg)) {
-          document.body.removeChild(processingMsg);
-        }
+      } finally {
+        // 不論匯入成功或失敗，都在 3 秒後自動隱藏提示訊息
+        setTimeout(() => {
+          if (processingMsg && document.body.contains(processingMsg)) {
+            document.body.removeChild(processingMsg);
+          }
+        }, 3000);
       }
       
       this.value = '';
