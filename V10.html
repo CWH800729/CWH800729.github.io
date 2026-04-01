@@ -1327,8 +1327,11 @@
   </div>
 
   <button onclick="openKeywordPrompt()">新增關鍵字</button>
+  <button onclick="triggerKeywordTxtImport()">匯入TXT關鍵字</button>
+  <button onclick="pasteKeywordBatch()">貼上批次關鍵字</button>
   <button onclick="processDescriptions()">關鍵字比對</button>
   <button id="toggleKeywordBtn" onclick="toggleKeywordTable()">展開/隱藏 關鍵字清單</button>
+  <input type="file" id="keywordTxtImporter" accept=".txt,text/plain" style="display:none" />
 
   <div id="keywordTable">
     <table>
@@ -1641,6 +1644,77 @@
       }
     }
 
+    function parseKeywordBatchText(rawText) {
+      // 支援中英文分隔符：逗號(,，)與分號(;；)
+      const normalizedText = (rawText || "")
+        .replace(/，/g, ",")
+        .replace(/；/g, ";")
+        .trim();
+
+      if (!normalizedText) {
+        return { entries: [], invalidCount: 0 };
+      }
+
+      const chunks = normalizedText
+        .split(";")
+        .map(item => item.trim())
+        .filter(Boolean);
+
+      const entries = [];
+      let invalidCount = 0;
+
+      chunks.forEach(chunk => {
+        const parts = chunk.split(",").map(p => p.trim());
+        if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) {
+          invalidCount += 1;
+          return;
+        }
+        entries.push({
+          keyword: parts[0],
+          category: parts[1],
+          vendor: parts[2]
+        });
+      });
+
+      return { entries, invalidCount };
+    }
+
+    function applyKeywordBatchText(rawText) {
+      const { entries, invalidCount } = parseKeywordBatchText(rawText);
+      if (!entries.length) {
+        alert("沒有可匯入的有效資料，請確認格式：關鍵字,分類,廠商;");
+        return;
+      }
+
+      // 同一關鍵字以最後一筆為準，避免重複衝突
+      const latestByKeyword = new Map();
+      customKeywordMap.forEach(item => {
+        latestByKeyword.set(item.keyword, item);
+      });
+      entries.forEach(item => {
+        latestByKeyword.set(item.keyword, item);
+      });
+
+      customKeywordMap = Array.from(latestByKeyword.values());
+      updateKeywordTable();
+
+      const skippedText = invalidCount ? `\n略過 ${invalidCount} 筆格式錯誤資料。` : "";
+      alert(`已匯入 ${entries.length} 筆關鍵字。${skippedText}`);
+    }
+
+    function triggerKeywordTxtImport() {
+      const input = document.getElementById("keywordTxtImporter");
+      input.value = "";
+      input.click();
+    }
+
+    function pasteKeywordBatch() {
+      const sample = "窗框,門窗工程,三協;地磚,地坪,大座;";
+      const text = prompt(`請貼上批次關鍵字內容，以逗號","分隔內容，以分號";"分隔每筆資料（格式：關鍵字,分類,廠商;）\n範例：\n${sample}`);
+      if (text === null) return;
+      applyKeywordBatchText(text);
+    }
+
     function updateKeywordTable() {
       keywordBody.innerHTML = "";
       customKeywordMap.forEach((item, idx) => {
@@ -1692,6 +1766,21 @@
       updateKeywordTable();
     }
 
+    document.getElementById("keywordTxtImporter").addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const text = evt.target.result || "";
+        applyKeywordBatchText(text);
+      };
+      reader.onerror = function() {
+        alert("TXT 讀取失敗，請重試。");
+      };
+      reader.readAsText(file, "utf-8");
+    });
+
     function processDescriptions() {
       // 每次按下都從目前關鍵字表格重建比對清單（含尚未按「儲存」的編輯內容）
       const liveCustomKeywords = Array.from(keywordBody.children)
@@ -1742,6 +1831,7 @@
           vendorCell.textContent = match ? match.vendor : "未指定";
         }
       }
+      updateVendorFilter();
     }
 
     // 新增：計算表格寬度
@@ -2049,6 +2139,7 @@
           
           // 顯示預覽
           showPhotoPreview(pointId);
+          updatePhotoOverview();
         };
         
         // 關閉按鈕事件
@@ -2277,6 +2368,7 @@
       updateSummaryTable();
       updateDefectCount();
       updateFooter();
+      updatePhotoOverview();
     }
 
     // 新增：更換照片函數
@@ -2872,12 +2964,12 @@
         console.error('匯入失敗:', error);
         alert('匯入過程發生錯誤，請重試。');
       } finally {
-        // 不論匯入成功或失敗，都在 3 秒後自動隱藏提示訊息
+        // 不論匯入成功或失敗，都在 1.5 秒後自動隱藏提示訊息
         setTimeout(() => {
           if (processingMsg && document.body.contains(processingMsg)) {
             document.body.removeChild(processingMsg);
           }
-        }, 3000);
+        }, 1500);
       }
       
       this.value = '';
@@ -2931,7 +3023,9 @@
       const vendors = new Set();
       
       Array.from(defectBody.rows).forEach(row => {
-        const vendor = row.cells[3].textContent;
+        const vendorCell = row.cells[3];
+        const vendorInput = vendorCell.querySelector('input');
+        const vendor = (vendorInput ? vendorInput.value : vendorCell.textContent).trim();
         if (vendor) vendors.add(vendor);
       });
 
@@ -3013,7 +3107,9 @@
       const statusFilter = document.getElementById('statusFilter').value;
       
       Array.from(defectBody.rows).forEach(row => {
-        const vendor = row.cells[3].textContent;
+        const vendorCell = row.cells[3];
+        const vendorInput = vendorCell.querySelector('input');
+        const vendor = (vendorInput ? vendorInput.value : vendorCell.textContent).trim();
         const status = row.cells[4].textContent;
         const pointId = '點' + row.cells[0].textContent;
         
