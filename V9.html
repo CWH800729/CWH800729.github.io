@@ -1687,15 +1687,44 @@
     }
 
     function processDescriptions() {
+      // 每次按下都從目前關鍵字表格重建比對清單（含尚未按「儲存」的編輯內容）
+      const liveCustomKeywords = Array.from(keywordBody.children)
+        .map(row => {
+          const cells = row.cells;
+          if (!cells || cells.length < 3) return null;
+          const keywordInput = cells[0].querySelector("input");
+          const categoryInput = cells[1].querySelector("input");
+          const vendorInput = cells[2].querySelector("input");
+          return {
+            keyword: (keywordInput ? keywordInput.value : cells[0].textContent).trim(),
+            category: (categoryInput ? categoryInput.value : cells[1].textContent).trim(),
+            vendor: (vendorInput ? vendorInput.value : cells[2].textContent).trim()
+          };
+        })
+        .filter(item => item && item.keyword);
+
+      const activeKeywords = [...keywordMap, ...liveCustomKeywords];
+
       for (let row of defectBody.children) {
-        const input = row.cells[1].querySelector("input");
-        const desc = input.value;
-        let match = keywordMap.find(k => desc.includes(k.keyword));
-        if (!match) {
-          match = customKeywordMap.find(k => desc.includes(k.keyword));
+        const descCell = row.cells[1];
+        const categoryCell = row.cells[2];
+        const vendorCell = row.cells[3];
+
+        const descInput = descCell.querySelector("input");
+        const desc = (descInput ? descInput.value : descCell.textContent).trim();
+        const match = activeKeywords.find(k => desc.includes(k.keyword));
+
+        if (categoryCell.querySelector("input")) {
+          categoryCell.querySelector("input").value = match ? match.category : "未分類";
+        } else {
+          categoryCell.textContent = match ? match.category : "未分類";
         }
-        row.cells[2].textContent = match ? match.category : "未分類";
-        row.cells[3].textContent = match ? match.vendor : "未指定";
+
+        if (vendorCell.querySelector("input")) {
+          vendorCell.querySelector("input").value = match ? match.vendor : "未指定";
+        } else {
+          vendorCell.textContent = match ? match.vendor : "未指定";
+        }
       }
     }
 
@@ -2295,22 +2324,47 @@
     function toggleEdit(btn) {
       const row = btn.closest("tr");
       const isEditing = btn.textContent === "編輯";
-      const targetCells = [1, 2, 3]; // 缺失說明、類別、廠商
-      targetCells.forEach(i => {
-        const cell = row.cells[i];
-        if (isEditing) {
-          const currentValue = cell.textContent;
-          cell.innerHTML = `<input type='text' value='${currentValue}' />`;
-        } else {
-          const newValue = cell.querySelector("input").value;
-          cell.textContent = newValue;
+
+      const descCell = row.cells[1];
+      const categoryCell = row.cells[2];
+      const vendorCell = row.cells[3];
+
+      if (isEditing) {
+        // 缺失說明：若原本已是 input，沿用其值；否則從文字轉為 input
+        const currentDescInput = descCell.querySelector("input");
+        const descValue = currentDescInput ? currentDescInput.value : descCell.textContent;
+        if (!currentDescInput) {
+          descCell.innerHTML = `<input type='text' value='${descValue}' />`;
         }
-      });
-      btn.textContent = isEditing ? "儲存" : "編輯";
-      if (!isEditing) {
+
+        // 類別、廠商：進入編輯模式
+        [categoryCell, vendorCell].forEach(cell => {
+          const currentInput = cell.querySelector("input");
+          const cellValue = currentInput ? currentInput.value : cell.textContent;
+          if (!currentInput) {
+            cell.innerHTML = `<input type='text' value='${cellValue}' />`;
+          }
+        });
+      } else {
+        // 缺失說明：儲存後維持可輸入狀態（只更新 value，不鎖定）
+        const descInput = descCell.querySelector("input");
+        if (!descInput) {
+          const descValue = descCell.textContent;
+          descCell.innerHTML = `<input type='text' value='${descValue}' />`;
+        }
+
+        // 類別、廠商：儲存後鎖定為文字
+        [categoryCell, vendorCell].forEach(cell => {
+          const input = cell.querySelector("input");
+          const newValue = input ? input.value : cell.textContent;
+          cell.textContent = newValue;
+        });
+
         updateVendorFilter();
         updateSummaryTable();
       }
+
+      btn.textContent = isEditing ? "儲存" : "編輯";
     }
 
     function deleteRow(btn) {
