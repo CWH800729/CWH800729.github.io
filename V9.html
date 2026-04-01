@@ -1500,10 +1500,13 @@
       return `${year}年${month}月${day}日 星期${weekDay}`;
     }
 
+    let importedSnapshotDate = null;
+    let importedSnapshotDefectCount = null;
+
     // 更新日期顯示
     function updateDate() {
       const dateElement = document.getElementById('currentDate');
-      dateElement.textContent = formatDate(new Date());
+      dateElement.textContent = importedSnapshotDate || formatDate(new Date());
       updateDefectCount();
     }
 
@@ -1519,7 +1522,10 @@
         maxPointNumber = Math.max(maxPointNumber, pointNumber);
       });
       
-      document.getElementById('totalDefects').textContent = maxPointNumber;
+      const displayCount = importedSnapshotDefectCount !== null
+        ? importedSnapshotDefectCount
+        : maxPointNumber;
+      document.getElementById('totalDefects').textContent = displayCount;
     }
 
     // 保存標題到 localStorage
@@ -1568,7 +1574,7 @@
     // 每天凌晨更新日期
     setInterval(() => {
       const now = new Date();
-      if (now.getHours() === 0 && now.getMinutes() === 0) {
+      if (!importedSnapshotDate && now.getHours() === 0 && now.getMinutes() === 0) {
         updateDate();
       }
     }, 60000); // 每分鐘檢查一次
@@ -2451,6 +2457,9 @@
         const defectData = {
           ownerName: document.getElementById('ownerName').value,
           ownerPhone: document.getElementById('ownerPhone').value,
+          pageTitle: document.getElementById('pageTitle').value || '',
+          currentDate: document.getElementById('currentDate').textContent || '',
+          totalDefects: document.getElementById('totalDefects').textContent || '',
           points: points.map(point => ({
             ...point,
             x: point.x,
@@ -2677,6 +2686,7 @@
         document.body.appendChild(processingMsg);
 
         const zip = await JSZip.loadAsync(file);
+        let defectData = null;
         
         // 1. 載入原始平面圖
         const originalImageFile = zip.file("原始平面圖.png");
@@ -2748,7 +2758,7 @@
         const defectDataFile = zip.file("defect_data.json");
         if (defectDataFile) {
           const defectDataText = await defectDataFile.async("text");
-          const defectData = JSON.parse(defectDataText);
+          defectData = JSON.parse(defectDataText);
           
           // 確保在載入點位資料前已清空現有資料
           points = [];
@@ -2819,12 +2829,29 @@
           updateKeywordTable();
         }
 
-        // 載入屋主資訊
-        if (defectData.ownerName) {
+        // 還原上方資訊（屋主、電話、標題、日期、缺失數）
+        if (defectData && defectData.ownerName) {
           document.getElementById('ownerName').value = defectData.ownerName;
         }
-        if (defectData.ownerPhone) {
+        if (defectData && defectData.ownerPhone) {
           document.getElementById('ownerPhone').value = defectData.ownerPhone;
+        }
+        if (defectData && defectData.pageTitle) {
+          document.getElementById('pageTitle').value = defectData.pageTitle;
+        }
+        if (defectData && defectData.currentDate) {
+          importedSnapshotDate = defectData.currentDate;
+          document.getElementById('currentDate').textContent = defectData.currentDate;
+        } else {
+          importedSnapshotDate = null;
+          updateDate();
+        }
+        if (defectData && defectData.totalDefects !== undefined && defectData.totalDefects !== null) {
+          importedSnapshotDefectCount = defectData.totalDefects;
+          document.getElementById('totalDefects').textContent = defectData.totalDefects;
+        } else {
+          importedSnapshotDefectCount = null;
+          updateDefectCount();
         }
         
         // 更新所有相關顯示
