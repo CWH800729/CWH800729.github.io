@@ -886,18 +886,19 @@
         object-fit: contain;
       }
 
-      /* 簽名區域樣式 */
+      /* 簽名區域：列印時使用文件流，避免固定於頁底蓋住缺失照片總覽等後段內容 */
       .signature-container {
-        position: fixed;
-        bottom: 1cm;
-        left: 0;
-        right: 0;
+        position: static !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        margin: 12mm 0 0 0;
         padding: 10px;
         background-color: white;
         border-top: 1px solid #ccc;
         page-break-inside: avoid;
         break-inside: avoid;
-        z-index: 1000;
+        z-index: auto;
       }
 
       .signature-row {
@@ -980,12 +981,34 @@
         width: 85%;
       }
 
-      /* 頁尾樣式 */
+      /* 頁尾樣式：每頁固定顯示頁碼 */
       .page-footer {
         display: block;
         position: fixed;
-        bottom: 1cm;
+        left: 0;
+        right: 0;
+        bottom: 8mm;
         width: 100%;
+        text-align: center;
+        font-size: 10pt;
+        background: transparent;
+      }
+
+      .page-footer .footer-content {
+        justify-content: center;
+      }
+
+      .page-footer .footer-title {
+        display: none !important;
+      }
+
+      .page-footer .footer-page {
+        font-size: 0;
+      }
+
+      .page-footer .footer-page::after {
+        font-size: 10pt;
+        content: "第 " counter(page) " 頁，共 " attr(data-total-pages) " 頁";
       }
 
       /* 作者資訊樣式 */
@@ -998,6 +1021,12 @@
         border-top: 1px solid #ccc;
         background-color: white;
         font-size: 10pt;
+      }
+
+      /* 缺失照片總覽從新頁開始列印 */
+      .photo-overview-container {
+        page-break-before: always;
+        break-before: page;
       }
 
       /* 移除元素間的多餘空白 */
@@ -1022,7 +1051,6 @@
       gap: 10px;
     }
 
-    .print-button,
     .screenshot-button {
       padding: 12px 24px;
       font-size: 16px;
@@ -1034,14 +1062,6 @@
       display: flex;
       align-items: center;
       gap: 8px;
-    }
-
-    .print-button {
-      background-color: #4CAF50;
-    }
-
-    .print-button:hover {
-      background-color: #45a049;
     }
 
     .screenshot-button {
@@ -1179,19 +1199,27 @@
 
     @media print {
       .photo-overview-container {
-        page-break-inside: avoid;
-        break-inside: avoid;
+        position: relative;
+        z-index: 1;
+        margin-top: 10mm;
+        page-break-before: auto;
+        break-before: auto;
       }
 
       .photo-overview-grid {
         border: 1px dashed #999;
       }
 
+      /* 單格可斷頁，避免一整塊與簽名卡在同一頁造成擠壓 */
       .photo-overview-item {
         border: 1px dashed #999;
+        page-break-inside: avoid;
+        break-inside: avoid;
       }
 
       .photo-overview-item img {
+        max-height: 65mm;
+        object-fit: contain;
         border: 1px solid #999;
       }
     }
@@ -1411,7 +1439,7 @@
 
   <!-- 添加頁碼和標題 -->
   <div class="print-footer" id="printFooter"></div>
-  <div class="page-number" id="pageNumber"></div>
+  <div class="page-number" id="printPageNumber"></div>
 
   <!-- 添加統計表格 -->
   <div class="summary-container">
@@ -1461,9 +1489,6 @@
     <button class="screenshot-button" onclick="handleScreenshot()">
       <i class="fas fa-camera"></i> 截圖
     </button>
-    <button class="print-button" onclick="handlePrint()">
-      <i class="fas fa-print"></i> 列印文件
-    </button>
   </div>
 
   <!-- 添加截圖載入中提示 -->
@@ -1481,8 +1506,8 @@
 
   <!-- 添加作者資訊 -->
   <div class="author-footer">
-    <div>表格作者：陳維宏</div>
-    <div>網址：<a href="https://CWH800729.wordpress.com" target="_blank">https://CWH800729.wordpress.com</a></div>
+    <div>系統作者：CWH800729.wordpress.com</div>
+    <!--<div>網址：<a href="https://CWH800729.wordpress.com" target="_blank">https://CWH800729.wordpress.com</a></div>>
   </div>
 
   <!-- 新增照片總覽表格 -->
@@ -3361,10 +3386,18 @@
       const totalPages = Math.ceil(totalRows / rowsPerPage);
       
       // 更新頁碼
-      document.getElementById('pageNumber').textContent = `第 1 頁，共 ${totalPages} 頁`;
+      document.getElementById('printPageNumber').textContent = `第 1 頁，共 ${totalPages} 頁`;
     }
 
     // 更新頁尾信息
+    function estimateTotalPrintPages() {
+      // A4 高度 297mm，@page 上下邊界各 1.5cm，換算可列印高度
+      const pxPerMm = 96 / 25.4;
+      const printableHeightPx = (297 - 30) * pxPerMm;
+      const contentHeightPx = document.body.scrollHeight;
+      return Math.max(1, Math.ceil(contentHeightPx / printableHeightPx));
+    }
+
     function updateFooter() {
       const title = document.getElementById('pageTitle').value;
       document.getElementById('footerTitle').textContent = title;
@@ -3374,7 +3407,10 @@
       const totalRows = document.getElementById('defectBody').rows.length;
       const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
       
-      document.getElementById('footerPage').textContent = `第 1 頁，共 ${totalPages} 頁`;
+      const estimatedPages = Math.max(totalPages, estimateTotalPrintPages());
+      const footerPageEl = document.getElementById('footerPage');
+      footerPageEl.textContent = `第 1 頁，共 ${estimatedPages} 頁`;
+      footerPageEl.setAttribute('data-total-pages', String(estimatedPages));
     }
 
     // 在頁面載入時初始化
@@ -3394,44 +3430,6 @@
       saveTitle();
       updateFooter();
     });
-
-    // 列印處理函數
-    function handlePrint() {
-      // 更新頁尾信息
-      updateFooter();
-      
-      // 確保所有頁面都顯示相同的簽名
-      const signatureCanvases = ['ownerSignature', 'clientSignature', 'constructorSignature'];
-      const signatureImages = signatureCanvases.map(id => {
-        const canvas = document.getElementById(id);
-        return canvas.toDataURL();
-      });
-
-      // 在列印前同步所有頁面的簽名
-      const style = document.createElement('style');
-      style.textContent = `
-        @media print {
-          .signature-container {
-            position: fixed !important;
-            bottom: 1cm !important;
-            left: 0 !important;
-            right: 0 !important;
-            z-index: 1000 !important;
-          }
-          .signature-canvas {
-            image-rendering: -webkit-optimize-contrast !important;
-            image-rendering: crisp-edges !important;
-          }
-        }
-      `;
-      document.head.appendChild(style);
-
-      // 執行列印
-      window.print();
-
-      // 列印完成後移除樣式
-      document.head.removeChild(style);
-    }
 
     // 修改平面圖的觸控事件處理
     canvas.addEventListener('touchstart', function(e) {
