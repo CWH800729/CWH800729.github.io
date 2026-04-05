@@ -507,6 +507,30 @@
       background-color: #eef1f4;
     }
 
+    #keywordTable tr.keyword-group-header td {
+      background-color: #e9ecef;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    #keywordTable tr.keyword-detail-row td:first-child {
+      padding-left: 28px;
+    }
+
+    #keywordTable .keyword-group-count {
+      font-weight: normal;
+      color: #555;
+      margin-left: 4px;
+    }
+
+    #keywordTable .keyword-group-toggle {
+      min-width: 40px;
+      min-height: 36px;
+      font-size: 18px;
+      line-height: 1;
+      padding: 4px 10px;
+    }
+
     #keywordTable td {
       text-align: center;
       font-size: 16px;
@@ -1676,6 +1700,8 @@
     let customKeywordMap = [];
     /** 0=依加入順序（新筆在最上）, 1=廠商升序, 2=廠商降序 */
     let keywordVendorSortMode = 0;
+    /** 同一廠商多筆時，已展開的廠商鍵（字串）；預設收合 */
+    let keywordVendorGroupExpanded = new Set();
     const statusCycle = ["未修繕", "已完成修繕", "已檢查"];
     const canvas = document.getElementById("floorCanvas");
     const ctx = canvas.getContext("2d");
@@ -1787,7 +1813,7 @@
     }
 
     function getLiveKeywordRows() {
-      return Array.from(keywordBody.children)
+      return Array.from(keywordBody.querySelectorAll("tr[data-original-index]"))
         .map(row => {
           const cells = row.cells;
           if (!cells || cells.length < 3) return null;
@@ -1801,6 +1827,21 @@
           };
         })
         .filter(item => item && item.keyword);
+    }
+
+    function vendorGroupKey(vendor) {
+      const v = (vendor || "").trim();
+      return v || "未指定";
+    }
+
+    function toggleKeywordVendorGroup(encodedKey) {
+      const key = vendorGroupKey(decodeURIComponent(encodedKey));
+      if (keywordVendorGroupExpanded.has(key)) {
+        keywordVendorGroupExpanded.delete(key);
+      } else {
+        keywordVendorGroupExpanded.add(key);
+      }
+      updateKeywordTable();
     }
 
     async function copyKeywordListAsText() {
@@ -1860,21 +1901,87 @@
       updateKeywordTable();
     }
 
+    function appendKeywordDataRow(entry, options = {}) {
+      const { item, originalIndex } = entry;
+      const hide = options.hide === true;
+      const row = document.createElement("tr");
+      row.dataset.originalIndex = String(originalIndex);
+      if (options.isGroupedDetail) {
+        row.classList.add("keyword-detail-row");
+      }
+      if (hide) {
+        row.style.display = "none";
+      }
+      row.innerHTML = `
+        <td>${item.keyword}</td>
+        <td>${item.category}</td>
+        <td>${item.vendor}</td>
+        <td>
+          <button type="button" onclick="editKeyword(${originalIndex})">編輯</button>
+          <button type="button" onclick="deleteKeyword(${originalIndex})">刪除</button>
+        </td>`;
+      keywordBody.appendChild(row);
+    }
+
+    function appendKeywordGroupHeader(vendorKey, list) {
+      const tr = document.createElement("tr");
+      tr.className = "keyword-group-header";
+      const tdMain = document.createElement("td");
+      tdMain.colSpan = 3;
+      tdMain.appendChild(document.createTextNode(vendorKey + " "));
+      const span = document.createElement("span");
+      span.className = "keyword-group-count";
+      span.textContent = `（共 ${list.length} 筆）`;
+      tdMain.appendChild(span);
+      const tdBtn = document.createElement("td");
+      const expanded = keywordVendorGroupExpanded.has(vendorKey);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "keyword-group-toggle";
+      btn.textContent = expanded ? "−" : "+";
+      btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+      btn.setAttribute("aria-label", expanded ? "收合明細" : "展開明細");
+      const enc = encodeURIComponent(vendorKey);
+      btn.onclick = () => toggleKeywordVendorGroup(enc);
+      tdBtn.appendChild(btn);
+      tr.appendChild(tdMain);
+      tr.appendChild(tdBtn);
+      keywordBody.appendChild(tr);
+    }
+
     function updateKeywordTable() {
       keywordBody.innerHTML = "";
-      getKeywordRowsForDisplay().forEach(({ item, originalIndex }) => {
-        const row = document.createElement("tr");
-        row.dataset.originalIndex = String(originalIndex);
-        row.innerHTML = `
-          <td>${item.keyword}</td>
-          <td>${item.category}</td>
-          <td>${item.vendor}</td>
-          <td>
-            <button type="button" onclick="editKeyword(${originalIndex})">編輯</button>
-            <button type="button" onclick="deleteKeyword(${originalIndex})">刪除</button>
-          </td>`;
-        keywordBody.appendChild(row);
-      });
+      const flat = getKeywordRowsForDisplay();
+      const groupOrder = [];
+      const groups = new Map();
+      for (const entry of flat) {
+        const gKey = vendorGroupKey(entry.item.vendor);
+        if (!groups.has(gKey)) {
+          groups.set(gKey, []);
+          groupOrder.push(gKey);
+        }
+        groups.get(gKey).push(entry);
+      }
+
+      keywordVendorGroupExpanded = new Set(
+        [...keywordVendorGroupExpanded].filter(k => groupOrder.includes(k))
+      );
+
+      for (const gKey of groupOrder) {
+        const list = groups.get(gKey);
+        if (list.length === 1) {
+          appendKeywordDataRow(list[0], { isGroupedDetail: false });
+        } else {
+          appendKeywordGroupHeader(gKey, list);
+          const expanded = keywordVendorGroupExpanded.has(gKey);
+          for (const entry of list) {
+            appendKeywordDataRow(entry, {
+              isGroupedDetail: true,
+              hide: !expanded
+            });
+          }
+        }
+      }
     }
 
     function editKeyword(originalIndex) {
