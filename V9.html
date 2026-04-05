@@ -221,10 +221,6 @@
       display: none; 
     }
     
-    #toggleKeywordBtn { 
-      margin-bottom: 10px; 
-    }
-
     /* 美化按鈕樣式 */
     button:hover {
       background-color: #e8e8e8;
@@ -392,6 +388,48 @@
       left: -15px;
     }
 
+    /* 關鍵字比對區塊（與下方缺失表格視覺分隔） */
+    .keyword-section {
+      margin: 24px auto;
+      padding: 16px 20px;
+      max-width: 1200px;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      background: #f8f9fa;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .keyword-section-title {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #dee2e6;
+    }
+
+    .keyword-section-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+      align-items: stretch;
+    }
+
+    .keyword-section-toolbar button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      flex: 1 1 0;
+      min-width: 0;
+      min-height: 44px;
+      margin: 0;
+      padding: 10px 16px;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+
     /* 關鍵字表格樣式調整 */
     #keywordTable input[type="text"] {
       width: 90%;
@@ -457,6 +495,16 @@
       text-align: center;
       font-size: 18px;
       padding: 15px 8px;
+    }
+
+    #keywordTable th.keyword-vendor-sort-header {
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    #keywordTable th.keyword-vendor-sort-header:hover {
+      background-color: #eef1f4;
     }
 
     #keywordTable td {
@@ -1354,20 +1402,29 @@
     <i class="fas fa-info-circle"></i> 操作說明：請在平面圖上點擊缺失位置，並拖曳滑鼠來指示箭頭方向。完成後會自動開啟照片上傳視窗。
   </div>
 
-  <button onclick="openKeywordPrompt()">新增關鍵字</button>
-  <button onclick="triggerKeywordTxtImport()">匯入TXT關鍵字</button>
-  <button onclick="pasteKeywordBatch()">貼上批次關鍵字</button>
-  <button onclick="processDescriptions()">關鍵字比對</button>
-  <button id="toggleKeywordBtn" onclick="toggleKeywordTable()">展開/隱藏 關鍵字清單</button>
-  <input type="file" id="keywordTxtImporter" accept=".txt,text/plain" style="display:none" />
+  <div class="keyword-section">
+    <h3 class="keyword-section-title">關鍵字比對設定</h3>
+    <div class="keyword-section-toolbar">
+      <button type="button" onclick="openKeywordPrompt()">1.資料庫新增</button>
+      <button type="button" onclick="processDescriptions()">2.資料比對</button>
+      <button type="button" id="toggleKeywordBtn" onclick="toggleKeywordTable()">3.資料清單</button>
+      <button type="button" onclick="pasteKeywordBatch()">4.資料匯入</button>
+      <button type="button" onclick="copyKeywordListAsText()">5.資料匯出</button>
+    </div>
 
-  <div id="keywordTable">
-    <table>
-      <thead>
-        <tr><th>關鍵字</th><th>分類</th><th>廠商</th><th>操作</th></tr>
-      </thead>
-      <tbody id="keywordBody"></tbody>
-    </table>
+    <div id="keywordTable">
+      <table>
+        <thead>
+          <tr>
+            <th>關鍵字</th>
+            <th>分類</th>
+            <th class="keyword-vendor-sort-header" onclick="cycleKeywordVendorSort()" title="切換排序：加入順序（新筆在上）／廠商升序／廠商降序">廠商 <span id="keywordVendorSortHint">↕</span></th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="keywordBody"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- 在缺失表格前添加篩選器 -->
@@ -1617,6 +1674,8 @@
       { keyword: "地磚", category: "地坪", vendor: "廠商B" },
     ];
     let customKeywordMap = [];
+    /** 0=依加入順序（新筆在最上）, 1=廠商升序, 2=廠商降序 */
+    let keywordVendorSortMode = 0;
     const statusCycle = ["未修繕", "已完成修繕", "已檢查"];
     const canvas = document.getElementById("floorCanvas");
     const ctx = canvas.getContext("2d");
@@ -1663,7 +1722,7 @@
       const category = prompt("請輸入此關鍵字對應的項目分類");
       const vendor = prompt("請輸入此關鍵字對應的廠商名稱");
       if (category && vendor) {
-        customKeywordMap.push({ keyword, category, vendor });
+        customKeywordMap.unshift({ keyword, category, vendor });
         updateKeywordTable();
         alert("已儲存關鍵字設定");
       }
@@ -1727,88 +1786,8 @@
       alert(`已匯入 ${entries.length} 筆關鍵字。${skippedText}`);
     }
 
-    function triggerKeywordTxtImport() {
-      const input = document.getElementById("keywordTxtImporter");
-      input.value = "";
-      input.click();
-    }
-
-    function pasteKeywordBatch() {
-      const sample = "窗框,門窗工程,三協;地磚,地坪,大座;";
-      const text = prompt(`請貼上批次關鍵字內容，以逗號","分隔內容，以分號";"分隔每筆資料（格式：關鍵字,分類,廠商;）\n範例：\n${sample}`);
-      if (text === null) return;
-      applyKeywordBatchText(text);
-    }
-
-    function updateKeywordTable() {
-      keywordBody.innerHTML = "";
-      customKeywordMap.forEach((item, idx) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${item.keyword}</td>
-          <td>${item.category}</td>
-          <td>${item.vendor}</td>
-          <td>
-            <button onclick="editKeyword(${idx})">編輯</button>
-            <button onclick="deleteKeyword(${idx})">刪除</button>
-          </td>`;
-        keywordBody.appendChild(row);
-      });
-    }
-
-    function editKeyword(index) {
-      const row = keywordBody.children[index];
-      const item = customKeywordMap[index];
-      const isEditing = row.querySelector('input') === null;
-      
-      if (isEditing) {
-        row.innerHTML = `
-          <td><input type="text" value="${item.keyword}"></td>
-          <td><input type="text" value="${item.category}"></td>
-          <td><input type="text" value="${item.vendor}"></td>
-          <td>
-            <button onclick="saveKeyword(${index})">儲存</button>
-            <button onclick="deleteKeyword(${index})">刪除</button>
-          </td>`;
-      }
-    }
-
-    function saveKeyword(index) {
-      const row = keywordBody.children[index];
-      const inputs = row.querySelectorAll('input');
-      
-      customKeywordMap[index] = {
-        keyword: inputs[0].value,
-        category: inputs[1].value,
-        vendor: inputs[2].value
-      };
-      
-      updateKeywordTable();
-    }
-
-    function deleteKeyword(index) {
-      customKeywordMap.splice(index, 1);
-      updateKeywordTable();
-    }
-
-    document.getElementById("keywordTxtImporter").addEventListener("change", function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        const text = evt.target.result || "";
-        applyKeywordBatchText(text);
-      };
-      reader.onerror = function() {
-        alert("TXT 讀取失敗，請重試。");
-      };
-      reader.readAsText(file, "utf-8");
-    });
-
-    function processDescriptions() {
-      // 每次按下都從目前關鍵字表格重建比對清單（含尚未按「儲存」的編輯內容）
-      const liveCustomKeywords = Array.from(keywordBody.children)
+    function getLiveKeywordRows() {
+      return Array.from(keywordBody.children)
         .map(row => {
           const cells = row.cells;
           if (!cells || cells.length < 3) return null;
@@ -1822,6 +1801,122 @@
           };
         })
         .filter(item => item && item.keyword);
+    }
+
+    async function copyKeywordListAsText() {
+      const entries = getLiveKeywordRows();
+      if (!entries.length) {
+        alert("目前沒有可複製的關鍵字。");
+        return;
+      }
+      const text = entries
+        .map(e => `${e.keyword},${e.category},${e.vendor}`)
+        .join(";\n") + ";";
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          throw new Error("no clipboard api");
+        }
+      } catch (err) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+
+      alert("已複製到剪貼簿，可貼到 LINE 或其他地方自行保存。");
+    }
+
+    function pasteKeywordBatch() {
+      const sample = "窗框,門窗工程,三協;地磚,地坪,大座;";
+      const text = prompt(`請貼上批次關鍵字內容，以逗號","分隔內容，以分號";"分隔每筆資料（格式：關鍵字,分類,廠商;）\n範例：\n${sample}`);
+      if (text === null) return;
+      applyKeywordBatchText(text);
+    }
+
+    function getKeywordRowsForDisplay() {
+      const base = customKeywordMap.map((item, originalIndex) => ({ item, originalIndex }));
+      if (keywordVendorSortMode === 0) return base;
+      return [...base].sort((a, b) => {
+        const v = a.item.vendor.localeCompare(b.item.vendor, 'zh-Hant');
+        if (v !== 0) return keywordVendorSortMode === 1 ? v : -v;
+        return a.item.keyword.localeCompare(b.item.keyword, 'zh-Hant');
+      });
+    }
+
+    function cycleKeywordVendorSort() {
+      keywordVendorSortMode = (keywordVendorSortMode + 1) % 3;
+      const hint = document.getElementById('keywordVendorSortHint');
+      if (hint) {
+        hint.textContent = keywordVendorSortMode === 0 ? '↕' : keywordVendorSortMode === 1 ? '↑' : '↓';
+      }
+      updateKeywordTable();
+    }
+
+    function updateKeywordTable() {
+      keywordBody.innerHTML = "";
+      getKeywordRowsForDisplay().forEach(({ item, originalIndex }) => {
+        const row = document.createElement("tr");
+        row.dataset.originalIndex = String(originalIndex);
+        row.innerHTML = `
+          <td>${item.keyword}</td>
+          <td>${item.category}</td>
+          <td>${item.vendor}</td>
+          <td>
+            <button type="button" onclick="editKeyword(${originalIndex})">編輯</button>
+            <button type="button" onclick="deleteKeyword(${originalIndex})">刪除</button>
+          </td>`;
+        keywordBody.appendChild(row);
+      });
+    }
+
+    function editKeyword(originalIndex) {
+      const row = keywordBody.querySelector(`tr[data-original-index="${originalIndex}"]`);
+      if (!row) return;
+      const item = customKeywordMap[originalIndex];
+      const isEditing = row.querySelector('input') === null;
+      
+      if (isEditing) {
+        row.innerHTML = `
+          <td><input type="text" value="${item.keyword}"></td>
+          <td><input type="text" value="${item.category}"></td>
+          <td><input type="text" value="${item.vendor}"></td>
+          <td>
+            <button type="button" onclick="saveKeyword(${originalIndex})">儲存</button>
+            <button type="button" onclick="deleteKeyword(${originalIndex})">刪除</button>
+          </td>`;
+      }
+    }
+
+    function saveKeyword(originalIndex) {
+      const row = keywordBody.querySelector(`tr[data-original-index="${originalIndex}"]`);
+      if (!row) return;
+      const inputs = row.querySelectorAll('input');
+      
+      customKeywordMap[originalIndex] = {
+        keyword: inputs[0].value,
+        category: inputs[1].value,
+        vendor: inputs[2].value
+      };
+      
+      updateKeywordTable();
+    }
+
+    function deleteKeyword(originalIndex) {
+      customKeywordMap.splice(originalIndex, 1);
+      updateKeywordTable();
+    }
+
+    function processDescriptions() {
+      // 每次按下都從目前關鍵字表格重建比對清單（含尚未按「儲存」的編輯內容）
+      const liveCustomKeywords = getLiveKeywordRows();
 
       // 比對優先順序：
       // 1) 使用者關鍵字清單優先於內建關鍵字
