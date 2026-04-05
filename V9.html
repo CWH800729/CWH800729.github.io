@@ -2443,29 +2443,7 @@
         
         addTableRow(id);
         draw();
-        
-        // 修正照片上傳觸發邏輯
-        const photoUploader = document.getElementById('photoUploader');
-        if (!photoUploader) {
-          console.error('找不到照片上傳元素');
-          return;
-        }
-        
-        photoUploader.dataset.pointId = id;
-        
-        // 檢查是否為移動設備且支援相機
-        if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          // 移動設備：提供選擇拍照或上傳
-          const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
-          if (choice) {
-            openCamera(id);
-          } else {
-            photoUploader.click();
-          }
-        } else {
-          // PC設備：直接開啟檔案選擇
-          photoUploader.click();
-        }
+        promptPhotoForNewPoint(id);
       } else {
         // 如果拖曳距離太短，重新繪製以清除預覽
         draw();
@@ -2569,6 +2547,47 @@
         );
         // 重置為實線
         ctx.setLineDash([]);
+      }
+    }
+
+    function removeLastCreatedPoint(id) {
+      const index = points.findIndex(p => p.id === id);
+      if (index === -1) return;
+      document.getElementById("defectTable").deleteRow(index + 1);
+      points.splice(index, 1);
+      delete pointPhotos[id];
+      reindexPoints();
+      updateVendorFilter();
+      updateSummaryTable();
+      updateDefectCount();
+      updateFooter();
+      updatePhotoOverview();
+      if (highlightedId === id) highlightedId = null;
+    }
+
+    /** 新點位建立後：先確認是否誤觸；取消則刪除該點，再進入相機／選檔 */
+    function promptPhotoForNewPoint(id) {
+      const photoUploader = document.getElementById("photoUploader");
+      if (!photoUploader) {
+        console.error("找不到照片上傳元素");
+        return;
+      }
+      photoUploader.dataset.pointId = id;
+
+      if (!confirm("若要繼續為此點位新增照片，請按「確定」。\n若為誤觸請按「取消」將刪除此點位。")) {
+        removeLastCreatedPoint(id);
+        return;
+      }
+
+      if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const choice = confirm("要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案");
+        if (choice) {
+          openCamera(id);
+        } else {
+          photoUploader.click();
+        }
+      } else {
+        photoUploader.click();
       }
     }
 
@@ -3704,29 +3723,7 @@
         
         addTableRow(id);
         draw();
-        
-        // 修正照片上傳觸發邏輯
-        const photoUploader = document.getElementById('photoUploader');
-        if (!photoUploader) {
-          console.error('找不到照片上傳元素');
-          return;
-        }
-        
-        photoUploader.dataset.pointId = id;
-        
-        // 檢查是否為移動設備且支援相機
-        if (isMobileDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          // 移動設備：提供選擇拍照或上傳
-          const choice = confirm('要使用相機拍照嗎？\n按「確定」使用相機拍照\n按「取消」選擇照片檔案');
-          if (choice) {
-            openCamera(id);
-          } else {
-            photoUploader.click();
-          }
-        } else {
-          // PC設備：直接開啟檔案選擇
-          photoUploader.click();
-        }
+        promptPhotoForNewPoint(id);
       } else {
         // 如果拖曳距離太短，重新繪製以清除預覽
         draw();
