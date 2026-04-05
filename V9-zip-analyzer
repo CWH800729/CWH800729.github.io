@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>缺失表格系統 資料分析／統整</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #fff;
+      --border: #dee2e6;
+      --accent: #2c5282;
+      --muted: #6c757d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: var(--bg);
+      color: #212529;
+      line-height: 1.5;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin: 0 0 8px;
+      color: var(--accent);
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 20px;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--card);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .toolbar input[type="file"] { max-width: 100%; }
+    button {
+      padding: 8px 16px;
+      font-size: 15px;
+      border: none;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #err {
+      color: #c0392b;
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+    }
+    #out { display: none; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+    }
+    section h2 {
+      margin: 0 0 12px;
+      font-size: 1.15rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 8px;
+      color: #333;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px 20px;
+    }
+    .meta-grid dt { color: var(--muted); font-size: 0.9rem; }
+    .meta-grid dd { margin: 0 0 8px; font-weight: 600; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      background: #e8eef5;
+      border-radius: 8px;
+      padding: 12px 14px;
+      text-align: center;
+    }
+    .card .num { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+    .card .lbl { font-size: 0.85rem; color: var(--muted); }
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    table.data th, table.data td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+    }
+    table.data th { background: #e9ecef; }
+    table.data tr:nth-child(even) { background: #fafbfc; }
+    .project-block {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .project-block > h2 {
+      margin: 0 0 6px;
+      font-size: 1.2rem;
+      color: var(--accent);
+      border: none;
+      padding: 0;
+    }
+    .project-block .zip-name {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .project-block h3 {
+      margin: 18px 0 10px;
+      font-size: 1.05rem;
+      color: #333;
+      border-left: 4px solid var(--accent);
+      padding-left: 10px;
+    }
+    .img-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .img-box {
+      flex: 1 1 280px;
+      max-width: 100%;
+    }
+    .img-box img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+    }
+    .img-box .cap { font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .photo-grid figure {
+      margin: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+      cursor: zoom-in;
+    }
+    .photo-grid img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      display: block;
+    }
+    .photo-grid figcaption {
+      padding: 6px 8px;
+      font-size: 12px;
+      color: #444;
+      word-break: break-all;
+    }
+    ul.files {
+      margin: 0;
+      padding-left: 1.2rem;
+      font-size: 13px;
+      color: #444;
+      max-height: 240px;
+      overflow: auto;
+    }
+    .badge { font-size: 12px; color: var(--muted); }
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(0, 0, 0, 0.88);
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      cursor: zoom-out;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 4px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .lightbox .hint {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #ccc;
+      font-size: 13px;
+    }
+    .merged-controls {
+      margin-bottom: 14px;
+    }
+    .chip-group {
+      margin-bottom: 12px;
+    }
+    .chip-group .row-h {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .chip-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+    button.chip {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: #fff;
+      color: #212529;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+    button.chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    button.chip.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .sort-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      align-items: center;
+      margin-top: 4px;
+      font-size: 14px;
+    }
+    .sort-row label {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .sort-row select {
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    @media print {
+      body { background: #fff; padding: 12px; }
+      .toolbar, #err, .merged-controls { display: none !important; }
+      .merged-section {
+        break-after: page;
+        page-break-after: always;
+      }
+      .project-block + .project-block {
+        break-before: page;
+        page-break-before: always;
+      }
+      .project-block, section {
+        box-shadow: none;
+      }
+      table.data tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+    @media print {
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <h1>V9 匯出資料包分析／統整</h1>
+  <p class="sub">
+    可一次選擇多個由 <strong>V9.html</strong>「匯出資料」產生的 <code>.zip</code>；每個 ZIP 視為一個專案。頁面上方為<strong>跨專案統整</strong>（整體摘要、廠商統計），下方依專案分區顯示缺失、平面圖與照片。
+  </p>
+
+  <div class="toolbar">
+    <input type="file" id="zipFiles" accept=".zip,application/zip" multiple />
+    <button type="button" id="btnClear" disabled>清除結果</button>
+  </div>
+  <div id="err"></div>
+
+  <div id="out">
+    <section>
+      <h2>匯入概況</h2>
+      <dl class="meta-grid" id="metaDl"></dl>
+    </section>
+
+    <section>
+      <h2>整體摘要（跨專案）</h2>
+      <div class="cards" id="summaryCards"></div>
+    </section>
+
+    <section>
+      <h2>廠商統計（跨專案，由缺失清單彙整）</h2>
+      <table class="data" id="vendorTable">
+        <thead>
+          <tr>
+            <th>廠商</th>
+            <th>總筆數</th>
+            <th>未修繕</th>
+            <th>已完成修繕</th>
+            <th>已檢查</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="mergedSection" class="merged-section" style="display:none;">
+      <h2>全專案缺失整合</h2>
+      <p class="badge">以下為所有 ZIP 之缺失列合併。請<strong>點選下方晶片</strong>篩選廠商／類別（可同時套用）；再以<strong>第一／第二排序</strong>決定本表列順序。篩選會<strong>同步套用至下方各專案</strong>（缺失表、對應點位照片、標記平面圖；無符合列之專案整區不顯示）。列印時此區塊下方會分頁，且「套件內檔案清單」不列印。</p>
+      <div class="merged-controls" id="mergedControls">
+        <div class="chip-group">
+          <div class="row-h">廠商（點選篩選）</div>
+          <div id="mergedVendorChips" class="chip-wrap"></div>
+        </div>
+        <div class="chip-group">
+          <div class="row-h">類別（點選篩選）</div>
+          <div id="mergedCategoryChips" class="chip-wrap"></div>
+        </div>
+        <div class="sort-row">
+          <label>第一排序
+            <select id="mergedSort1">
+              <option value="point">點位</option>
+              <option value="desc">缺失說明</option>
+              <option value="cat">類別</option>
+              <option value="vendor">廠商</option>
+            </select>
+            <select id="mergedSort1Dir">
+              <option value="asc">升序</option>
+              <option value="desc">降序</option>
+            </select>
+          </label>
+          <label>第二排序
+            <select id="mergedSort2">
+              <option value="none">無</option>
+              <option value="point">點位</option>
+              <option value="desc">缺失說明</option>
+              <option value="cat">類別</option>
+              <option value="vendor">廠商</option>
+            </select>
+            <select id="mergedSort2Dir">
+              <option value="asc">升序</option>
+              <option value="desc">降序</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data" id="mergedTable">
+          <thead>
+            <tr>
+              <th>點位</th>
+              <th>缺失說明</th>
+              <th>類別</th>
+              <th>廠商</th>
+            </tr>
+          </thead>
+          <tbody id="mergedTableBody"></tbody>
+        </table>
+      </div>
+      <p id="mergedCount" class="badge" style="margin-top:10px;"></p>
+    </section>
+
+    <div id="projectsRoot"></div>
+  </div>
+
+  <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="照片放大">
+    <img id="lightboxImg" src="" alt="" />
+    <span class="hint">點擊畫面關閉</span>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const errEl = $('err');
+    const outEl = $('out');
+
+    /** 供整合表篩選／排序用 */
+    let mergedRowsCache = [];
+    let mergedFilterVendor = null;
+    let mergedFilterCategory = null;
+    /** 目前載入的專案資料（供篩選聯動下方專案區塊） */
+    let cachedProjects = [];
+
+    function showError(msg) {
+      errEl.textContent = msg || '';
+    }
+
+    function clearAll() {
+      showError('');
+      outEl.style.display = 'none';
+      $('zipFiles').value = '';
+      $('btnClear').disabled = true;
+      $('projectsRoot').innerHTML = '';
+      mergedRowsCache = [];
+      mergedFilterVendor = null;
+      mergedFilterCategory = null;
+      cachedProjects = [];
+      const ms = $('mergedSection');
+      if (ms) {
+        ms.style.display = 'none';
+        $('mergedTableBody').innerHTML = '';
+        $('mergedCount').textContent = '';
+        const vc = $('mergedVendorChips');
+        const cc = $('mergedCategoryChips');
+        if (vc) vc.innerHTML = '';
+        if (cc) cc.innerHTML = '';
+        if ($('mergedSort1')) $('mergedSort1').value = 'point';
+        if ($('mergedSort1Dir')) $('mergedSort1Dir').value = 'asc';
+        if ($('mergedSort2')) $('mergedSort2').value = 'desc';
+        if ($('mergedSort2Dir')) $('mergedSort2Dir').value = 'asc';
+      }
+    }
+
+    function normalizeVendor(v) {
+      return (String(v || '').trim() || '未指定');
+    }
+
+    function normalizeCategoryKey(cat) {
+      const s = String(cat || '').trim();
+      return s === '' ? '（空白）' : s;
+    }
+
+    function parsePointNum(rowId) {
+      const n = Number(rowId);
+      if (Number.isFinite(n)) return n;
+      const m = String(rowId).match(/(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    }
+
+    function rowMatchesMergedFilter(row) {
+      if (mergedFilterVendor === null && mergedFilterCategory === null) return true;
+      const vendorNorm = normalizeVendor(row.vendor);
+      const categoryKey = normalizeCategoryKey(row.category);
+      if (mergedFilterVendor !== null && vendorNorm !== mergedFilterVendor) return false;
+      if (mergedFilterCategory !== null && categoryKey !== mergedFilterCategory) return false;
+      return true;
+    }
+
+    /** 與 V9 匯出檔名「…-點位N.jpg」對應 */
+    function extractPointIdFromPhotoName(name) {
+      const s = String(name);
+      let m = s.match(/點位\s*(\d+)/);
+      if (m) return m[1];
+      m = s.match(/點\s*(\d+)/);
+      if (m) return m[1];
+      return null;
+    }
+
+    function filterPhotosForPointRows(photos, tableRows) {
+      const ids = new Set(tableRows.map((r) => String(r.id)));
+      return photos.filter((p) => {
+        const pid = extractPointIdFromPhotoName(p.name);
+        return pid !== null && ids.has(pid);
+      });
+    }
+
+    function buildMergedRows(projects) {
+      const rows = [];
+      projects.forEach((p) => {
+        const zipFileName = p.zipFileName;
+        const tableData = (p.defectData && p.defectData.tableData) ? p.defectData.tableData : [];
+        tableData.forEach((row) => {
+          const vendorNorm = normalizeVendor(row.vendor);
+          const categoryRaw = String(row.category || '');
+          rows.push({
+            pointLabel: formatPointLabel(zipFileName, row.id),
+            pointNum: parsePointNum(row.id),
+            description: String(row.description || ''),
+            category: categoryRaw,
+            vendor: String(row.vendor || ''),
+            vendorNorm,
+            categoryKey: normalizeCategoryKey(categoryRaw)
+          });
+        });
+      });
+      return rows;
+    }
+
+    function getSortValue(r, key) {
+      if (key === 'point') return r.pointNum;
+      if (key === 'desc') return r.description;
+      if (key === 'cat') return r.categoryKey;
+      if (key === 'vendor') return r.vendorNorm;
+      return '';
+    }
+
+    function compareMerged(a, b, key, dir) {
+      const va = getSortValue(a, key);
+      const vb = getSortValue(b, key);
+      let c = 0;
+      if (key === 'point') {
+        c = (Number(va) || 0) - (Number(vb) || 0);
+      } else {
+        c = String(va).localeCompare(String(vb), 'zh-Hant');
+      }
+      if (dir === 'desc') c = -c;
+      return c;
+    }
+
+    function dualSortRows(rows, k1, d1, k2, d2) {
+      const list = rows.slice();
+      list.sort((a, b) => {
+        let c = compareMerged(a, b, k1, d1);
+        if (c !== 0) return c;
+        if (!k2 || k2 === 'none') return 0;
+        if (k2 === k1) return 0;
+        return compareMerged(a, b, k2, d2);
+      });
+      return list;
+    }
+
+    function countVendorsRespectingCategory() {
+      const counts = {};
+      mergedRowsCache.forEach((r) => {
+        if (mergedFilterCategory !== null && r.categoryKey !== mergedFilterCategory) return;
+        const v = r.vendorNorm;
+        counts[v] = (counts[v] || 0) + 1;
+      });
+      return counts;
+    }
+
+    function countCategoriesRespectingVendor() {
+      const counts = {};
+      mergedRowsCache.forEach((r) => {
+        if (mergedFilterVendor !== null && r.vendorNorm !== mergedFilterVendor) return;
+        const c = r.categoryKey;
+        counts[c] = (counts[c] || 0) + 1;
+      });
+      return counts;
+    }
+
+    function renderVendorChips() {
+      const wrap = $('mergedVendorChips');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      const counts = countVendorsRespectingCategory();
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+      const mk = (label, value, count, isAll) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip';
+        const active = isAll ? mergedFilterVendor === null : mergedFilterVendor === value;
+        if (active) btn.classList.add('active');
+        btn.textContent = label + '（' + count + '）';
+        btn.addEventListener('click', () => {
+          mergedFilterVendor = isAll ? null : value;
+          renderVendorChips();
+          renderCategoryChips();
+          refreshMergedTable();
+          renderProjectBlocks();
+        });
+        wrap.appendChild(btn);
+      };
+
+      mk('全部', null, total, true);
+      const vendors = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+      vendors.forEach((v) => mk(v, v, counts[v], false));
+    }
+
+    function renderCategoryChips() {
+      const wrap = $('mergedCategoryChips');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      const counts = countCategoriesRespectingVendor();
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+      const mk = (label, value, count, isAll) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip';
+        const active = isAll ? mergedFilterCategory === null : mergedFilterCategory === value;
+        if (active) btn.classList.add('active');
+        btn.textContent = label + '（' + count + '）';
+        btn.addEventListener('click', () => {
+          mergedFilterCategory = isAll ? null : value;
+          renderVendorChips();
+          renderCategoryChips();
+          refreshMergedTable();
+          renderProjectBlocks();
+        });
+        wrap.appendChild(btn);
+      };
+
+      mk('全部', null, total, true);
+      const cats = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+      cats.forEach((c) => mk(c, c, counts[c], false));
+    }
+
+    function refreshMergedTable() {
+      const tbody = $('mergedTableBody');
+      tbody.innerHTML = '';
+
+      let rows = mergedRowsCache.filter((r) => {
+        if (mergedFilterVendor !== null && r.vendorNorm !== mergedFilterVendor) return false;
+        if (mergedFilterCategory !== null && r.categoryKey !== mergedFilterCategory) return false;
+        return true;
+      });
+
+      const k1 = $('mergedSort1').value;
+      const d1 = $('mergedSort1Dir').value;
+      const k2 = $('mergedSort2').value;
+      const d2 = $('mergedSort2Dir').value;
+      if (k2 !== 'none' && k2 === k1) {
+        /* 避免兩欄相同無效；仍允許但第二排序不生效 */
+      }
+      rows = dualSortRows(rows, k1, d1, k2, d2);
+
+      rows.forEach((r) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(r.pointLabel)}</td>
+          <td>${escapeHtml(r.description)}</td>
+          <td>${escapeHtml(r.category)}</td>
+          <td>${escapeHtml(r.vendor)}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      const total = mergedRowsCache.length;
+      const shown = rows.length;
+      let msg = '顯示 ' + shown + ' / ' + total + ' 筆';
+      if (mergedFilterVendor !== null || mergedFilterCategory !== null) msg += '（已套用晶片篩選）';
+      $('mergedCount').textContent = msg;
+    }
+
+    function wireMergedSortControls() {
+      const ids = ['mergedSort1', 'mergedSort1Dir', 'mergedSort2', 'mergedSort2Dir'];
+      ids.forEach((id) => {
+        const el = $(id);
+        if (!el || el.dataset.wired) return;
+        el.dataset.wired = '1';
+        el.addEventListener('change', () => refreshMergedTable());
+      });
+    }
+
+    function renderMergedSection(projects) {
+      mergedRowsCache = buildMergedRows(projects);
+      mergedFilterVendor = null;
+      mergedFilterCategory = null;
+      $('mergedSection').style.display = 'block';
+
+      if ($('mergedSort1')) $('mergedSort1').value = 'point';
+      if ($('mergedSort1Dir')) $('mergedSort1Dir').value = 'asc';
+      if ($('mergedSort2')) $('mergedSort2').value = 'desc';
+      if ($('mergedSort2Dir')) $('mergedSort2Dir').value = 'asc';
+
+      wireMergedSortControls();
+      renderVendorChips();
+      renderCategoryChips();
+      refreshMergedTable();
+    }
+
+    function buildVendorStats(rows) {
+      const stats = {};
+      rows.forEach((row) => {
+        const v = (row.vendor || '未指定').trim() || '未指定';
+        const st = (row.status || '未修繕').trim();
+        if (!stats[v]) {
+          stats[v] = { total: 0, '未修繕': 0, '已完成修繕': 0, '已檢查': 0 };
+        }
+        stats[v].total++;
+        if (stats[v][st] !== undefined) stats[v][st]++;
+        else stats[v]['未修繕']++;
+      });
+      return stats;
+    }
+
+    function formatBytes(n) {
+      if (n < 1024) return n + ' B';
+      if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+      return (n / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    /** 點位欄位：以匯入的 ZIP 檔名辨識所屬專案 */
+    function formatPointLabel(zipFileName, pointId) {
+      const name = (zipFileName || '').trim() || '（無檔名）';
+      return '【' + name + '】點' + String(pointId);
+    }
+
+    async function analyzeZip(arrayBuffer, zipFileName) {
+      const zip = await JSZip.loadAsync(arrayBuffer);
+      const paths = [];
+      zip.forEach((path, entry) => {
+        if (!entry.dir) paths.push({ path, entry });
+      });
+      paths.sort((a, b) => a.path.localeCompare(b.path, 'zh-Hant'));
+
+      let defectData = null;
+
+      const readText = async (name) => {
+        const f = zip.file(name);
+        if (!f) return null;
+        return await f.async('string');
+      };
+      const readBase64 = async (name) => {
+        const f = zip.file(name);
+        if (!f) return null;
+        return await f.async('base64');
+      };
+
+      const defectText = await readText('defect_data.json');
+      if (defectText) {
+        try { defectData = JSON.parse(defectText); } catch (e) { throw new Error(zipFileName + '：defect_data.json 解析失敗'); }
+      }
+
+      const markedB64 = await readBase64('標記平面圖.png');
+
+      const photos = [];
+      for (const { path, entry } of paths) {
+        if (path.startsWith('照片/') && /\.(jpe?g)$/i.test(path)) {
+          const b64 = await entry.async('base64');
+          const name = path.split('/').pop();
+          photos.push({ path, name, dataUrl: 'data:image/jpeg;base64,' + b64 });
+        }
+      }
+
+      let xlsxName = null;
+      for (const { path } of paths) {
+        if (/\.xlsx$/i.test(path) && !path.includes('__MACOSX')) {
+          xlsxName = path;
+          break;
+        }
+      }
+
+      const pageTitle = defectData && defectData.pageTitle != null ? String(defectData.pageTitle) : '';
+
+      return {
+        zipFileName,
+        pageTitle,
+        displayTitle: pageTitle || zipFileName.replace(/\.zip$/i, ''),
+        defectData,
+        markedB64,
+        photos,
+        paths,
+        xlsxName
+      };
+    }
+
+    function openLightbox(dataUrl) {
+      const lb = $('lightbox');
+      const img = $('lightboxImg');
+      img.src = dataUrl;
+      lb.classList.add('open');
+    }
+
+    function closeLightbox() {
+      const lb = $('lightbox');
+      lb.classList.remove('open');
+      $('lightboxImg').src = '';
+    }
+
+    $('lightbox').addEventListener('click', closeLightbox);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLightbox();
+    });
+
+    /**
+     * @returns {HTMLElement|null} 有套用篩選且該專案無符合列時回傳 null（不顯示區塊）
+     */
+    function renderProjectBlock(proj) {
+      const {
+        displayTitle,
+        zipFileName,
+        defectData,
+        markedB64,
+        photos,
+        paths,
+        xlsxName
+      } = proj;
+
+      const tableData = (defectData && defectData.tableData) ? defectData.tableData : [];
+      const hasMergedFilter = mergedFilterVendor !== null || mergedFilterCategory !== null;
+      const filteredRows = hasMergedFilter ? tableData.filter(rowMatchesMergedFilter) : tableData;
+
+      if (hasMergedFilter && filteredRows.length === 0) {
+        return null;
+      }
+
+      const rowsToShow = hasMergedFilter ? filteredRows : tableData;
+      const photosToShow = hasMergedFilter ? filterPhotosForPointRows(photos, rowsToShow) : photos;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'project-block';
+
+      const h2 = document.createElement('h2');
+      h2.textContent = escapeHtml(displayTitle);
+      wrap.appendChild(h2);
+
+      const sub = document.createElement('div');
+      sub.className = 'zip-name';
+      sub.textContent = '檔案：' + zipFileName;
+      wrap.appendChild(sub);
+
+      const hDef = document.createElement('h3');
+      hDef.textContent = hasMergedFilter
+        ? '缺失清單（與上方全專案篩選一致）'
+        : '缺失清單（點位、缺失說明、類別、廠商）';
+      wrap.appendChild(hDef);
+
+      const tableWrap = document.createElement('div');
+      tableWrap.style.overflowX = 'auto';
+      const table = document.createElement('table');
+      table.className = 'data';
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>點位</th>
+            <th>缺失說明</th>
+            <th>類別</th>
+            <th>廠商</th>
+          </tr>
+        </thead>
+        <tbody></tbody>`;
+      const tbody = table.querySelector('tbody');
+      rowsToShow.forEach((row) => {
+        const tr = document.createElement('tr');
+        const pointLabel = formatPointLabel(zipFileName, row.id);
+        tr.innerHTML = `
+          <td>${escapeHtml(pointLabel)}</td>
+          <td>${escapeHtml(String(row.description || ''))}</td>
+          <td>${escapeHtml(String(row.category || ''))}</td>
+          <td>${escapeHtml(String(row.vendor || ''))}</td>`;
+        tbody.appendChild(tr);
+      });
+      if (rowsToShow.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="4" class="badge">無 tableData 或 defect_data.json 缺失</td>';
+        tbody.appendChild(tr);
+      }
+      tableWrap.appendChild(table);
+      wrap.appendChild(tableWrap);
+
+      const hFloor = document.createElement('h3');
+      hFloor.textContent = '標記平面圖（含點位箭頭；依版面自動縮放）';
+      wrap.appendChild(hFloor);
+
+      const floorRow = document.createElement('div');
+      floorRow.className = 'img-row';
+      const showFloor = markedB64 && (rowsToShow.length > 0 || !hasMergedFilter);
+      if (showFloor) {
+        const box = document.createElement('div');
+        box.className = 'img-box';
+        box.innerHTML = `<img alt="標記平面圖" src="data:image/png;base64,${markedB64}" /><div class="cap">標記平面圖.png</div>`;
+        floorRow.appendChild(box);
+      } else if (!markedB64) {
+        floorRow.innerHTML = '<p class="badge">此套件未包含標記平面圖.png。</p>';
+      } else {
+        floorRow.innerHTML = '<p class="badge">此篩選下無缺失，不顯示平面圖。</p>';
+      }
+      wrap.appendChild(floorRow);
+
+      const hPh = document.createElement('h3');
+      hPh.textContent = '點位照片（縮圖；點圖可放大）';
+      wrap.appendChild(hPh);
+
+      const grid = document.createElement('div');
+      grid.className = 'photo-grid';
+      if (photosToShow.length === 0) {
+        grid.innerHTML = '<p class="badge">' +
+          (photos.length === 0 ? '照片資料夾中無 jpg 或路徑不同。' : '此篩選下無對應點位照片（或檔名無法對應點位）。') +
+          '</p>';
+      } else {
+        photosToShow.forEach((p) => {
+          const fig = document.createElement('figure');
+          const img = document.createElement('img');
+          img.src = p.dataUrl;
+          img.alt = p.name;
+          img.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            openLightbox(p.dataUrl);
+          });
+          const cap = document.createElement('figcaption');
+          cap.textContent = p.name;
+          fig.appendChild(img);
+          fig.appendChild(cap);
+          grid.appendChild(fig);
+        });
+      }
+      wrap.appendChild(grid);
+
+      const fileSection = document.createElement('div');
+      fileSection.className = 'no-print';
+
+      const hFiles = document.createElement('h3');
+      hFiles.textContent = '套件內檔案清單';
+      fileSection.appendChild(hFiles);
+
+      const fileList = document.createElement('ul');
+      fileList.className = 'files';
+      paths.forEach(({ path, entry }) => {
+        const li = document.createElement('li');
+        const sz = typeof entry.uncompressedSize === 'number' ? entry.uncompressedSize : 0;
+        li.textContent = path + ' — ' + formatBytes(sz);
+        fileList.appendChild(li);
+      });
+      const countNote = document.createElement('p');
+      countNote.className = 'badge';
+      countNote.textContent = '共 ' + paths.length + ' 個檔案';
+      fileSection.appendChild(countNote);
+      fileSection.appendChild(fileList);
+
+      if (xlsxName) {
+        const note = document.createElement('p');
+        note.className = 'badge';
+        note.style.marginTop = '10px';
+        note.textContent = 'Excel：' + xlsxName + '（請自 ZIP 解壓後以 Excel 開啟；本頁不解析試算表內容。）';
+        fileSection.appendChild(note);
+      }
+
+      wrap.appendChild(fileSection);
+
+      return wrap;
+    }
+
+    function renderProjectBlocks() {
+      const root = $('projectsRoot');
+      root.innerHTML = '';
+      if (!cachedProjects.length) return;
+      cachedProjects.forEach((proj) => {
+        const block = renderProjectBlock(proj);
+        if (block) root.appendChild(block);
+      });
+    }
+
+    function renderAll(projects) {
+      cachedProjects = projects;
+
+      const metaDl = $('metaDl');
+      metaDl.innerHTML = '';
+      const addMeta = (label, val) => {
+        const dt = document.createElement('dt');
+        dt.textContent = label;
+        const dd = document.createElement('dd');
+        dd.textContent = val == null || val === '' ? '—' : String(val);
+        metaDl.appendChild(dt);
+        metaDl.appendChild(dd);
+      };
+
+      addMeta('已匯入專案數（ZIP 數）', projects.length);
+
+      let totalPoints = 0;
+      let totalRows = 0;
+      let totalPhotos = 0;
+      const allRowsForVendor = [];
+
+      projects.forEach((p) => {
+        const dd = p.defectData;
+        const pts = (dd && dd.points) ? dd.points : [];
+        const rows = (dd && dd.tableData) ? dd.tableData : [];
+        totalPoints += pts.length;
+        totalRows += rows.length;
+        totalPhotos += p.photos.length;
+        rows.forEach((row) => {
+          allRowsForVendor.push({
+            vendor: row.vendor,
+            status: row.status
+          });
+        });
+      });
+
+      const vendorStats = buildVendorStats(allRowsForVendor);
+
+      $('summaryCards').innerHTML = `
+        <div class="card"><div class="num">${projects.length}</div><div class="lbl">專案數（ZIP）</div></div>
+        <div class="card"><div class="num">${totalPoints}</div><div class="lbl">點位數（加總）</div></div>
+        <div class="card"><div class="num">${totalRows}</div><div class="lbl">缺失列數（加總）</div></div>
+        <div class="card"><div class="num">${totalPhotos}</div><div class="lbl">照片檔案數（加總）</div></div>
+        <div class="card"><div class="num">${Object.keys(vendorStats).length}</div><div class="lbl">廠商種類數</div></div>
+      `;
+
+      const vTbody = $('vendorTable').querySelector('tbody');
+      vTbody.innerHTML = '';
+      Object.entries(vendorStats)
+        .sort((a, b) => a[0].localeCompare(b[0], 'zh-Hant'))
+        .forEach(([vendor, s]) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${escapeHtml(vendor)}</td>
+            <td>${s.total}</td>
+            <td>${s['未修繕']}</td>
+            <td>${s['已完成修繕']}</td>
+            <td>${s['已檢查']}</td>`;
+          vTbody.appendChild(tr);
+        });
+
+      renderMergedSection(projects);
+
+      renderProjectBlocks();
+
+      outEl.style.display = 'block';
+      $('btnClear').disabled = false;
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    $('zipFiles').addEventListener('change', async (e) => {
+      const files = e.target.files;
+      showError('');
+      outEl.style.display = 'none';
+      if (!files || files.length === 0) return;
+
+      const projects = [];
+      const errors = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const name = file.name || '專案' + (i + 1);
+        if (!/\.zip$/i.test(name)) {
+          errors.push(name + '：副檔名不是 .zip，已略過');
+          continue;
+        }
+        try {
+          const buf = await file.arrayBuffer();
+          const result = await analyzeZip(buf, name);
+          projects.push(result);
+        } catch (ex) {
+          console.error(ex);
+          errors.push(name + '：' + (ex.message || String(ex)));
+        }
+      }
+
+      if (errors.length) {
+        showError(errors.join('\n'));
+      }
+
+      if (projects.length === 0) {
+        if (!errors.length) showError('沒有可分析的 ZIP 檔。');
+        return;
+      }
+
+      renderAll(projects);
+    });
+
+    $('btnClear').addEventListener('click', clearAll);
+  </script>
+</body>
+</html>
