@@ -1553,11 +1553,17 @@
         <button onclick="exportAllData()">匯出資料</button>
         <button onclick="importData()">匯入資料</button>
       </div>
+      <div class="action-buttons-row" style="margin-top:10px;">
+        <button type="button" onclick="reloadSessionFromStorage()">重新載入暫存</button>
+        <button type="button" onclick="clearSessionStorageManual()">清除暫存</button>
+      </div>
       <div class="action-instructions">
         <p><strong>使用說明：</strong></p>
         <ul>
           <li>匯出資料：將儲存目前的平面圖、缺失標記、照片及關鍵字設定</li>
           <li>匯入資料：可載入先前匯出的資料包，繼續編輯或新增資料</li>
+          <li>自動暫存：編輯資料會不定期寫入瀏覽器本機（IndexedDB，含圖片與點位）；誤關分頁可試著按「重新載入暫存」還原</li>
+          <li>匯出 ZIP 成功後會自動清除暫存；「清除暫存」為手動刪除且無法還原</li>
         </ul>
       </div>
     </div>
@@ -1702,6 +1708,8 @@
     let keywordVendorSortMode = 0;
     /** 同一廠商多筆時，已展開的廠商鍵（字串）；預設收合 */
     let keywordVendorGroupExpanded = new Set();
+    let sessionRestoreInProgress = false;
+    let sessionAutosaveTimer = null;
     const statusCycle = ["未修繕", "已完成修繕", "已檢查"];
     const canvas = document.getElementById("floorCanvas");
     const ctx = canvas.getContext("2d");
@@ -1982,6 +1990,7 @@
           }
         }
       }
+      scheduleSessionAutosave();
     }
 
     function editKeyword(originalIndex) {
@@ -2059,6 +2068,7 @@
         }
       }
       updateVendorFilter();
+      scheduleSessionAutosave();
     }
 
     // 新增：計算表格寬度
@@ -2168,6 +2178,7 @@
               
               // 繪製圖片
               draw();
+              scheduleSessionAutosave();
               
               // 顯示操作提示
               const drawInstruction = document.getElementById('drawInstruction');
@@ -2367,6 +2378,7 @@
           // 顯示預覽
           showPhotoPreview(pointId);
           updatePhotoOverview();
+          scheduleSessionAutosave();
         };
         
         // 關閉按鈕事件
@@ -2563,6 +2575,7 @@
       updateFooter();
       updatePhotoOverview();
       if (highlightedId === id) highlightedId = null;
+      scheduleSessionAutosave();
     }
 
     /** 新點位建立後：先確認是否誤觸；取消則刪除該點，再進入相機／選檔 */
@@ -2615,6 +2628,7 @@
       updateDefectCount();
       updateFooter();
       updatePhotoOverview();
+      scheduleSessionAutosave();
     }
 
     // 新增：更換照片函數
@@ -2643,6 +2657,7 @@
       const idx = statusCycle.indexOf(current);
       td.textContent = statusCycle[(idx + 1) % statusCycle.length];
       updateSummaryTable();
+      scheduleSessionAutosave();
     }
 
     function highlightPoint(id) {
@@ -2716,6 +2731,7 @@
 
         updateVendorFilter();
         updateSummaryTable();
+        scheduleSessionAutosave();
       }
 
       btn.textContent = isEditing ? "儲存" : "編輯";
@@ -2746,6 +2762,303 @@
       }
       draw();
       updateDefectCount(); // 更新缺失數量
+      scheduleSessionAutosave();
+    }
+
+    // ---------- 本機完整暫存（IndexedDB，含圖片／點位／表格／簽名等）----------
+    const SESSION_DB_NAME = 'V9FullSessionDB';
+    const SESSION_STORE = 'snapshots';
+    const SESSION_KEY = 'latest';
+
+    function openSessionDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(SESSION_DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(SESSION_STORE)) {
+            db.createObjectStore(SESSION_STORE);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function getDefectTableCellValue(row, cellIndex) {
+      const cell = row.cells[cellIndex];
+      if (!cell) return '';
+      const inp = cell.querySelector('input');
+      if (inp) return inp.value;
+      return cell.textContent || '';
+    }
+
+    function buildDefectDataSnapshot() {
+      return {
+        ownerName: document.getElementById('ownerName').value,
+        ownerPhone: document.getElementById('ownerPhone').value,
+        pageTitle: document.getElementById('pageTitle').value || '',
+        currentDate: document.getElementById('currentDate').textContent || '',
+        totalDefects: document.getElementById('totalDefects').textContent || '',
+        points: points.map(p => ({ ...p })),
+        tableData: Array.from(defectBody.rows).map(row => {
+          const pointId = row.cells[0].textContent;
+          return {
+            id: pointId,
+            description: row.cells[1].querySelector('input')?.value || row.cells[1].textContent,
+            category: getDefectTableCellValue(row, 2),
+            vendor: getDefectTableCellValue(row, 3),
+            status: row.cells[4].textContent,
+            hasPhoto: !!pointPhotos['點' + pointId]
+          };
+        })
+      };
+    }
+
+    function hasMeaningfulSessionData() {
+      return !!(originalImage || points.length || customKeywordMap.length || Object.keys(pointPhotos).length);
+    }
+
+    async function collectFullSessionPayload() {
+      const markedCanvasPng = (canvas && canvas.width > 0 && canvas.height > 0)
+        ? canvas.toDataURL('image/png')
+        : null;
+      const signatureData = {
+        owner: document.getElementById('ownerSignature').toDataURL(),
+        client: document.getElementById('clientSignature').toDataURL(),
+        constructor: document.getElementById('constructorSignature').toDataURL()
+      };
+      return {
+        version: 1,
+        originalImage,
+        markedCanvasPng,
+        scaleFactor,
+        originalWidth,
+        originalHeight,
+        signatureData,
+        defectData: buildDefectDataSnapshot(),
+        pointPhotos: JSON.parse(JSON.stringify(pointPhotos)),
+        customKeywordMap: JSON.parse(JSON.stringify(customKeywordMap)),
+        keywordVendorSortMode,
+        keywordVendorGroupExpanded: Array.from(keywordVendorGroupExpanded),
+        importedSnapshotDate,
+        importedSnapshotDefectCount,
+        defaultColor: document.getElementById('defaultColor').value,
+        highlightColor: document.getElementById('highlightColor').value
+      };
+    }
+
+    async function saveSessionToIndexedDB() {
+      if (sessionRestoreInProgress) return;
+      if (!hasMeaningfulSessionData()) return;
+      try {
+        const payload = await collectFullSessionPayload();
+        const record = {
+          savedAt: new Date().toISOString(),
+          payload
+        };
+        const db = await openSessionDB();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(SESSION_STORE, 'readwrite');
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+          tx.objectStore(SESSION_STORE).put(record, SESSION_KEY);
+        });
+        db.close();
+      } catch (err) {
+        if (err && err.name === 'QuotaExceededError') {
+          console.warn('暫存失敗：瀏覽器儲存空間不足', err);
+        } else {
+          console.warn('暫存失敗', err);
+        }
+      }
+    }
+
+    function scheduleSessionAutosave() {
+      if (sessionRestoreInProgress) return;
+      clearTimeout(sessionAutosaveTimer);
+      sessionAutosaveTimer = setTimeout(() => {
+        saveSessionToIndexedDB();
+      }, 2000);
+    }
+
+    async function clearSessionIndexedDB() {
+      try {
+        const db = await openSessionDB();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(SESSION_STORE, 'readwrite');
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+          tx.objectStore(SESSION_STORE).delete(SESSION_KEY);
+        });
+        db.close();
+      } catch (e) {
+        console.warn('清除暫存失敗', e);
+      }
+    }
+
+    async function loadSessionRecordFromIndexedDB() {
+      const db = await openSessionDB();
+      const record = await new Promise((resolve, reject) => {
+        const tx = db.transaction(SESSION_STORE, 'readonly');
+        const req = tx.objectStore(SESSION_STORE).get(SESSION_KEY);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      db.close();
+      return record || null;
+    }
+
+    async function restoreFullSessionFromPayload(payload) {
+      sessionRestoreInProgress = true;
+      try {
+        currentPDF = null;
+        document.getElementById('pdfPageSelector').style.display = 'none';
+
+        if (payload.originalImage) {
+          originalImage = payload.originalImage;
+          img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = () => {
+              originalWidth = payload.originalWidth != null ? payload.originalWidth : img.width;
+              originalHeight = payload.originalHeight != null ? payload.originalHeight : img.height;
+              scaleFactor = payload.scaleFactor != null ? payload.scaleFactor : calculateScaleFactor(img.width);
+              canvas.width = img.width * scaleFactor;
+              canvas.height = img.height * scaleFactor;
+              resolve();
+            };
+            img.onerror = reject;
+            img.src = originalImage;
+          });
+        }
+
+        const loadSignatureCanvas = async (canvasId, dataUrl) => {
+          if (!dataUrl) return;
+          const c = document.getElementById(canvasId);
+          const cctx = c.getContext('2d');
+          const simg = new Image();
+          await new Promise((resolve, reject) => {
+            simg.onload = () => {
+              cctx.clearRect(0, 0, c.width, c.height);
+              cctx.drawImage(simg, 0, 0);
+              signatureStates[canvasId] = true;
+              updateSignatureStatus(canvasId);
+              resolve();
+            };
+            simg.onerror = reject;
+            simg.src = dataUrl;
+          });
+        };
+
+        if (payload.signatureData) {
+          await Promise.all([
+            loadSignatureCanvas('ownerSignature', payload.signatureData.owner),
+            loadSignatureCanvas('clientSignature', payload.signatureData.client),
+            loadSignatureCanvas('constructorSignature', payload.signatureData.constructor)
+          ]);
+        }
+
+        const dd = payload.defectData;
+        if (dd) {
+          points = (dd.points || []).map(point => ({ ...point }));
+          defectBody.innerHTML = '';
+          (dd.tableData || []).forEach(row => {
+            const pointId = '點' + row.id;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="clickable" 
+                  onclick="highlightPoint('${pointId}')"
+                  ondblclick="showPointPhoto('${pointId}')">${row.id}</td>
+              <td><input type="text" value="${(row.description || '').replace(/"/g, '&quot;')}"></td>
+              <td>${row.category || ''}</td>
+              <td>${row.vendor || ''}</td>
+              <td class="status" onclick="cycleStatus(this)">${row.status || '未修繕'}</td>
+              <td>
+                <button onclick="toggleEdit(this)">編輯</button>
+                <button onclick="deleteRow(this)">刪除</button>
+                <button onclick="changePhoto('${pointId}')" title="更換照片">
+                  <i class="fas fa-camera"></i>
+                </button>
+              </td>`;
+            defectBody.appendChild(tr);
+          });
+        }
+
+        pointPhotos = payload.pointPhotos ? JSON.parse(JSON.stringify(payload.pointPhotos)) : {};
+
+        customKeywordMap = Array.isArray(payload.customKeywordMap) ? JSON.parse(JSON.stringify(payload.customKeywordMap)) : [];
+        keywordVendorSortMode = typeof payload.keywordVendorSortMode === 'number' ? payload.keywordVendorSortMode : 0;
+        keywordVendorGroupExpanded = new Set(payload.keywordVendorGroupExpanded || []);
+        const sortHint = document.getElementById('keywordVendorSortHint');
+        if (sortHint) {
+          sortHint.textContent = keywordVendorSortMode === 0 ? '↕' : keywordVendorSortMode === 1 ? '↑' : '↓';
+        }
+        updateKeywordTable();
+
+        if (dd) {
+          if (dd.ownerName) document.getElementById('ownerName').value = dd.ownerName;
+          if (dd.ownerPhone) document.getElementById('ownerPhone').value = dd.ownerPhone;
+          if (dd.pageTitle) document.getElementById('pageTitle').value = dd.pageTitle;
+          if (dd.currentDate) {
+            importedSnapshotDate = dd.currentDate;
+            document.getElementById('currentDate').textContent = dd.currentDate;
+          } else {
+            importedSnapshotDate = null;
+            updateDate();
+          }
+          if (dd.totalDefects !== undefined && dd.totalDefects !== null) {
+            importedSnapshotDefectCount = dd.totalDefects;
+            document.getElementById('totalDefects').textContent = dd.totalDefects;
+          } else {
+            importedSnapshotDefectCount = null;
+            updateDefectCount();
+          }
+        }
+
+        if (payload.defaultColor) {
+          document.getElementById('defaultColor').value = payload.defaultColor;
+        }
+        if (payload.highlightColor) {
+          document.getElementById('highlightColor').value = payload.highlightColor;
+        }
+        updateColors();
+
+        draw();
+        updateVendorFilter();
+        updateSummaryTable();
+        updateFooter();
+        updatePhotoOverview();
+      } finally {
+        sessionRestoreInProgress = false;
+        scheduleSessionAutosave();
+      }
+    }
+
+    async function reloadSessionFromStorage() {
+      const record = await loadSessionRecordFromIndexedDB();
+      if (!record || !record.payload) {
+        alert('目前沒有可還原的本機暫存。');
+        return;
+      }
+      if (!confirm('將以暫存資料覆蓋目前畫面上的內容，確定嗎？')) return;
+      await restoreFullSessionFromPayload(record.payload);
+      alert('已重新載入暫存資料。\n儲存時間：' + (record.savedAt || ''));
+    }
+
+    async function clearSessionStorageManual() {
+      if (!confirm('確定要清除本機暫存？清除後無法再按「重新載入暫存」還原（不影響目前畫面上的資料）。')) return;
+      await clearSessionIndexedDB();
+      alert('已清除本機暫存。');
+    }
+
+    setInterval(() => {
+      if (!sessionRestoreInProgress && hasMeaningfulSessionData()) {
+        saveSessionToIndexedDB();
+      }
+    }, 60000);
+
+    if (document.getElementById('defectBody')) {
+      document.getElementById('defectBody').addEventListener('input', () => scheduleSessionAutosave());
+      document.getElementById('defectBody').addEventListener('change', () => scheduleSessionAutosave());
     }
 
     async function exportAllData() {
@@ -2946,8 +3259,10 @@
         const exportFileName = `${currentDate}-${title}缺失.zip`;
         saveAs(zipBlob, exportFileName);
 
+        await clearSessionIndexedDB();
+
         document.body.removeChild(processingMsg);
-        alert(`資料匯出完成！\n共匯出 ${processedPhotos.size} 張照片。`);
+        alert(`資料匯出完成！\n共匯出 ${processedPhotos.size} 張照片。\n本機暫存已清除。`);
       } catch (error) {
         console.error('匯出失敗:', error);
         alert('匯出過程發生錯誤，請重試。');
@@ -2993,6 +3308,7 @@
           // 立即顯示預覽
           showPhotoPreview(id);
           updatePhotoOverview(); // 更新照片總覽
+          scheduleSessionAutosave();
         };
         reader.readAsDataURL(file);
       }
@@ -3204,6 +3520,7 @@
         
         const photoCount = Object.keys(pointPhotos).length;
         console.log('照片載入狀態:', pointPhotos);
+        scheduleSessionAutosave();
         alert(`資料匯入完成！\n已載入 ${photoCount} 張照片。`);
         
       } catch (error) {
@@ -3483,6 +3800,7 @@
       // 更新簽名狀態
       signatureStates[canvasId] = false;
       updateSignatureStatus(canvasId);
+      scheduleSessionAutosave();
     }
 
     // 更新簽名狀態顯示
