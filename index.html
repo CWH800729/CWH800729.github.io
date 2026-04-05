@@ -25,6 +25,7 @@
             background-color: #fff;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             padding: 20px 0;
+            margin-bottom: 30px;
         }
 
         .header-content {
@@ -143,70 +144,6 @@
             }
         }
 
-        /* Navigation Bar Styles */
-        .main-nav {
-            background-color: #333;
-            margin-bottom: 30px;
-        }
-
-        .main-nav .container {
-            padding: 0 20px;
-        }
-
-        .nav-links {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;
-        }
-
-        .nav-links li a, .dropbtn {
-            color: rgba(250, 251, 252, 0.945);
-            padding: 15px 20px;
-            display: block;
-            text-decoration: none;
-            border: none;
-            background: none;
-            font-family: 'Microsoft JhengHei', sans-serif;
-            font-size: 1em;
-            cursor: pointer;
-        }
-
-        .nav-links li a:hover, .dropdown:hover .dropbtn {
-            background-color: #7a7171e0;
-        }
-
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
-
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: #afababe0;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
-        }
-
-        .dropdown-content a {
-            color: black;
-            background-color: #fff;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-        }
-
-        .dropdown-content a:hover {
-            color: black;
-            background-color: #ddd;
-        }
-
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-
         /* 水溝高程換算卡片樣式 */
         .elevation-card {
             background: #fff;
@@ -277,47 +214,6 @@
         .calculate-btn:hover {
             background-color: #2980b9;
         }
-
-        /* 圖片點擊樣式 */
-        .clickable-image {
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-
-        .clickable-image:hover {
-            transform: scale(1.05);
-        }
-
-        .clickable-image:active {
-            transform: scale(0.95);
-        }
-
-        .click-count {
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            background-color: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .click-count.show {
-            opacity: 1;
-        }
-
-        .image-container {
-            position: relative;
-            display: inline-block;
-        }
     </style>
 </head>
 <body>
@@ -330,42 +226,21 @@
         </div>
     </header>
 
-    <nav class="main-nav">
-        <div class="container">
-            <ul class="nav-links">
-                <li><a href="index.html">首頁</a></li>
-                <li class="dropdown">
-                    <a href="javascript:void(0)" class="dropbtn">數量計算 <i class="fa fa-caret-down"></i></a>
-                    <div class="dropdown-content">
-                        <a href="PartitionCalculation.html">輕隔間計算</a>
-                        <a href="TileCalculation.html">牆磚計算</a>
-                    </div>
-                </li>
-            </ul>
-        </div>
-    </nav>
-
     <main class="container">
         <div class="main-content">
-            <div class="card">
-                <h2><i class="fas fa-user"></i> 關於作者</h2>
-                <div class="author-info">
-                    <img src="http://cwh800729.github.io/CWH-LOGO" alt="http://cwh800729.github.io/CWH-LOGO" class="author-avatar">
-                    <div class="author-details">
-                        <h3 class="author-name">陳維宏</h3>
-                        <p class="author-bio">強調辦公室作業要專注快速化及標準化、最終目的為懶人自動化，解放雙手，降低重複操作，解救人生。</p>
-                        <a href="https://CWH800729.wordpress.com" class="author-link" target="_blank">
-                            <i class="fas fa-globe"></i> 訪問我的部落格
-                        </a>
-                    </div>
-                </div>
-            </div>
-
             <div class="card">
                 <h2><i class="fas fa-clipboard-list"></i> 缺失表格系統</h2>
                 <p>工程缺失管理系統，用於記錄工程現場缺失項目。系統提供完整的缺失標記、照片管理、進度追蹤等功能。</p>
                 <a href="http://cwh800729.github.io/V9.html" class="defect-link">
                     <i class="fas fa-external-link-alt"></i> 進入缺失表格系統
+                </a>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-file-zipper"></i> 缺失表格系統 資料分析／統整</h2>
+                <p>讀取 V9「匯出資料」產生的 ZIP，支援多專案匯入、全專案缺失整合與篩選、廠商統計與列印分頁，方便檢視與彙整。</p>
+                <a href="http://cwh800729.github.io/V9-zip-analyzer.html" class="defect-link" style="background-color: #2c5282;">
+                    <i class="fas fa-external-link-alt"></i> 進入匯出資料分析
                 </a>
             </div>
 
@@ -394,19 +269,25 @@
             </div>
 
             <div class="card">
-                <h2><i class="fas fa-chart-line"></i> 匯率查詢及換匯記錄</h2>
-                <p>匯率查詢及換匯記錄管理，包含即時匯率查詢、換匯記錄追蹤。</p>
+                <h2><i class="fas fa-chart-line"></i> 美股資訊查詢系統</h2>
+                <p>美股投資組合管理，包含股票市值計算、配息日期追蹤，以及台幣換美金匯率計算功能。</p>
                 <a href="http://cwh800729.github.io/StockInfo.html" class="defect-link" style="background-color: #9b59b6;">
-                    <i class="fas fa-external-link-alt"></i> 進入匯率查詢及換匯記錄系統
+                    <i class="fas fa-external-link-alt"></i> 進入美股資訊查詢系統
                 </a>
             </div>
 
             <div class="card">
-                <h2><i class="fas fa-calculator"></i> 工地成本損耗記錄</h2>
-                <p>工地成本損耗記錄管理系統，用於追蹤和管理工程項目的成本損耗、預算控制及財務分析。</p>
-                <a href="http://cwh800729.github.io/Cost%20Estimate.html" class="defect-link" style="background-color: #f39c12;">
-                    <i class="fas fa-external-link-alt"></i> 進入工地成本損耗記錄系統
-                </a>
+                <h2><i class="fas fa-user"></i> 關於作者</h2>
+                <div class="author-info">
+                    <img src="http://cwh800729.github.io/CWH-LOGO" alt="http://cwh800729.github.io/CWH-LOGO" class="author-avatar">
+                    <div class="author-details">
+                        <h3 class="author-name">陳維宏</h3>
+                        <p class="author-bio">強調辦公室作業要專注快速化及標準化、最終目的為懶人自動化，解放雙手，降低重複操作，解救人生。</p>
+                        <a href="..." class="author-link" target="_blank">
+                            <i class="fas fa-globe"></i> 訪問我的部落格
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
