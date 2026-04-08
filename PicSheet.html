@@ -74,6 +74,16 @@
                 gap: 10px;
             }
 
+            .header-left {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .site-author {
+                white-space: normal;
+                width: 100%;
+            }
+
             .logo {
                 width: 50px;
                 height: 50px;
@@ -124,7 +134,24 @@
         .header-content {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .site-author {
+            margin: 0;
+            font-size: clamp(0.85rem, 2.2vw, 1rem);
+            color: #5a6c7d;
+            white-space: nowrap;
         }
 
         .logo {
@@ -183,14 +210,6 @@
             padding: 10px 8px;
             font-size: 0.9em;
             box-sizing: border-box;
-        }
-        .draft-float-panel .draft-float-btn-clear {
-            background: #e9ecef;
-            color: #495057;
-            margin-bottom: 6px;
-        }
-        .draft-float-panel .draft-float-btn-clear:hover {
-            background: #dee2e6;
         }
         .draft-float-hint {
             margin: 0;
@@ -1071,13 +1090,16 @@
     <header>
         <div class="container">
             <div class="header-content">
-                <div class="image-container">
-                    <a href="https://CWH800729.github.io/index.html" class="logo-link" id="logoLink">
-                        <img src="https://CWH800729.github.io/CWH-LOGO" alt="logo" class="logo clickable-image" id="logoImage">
-                    </a>
-                    <div class="click-count" id="clickCount">0</div>
+                <div class="header-left">
+                    <div class="image-container">
+                        <a href="https://CWH800729.github.io/index.html" class="logo-link" id="logoLink">
+                            <img src="https://CWH800729.github.io/CWH-LOGO" alt="logo" class="logo clickable-image" id="logoImage">
+                        </a>
+                        <div class="click-count" id="clickCount">0</div>
+                    </div>
+                    <h1 class="site-title">照片表格製作系統</h1>
                 </div>
-                <h1 class="site-title">照片表格製作系統</h1>
+                <p class="site-author">系統作者：陳維宏</p>
             </div>
         </div>
     </header>
@@ -1204,10 +1226,7 @@
             <button type="button" class="btn btn-primary draft-float-btn" onclick="saveDraftNowManual()" title="立即將目前內容寫入瀏覽器儲存空間">
                 <i class="fas fa-floppy-disk"></i> 設置暫存
             </button>
-            <button type="button" class="btn btn-secondary draft-float-btn draft-float-btn-clear" onclick="clearDraftFromStorage()" title="刪除瀏覽器內備份（不影響目前畫面）">
-                <i class="fas fa-trash-can"></i> 清除暫存
-            </button>
-            <p class="draft-float-hint">編輯時仍會自動暫存；關閉分頁前也會再存一次。</p>
+            <p class="draft-float-hint">編輯時仍會自動暫存；關閉分頁前也會再存一次。若重新整理時選擇不還原暫存，瀏覽器備份會自動刪除。</p>
             <span class="draft-status" id="draftStatus" aria-live="polite"></span>
         </div>
     </div>
@@ -1506,14 +1525,6 @@
             } else {
                 setDraftStatusMessage('');
             }
-        }
-
-        function clearDraftFromStorage() {
-            if (!confirm('確定要清除瀏覽器內的暫存備份？\n（不影響目前畫面上的內容；之後編輯或按「設置暫存」會再寫入）')) return;
-            try {
-                localStorage.removeItem(PIACSHEET_DRAFT_KEY);
-            } catch (e) { /* ignore */ }
-            setDraftStatusMessage('暫存已清除');
         }
 
         function picSheetDataURLtoBlob(dataUrl) {
