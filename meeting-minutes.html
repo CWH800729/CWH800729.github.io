@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>會議記錄</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', sans-serif;
+            margin: 0;
+            padding: 1rem;
+            background: #f5f5f5;
+            color: #222;
+            line-height: 1.5;
+        }
+
+        .sheet {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 1.25rem;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .sheet-header h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .sheet-io {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .sheet-io button {
+            padding: 0.4rem 0.75rem;
+            font: inherit;
+            font-size: 0.88rem;
+            border: 1px solid #546e7a;
+            border-radius: 6px;
+            background: #fff;
+            color: #37474f;
+            cursor: pointer;
+        }
+
+        .sheet-io button:hover {
+            background: #eceff1;
+        }
+
+        .sheet-io button:focus-visible {
+            outline: 2px solid #1976d2;
+            outline-offset: 2px;
+        }
+
+        .sheet-io button.io-primary {
+            background: #1565c0;
+            color: #fff;
+            border-color: #0d47a1;
+        }
+
+        .sheet-io button.io-primary:hover {
+            background: #0d47a1;
+        }
+
+        .sheet-io button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        table.meta,
+        table.items {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-bottom: 1rem;
+        }
+
+        table.meta th,
+        table.meta td,
+        table.items th,
+        table.items td {
+            border: 1px solid #000;
+            padding: 0.45rem 0.55rem;
+            vertical-align: top;
+            word-break: break-word;
+        }
+
+        table.meta th,
+        table.items thead th {
+            background: #f0f0f0;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        table.meta .label {
+            width: 7em;
+            text-align: center;
+            background: #f0f0f0;
+            font-weight: 600;
+        }
+
+        table.meta .value {
+            text-align: left;
+        }
+
+        table.meta td.value[contenteditable="true"] {
+            outline: none;
+            min-height: 2.2em;
+        }
+
+        table.meta td.value[contenteditable="true"]:focus {
+            background: #fafcff;
+            box-shadow: inset 0 0 0 1px #90caf9;
+        }
+
+        .sheet [contenteditable="true"] a {
+            color: #0d47a1;
+            text-decoration: underline;
+            word-break: break-all;
+        }
+
+        .sheet [contenteditable="true"] img {
+            max-width: 100%;
+            height: auto;
+            vertical-align: middle;
+            display: inline-block;
+        }
+
+        .date-emphasis {
+            color: #c00;
+        }
+
+        table.items .col-num {
+            width: 2.75em;
+            text-align: center;
+        }
+
+        table.items .col-track {
+            width: 8.5em;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        table.items tr.date-section td {
+            background: #e8e8e8;
+            font-weight: 600;
+            text-align: center;
+            padding: 0.5rem 0.6rem;
+            cursor: pointer;
+        }
+
+        table.items tr.date-section.is-active td {
+            background: #d9e8f6;
+            box-shadow: inset 0 0 0 2px #1e88e5;
+        }
+
+        table.items td.section-title {
+            outline: none;
+        }
+
+        table.items td.section-title:focus {
+            background: #dedede;
+            box-shadow: inset 0 0 0 1px #666;
+        }
+
+        table.items td[contenteditable="true"]:not(.section-title) {
+            min-height: 2.5em;
+            outline: none;
+        }
+
+        table.items td[contenteditable="true"]:not(.section-title):focus {
+            background: #fafcff;
+            box-shadow: inset 0 0 0 1px #90caf9;
+        }
+
+        .report {
+            color: #1565c0;
+        }
+
+        .resolution {
+            color: #c00;
+        }
+
+        .status-btn {
+            display: inline-block;
+            width: 100%;
+            max-width: 7.5em;
+            margin: 0 auto;
+            padding: 0.35rem 0.5rem;
+            border: 1px solid #333;
+            border-radius: 4px;
+            font: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-align: center;
+            background: #e3f2fd;
+            color: #0d47a1;
+        }
+
+        .status-btn[data-status="pending"] {
+            background: #fff3e0;
+            color: #e65100;
+            border-color: #e65100;
+        }
+
+        .status-btn[data-status="done"] {
+            background: #e8f5e9;
+            color: #1b5e20;
+            border-color: #2e7d32;
+        }
+
+        .status-btn[data-status="active"] {
+            background: #e3f2fd;
+            color: #0d47a1;
+            border-color: #1565c0;
+        }
+
+        .status-btn[data-status="cancelled"] {
+            background: #f5f5f5;
+            color: #616161;
+            border-color: #757575;
+            text-decoration: line-through;
+        }
+
+        .status-btn:hover {
+            filter: brightness(0.97);
+        }
+
+        .status-btn:focus-visible {
+            outline: 2px solid #1976d2;
+            outline-offset: 2px;
+        }
+
+        tr.filter-hide {
+            display: none !important;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem 0.75rem;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem 0;
+        }
+
+        .toolbar-rich {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .toolbar-rich button {
+            padding: 0.3rem 0.55rem;
+            font: inherit;
+            font-size: 0.88rem;
+            border: 1px solid #90a4ae;
+            border-radius: 4px;
+            background: #fff;
+            color: #37474f;
+            cursor: pointer;
+        }
+
+        .toolbar-rich button:hover {
+            background: #eceff1;
+        }
+
+        .toolbar-rich button:focus-visible {
+            outline: 2px solid #1976d2;
+            outline-offset: 1px;
+        }
+
+        .add-float {
+            position: fixed;
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
+            z-index: 1000;
+            width: 220px;
+            max-width: calc(100vw - 24px);
+            padding: 0.65rem 0.55rem;
+            background: #fff;
+            border: 1px solid #cfd8dc;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+            font-size: 0.88rem;
+        }
+
+        .add-float-title {
+            font-weight: 600;
+            color: #37474f;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 1px solid #eceff1;
+        }
+
+        .add-float-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .add-row-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.5rem;
+            min-height: 2.5rem;
+            padding: 0.45rem 0.65rem;
+            font: inherit;
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.2;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .add-float .add-row-btn {
+            width: 100%;
+        }
+
+        .add-row-btn--item {
+            background: #2e7d32;
+            font-size: 1.25rem;
+        }
+
+        .add-row-btn--item:hover {
+            background: #1b5e20;
+        }
+
+        .add-row-btn--section {
+            background: #455a64;
+        }
+
+        .add-row-btn--section:hover {
+            background: #37474f;
+        }
+
+        .add-row-btn:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 2px;
+        }
+
+        .hint {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
+        .status-float {
+            position: fixed;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            z-index: 1000;
+            width: 220px;
+            max-width: calc(100vw - 24px);
+            padding: 0.65rem 0.55rem;
+            background: #fff;
+            border: 1px solid #cfd8dc;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+            font-size: 0.88rem;
+            max-height: calc(100vh - 24px);
+            overflow-y: auto;
+        }
+
+        .status-float-title {
+            font-weight: 600;
+            color: #37474f;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 1px solid #eceff1;
+        }
+
+        .status-float-block {
+            margin-bottom: 0.55rem;
+        }
+
+        .status-float-block:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .status-float-filter {
+            display: flex;
+            gap: 0.35rem;
+            align-items: flex-start;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            cursor: pointer;
+            color: #263238;
+        }
+
+        .status-float-filter input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            flex-shrink: 0;
+            margin-top: 0.12rem;
+            cursor: pointer;
+        }
+
+        #filter-desc {
+            font-size: 0.72rem;
+            color: #607d8b;
+            margin: 0.3rem 0 0;
+            line-height: 1.35;
+        }
+
+        .status-float-search-label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #455a64;
+            margin-bottom: 0.25rem;
+        }
+
+        .status-float-search {
+            width: 100%;
+            padding: 0.32rem 0.45rem;
+            border: 1px solid #b0bec5;
+            border-radius: 4px;
+            font: inherit;
+            font-size: 0.82rem;
+        }
+
+        .status-float-search:focus {
+            outline: 2px solid #64b5f6;
+            outline-offset: 1px;
+            border-color: #1976d2;
+        }
+
+        .status-float-sub {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #546e7a;
+            margin: 0.15rem 0 0.35rem;
+            padding-bottom: 0.2rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .status-float-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .status-stat {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.4rem 0.45rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+            font: inherit;
+            font-size: 0.88rem;
+            cursor: pointer;
+            text-align: left;
+            color: #263238;
+        }
+
+        .status-stat:hover {
+            background: #f0f4f8;
+            border-color: #b0bec5;
+        }
+
+        .status-stat:focus-visible {
+            outline: 2px solid #1976d2;
+            outline-offset: 1px;
+        }
+
+        .status-stat .stat-count {
+            font-weight: 700;
+            min-width: 1.5em;
+            text-align: right;
+            color: #546e7a;
+        }
+
+        .status-stat.is-selected {
+            border-width: 2px;
+            padding: calc(0.4rem - 1px) calc(0.45rem - 1px);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .status-stat[data-view="all"].is-selected {
+            border-color: #455a64;
+            background: #eceff1;
+        }
+
+        .status-stat[data-view="active"].is-selected {
+            border-color: #1565c0;
+            background: #e3f2fd;
+        }
+
+        .status-stat[data-view="pending"].is-selected {
+            border-color: #e65100;
+            background: #fff3e0;
+        }
+
+        .status-stat[data-view="done"].is-selected {
+            border-color: #2e7d32;
+            background: #e8f5e9;
+        }
+
+        .status-stat[data-view="cancelled"].is-selected {
+            border-color: #757575;
+            background: #f5f5f5;
+        }
+
+        .status-float-print select {
+            width: 100%;
+            font: inherit;
+            font-size: 0.82rem;
+            padding: 0.28rem 0.35rem;
+            border: 1px solid #b0bec5;
+            border-radius: 4px;
+            margin-top: 0.2rem;
+        }
+
+        .status-float-print .print-range-row {
+            display: grid;
+            gap: 0.35rem;
+            margin-bottom: 0.45rem;
+        }
+
+        .status-float-print .print-range-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #455a64;
+        }
+
+        .status-float-print button {
+            width: 100%;
+            margin-top: 0.35rem;
+            padding: 0.4rem 0.5rem;
+            font: inherit;
+            font-size: 0.85rem;
+            border: 1px solid #1976d2;
+            border-radius: 6px;
+            background: #1976d2;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .status-float-print button:hover {
+            background: #1565c0;
+        }
+
+        .status-float-print .print-hint {
+            font-size: 0.7rem;
+            color: #78909c;
+            margin: 0.25rem 0 0;
+            line-height: 1.3;
+        }
+
+        @media (max-width: 900px) {
+            .add-float {
+                top: auto;
+                bottom: 12px;
+                left: 8px;
+                transform: none;
+                width: min(220px, calc(100vw - 16px));
+            }
+
+            .status-float {
+                top: auto;
+                bottom: 12px;
+                transform: none;
+                right: 8px;
+                width: min(220px, calc(100vw - 16px));
+            }
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+
+            .sheet {
+                box-shadow: none;
+                padding: 0;
+            }
+
+            .hint,
+            .no-print {
+                display: none !important;
+            }
+
+            tr.filter-hide {
+                display: none !important;
+            }
+
+            table.items tbody tr.print-temp-hide {
+                display: none !important;
+            }
+
+            table.items tbody tr.filter-hide.print-temp-show {
+                display: table-row !important;
+            }
+
+            .status-btn {
+                border: 1px solid #000;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sheet">
+        <div class="sheet-header">
+            <h1>會議記錄</h1>
+            <div class="sheet-io no-print">
+                <button type="button" id="btn-export-zip" class="io-primary" title="將表格、狀態與內嵌圖片匯出為 ZIP（檔名：當天日期＋會議記錄.zip）">
+                    匯出 ZIP
+                </button>
+                <button type="button" id="btn-import-zip" title="自 ZIP 還原（需含 meeting-minutes.json 與 images 資料夾）">
+                    匯入 ZIP
+                </button>
+                <input type="file" id="import-zip-input" accept=".zip,application/zip,application/x-zip-compressed" class="no-print" hidden aria-hidden="true">
+            </div>
+        </div>
+
+        <table class="meta" aria-label="會議基本資料">
+            <colgroup>
+                <col class="label">
+                <col>
+                <col class="label">
+                <col>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <th class="label">會議主旨</th>
+                    <td class="value" contenteditable="true" colspan="3">&nbsp;</td>
+                </tr>
+                <tr>
+                    <th class="label">日期</th>
+                    <td class="value date-emphasis" contenteditable="true">&nbsp;</td>
+                    <th class="label">地點</th>
+                    <td class="value" contenteditable="true">&nbsp;</td>
+                </tr>
+                <tr>
+                    <th class="label">主席</th>
+                    <td class="value" contenteditable="true">&nbsp;</td>
+                    <th class="label">記錄</th>
+                    <td class="value" contenteditable="true">&nbsp;</td>
+                </tr>
+                <tr>
+                    <th class="label">參加人員</th>
+                    <td class="value" contenteditable="true" colspan="3">&nbsp;</td>
+                </tr>
+                <tr>
+                    <th class="label">議程</th>
+                    <td class="value" contenteditable="true" colspan="3">&nbsp;</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="toolbar no-print">
+            <div class="toolbar-rich">
+                <span class="hint" style="margin:0;">插入內容（先點儲存格）：</span>
+                <button type="button" id="insert-link" title="在目前游標處插入超連結">插入連結</button>
+                <button type="button" id="insert-image-url" title="以網址插入圖片">插入圖片網址</button>
+                <button type="button" id="insert-image-file" title="從電腦選擇圖片">本機圖片</button>
+                <input type="file" id="image-file-input" accept="image/*" class="no-print" style="display:none" aria-hidden="true">
+            </div>
+            <span class="hint" style="margin:0;">可貼上剪貼簿內的圖片；新增列在左側浮窗，篩選與搜尋在右側浮窗。</span>
+        </div>
+
+        <table class="items" aria-label="報告與決議事項">
+            <thead>
+                <tr>
+                    <th class="col-num">項次</th>
+                    <th>報告．檢討事項</th>
+                    <th>決議事項</th>
+                    <th class="col-track">進度追蹤</th>
+                </tr>
+            </thead>
+            <tbody id="items-body">
+                <tr class="date-section" data-row-type="section">
+                    <td colspan="4" contenteditable="true" class="section-title">2025/7/9 會議</td>
+                </tr>
+                <tr class="item-row" data-row-type="item">
+                    <td class="col-num">1</td>
+                    <td class="col-report" contenteditable="true"><span class="report">（範例）外牆防水與石材施作階段說明…</span></td>
+                    <td class="col-resolution" contenteditable="true"><span class="resolution">（範例）於○月○日前完成複查。</span></td>
+                    <td class="col-track">
+                        <button type="button" class="status-btn" data-status="active" title="點選切換：進行中 → 待決議 → 已完成">進行中</button>
+                    </td>
+                </tr>
+                <tr class="item-row" data-row-type="item">
+                    <td class="col-num">2</td>
+                    <td class="col-report" contenteditable="true"><span class="report">二樓天花與現場整理進度。</span></td>
+                    <td class="col-resolution" contenteditable="true"><span class="resolution">決議：○○前完成場清。</span></td>
+                    <td class="col-track">
+                        <button type="button" class="status-btn" data-status="pending" title="點選切換：進行中 → 待決議 → 已完成">待決議</button>
+                    </td>
+                </tr>
+                <tr class="date-section" data-row-type="section">
+                    <td colspan="4" contenteditable="true" class="section-title">2025/7/16 會議</td>
+                </tr>
+                <tr class="item-row" data-row-type="item">
+                    <td class="col-num">3</td>
+                    <td class="col-report" contenteditable="true"><span class="report">管道間各層完成日…</span></td>
+                    <td class="col-resolution" contenteditable="true"><span class="resolution">（待填）</span></td>
+                    <td class="col-track">
+                        <button type="button" class="status-btn" data-status="done" title="點選切換：進行中 → 待決議 → 已完成">已完成</button>
+                    </td>
+                </tr>
+                <tr class="item-row" data-row-type="item">
+                    <td class="col-num">4</td>
+                    <td class="col-report" contenteditable="true">&nbsp;</td>
+                    <td class="col-resolution" contenteditable="true">&nbsp;</td>
+                    <td class="col-track">
+                        <button type="button" class="status-btn" data-status="active" title="點選切換：進行中 → 待決議 → 已完成">進行中</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p class="hint">進度追蹤：點按鈕可循環「進行中 → 待決議 → 已完成 → 取消」。</p>
+        <p class="hint">點選某議題列或編輯「報告／決議」後，於左側浮窗按「＋ 議題」可在該列下方插入新項次</p>
+        <p class="hint">當兩欄皆空白且游標離開編輯時，會詢問是否刪除該列（無列內刪除鈕）。右側浮窗可搜尋、篩選與列印。</p>
+        <p class="hint">標題右側可匯出／匯入 ZIP：匯出檔名預設為當天八碼日期＋「會議記錄」。圖檔以區段日期與項次命名；匯入時會完整還原內容與狀態。</p>
+        <p class="hint">瀏覽器會將內容暫存於本機（約每半秒、離開儲存格或切換分頁時寫入）；成功完成「匯出 ZIP」後暫存才會清除。再次開啟本頁時可選擇是否還原暫存。大量圖片若超過瀏覽器配額可能無法暫存，請仍以 ZIP 備份為主。</p>
+    </div>
+
+    <aside class="add-float no-print" id="add-float" aria-label="新增日期區段與議題列">
+        <div class="add-float-title">新增列</div>
+        <div class="add-float-actions">
+            <button type="button" class="add-row-btn add-row-btn--section" id="add-section" title="新增一列日期標題（可改寫日期與會次）">＋ 日期區段</button>
+            <button type="button" class="add-row-btn add-row-btn--item" id="add-row" title="在目前選定的議題列下方新增一列（請先點該列或點入報告／決議欄）">＋ 議題</button>
+        </div>
+    </aside>
+
+    <aside class="status-float no-print" id="status-float" aria-label="篩選、搜尋與狀態統計">
+        <div class="status-float-title">篩選與狀態</div>
+        <div class="status-float-block">
+            <label class="status-float-filter">
+                <input type="checkbox" id="filter-unfinished" aria-describedby="filter-desc">
+                <span>僅顯示未完成（隱藏「已完成」「取消」與空區段）</span>
+            </label>
+            <p id="filter-desc">選「全部」時生效；列印前可勾選以隱藏「已完成」「取消」，避免舊案過長。</p>
+        </div>
+        <div class="status-float-block">
+            <label class="status-float-search-label" for="keyword-search">搜尋</label>
+            <input type="search" id="keyword-search" class="status-float-search" placeholder="關鍵字篩選議題" autocomplete="off">
+        </div>
+        <div class="status-float-block status-float-print">
+            <div class="status-float-sub" style="margin-top:0;">列印（依日期區段）</div>
+            <div class="print-range-row">
+                <div>
+                    <span class="print-range-label">從</span>
+                    <select id="print-range-from" aria-label="列印起始日期區段"></select>
+                </div>
+                <div>
+                    <span class="print-range-label">到</span>
+                    <select id="print-range-to" aria-label="列印結束日期區段"></select>
+                </div>
+            </div>
+            <button type="button" id="btn-print-range">列印此區間</button>
+            <p class="print-hint">只列印選定區間內的會議列（含該區間議題；與畫面篩選無關）。單日請起迄選同一列。</p>
+        </div>
+        <div class="status-float-sub">狀態統計</div>
+        <div class="status-float-list">
+            <button type="button" class="status-stat is-selected" data-view="all" title="顯示全部議題">
+                <span>全部</span><span class="stat-count" id="stat-all">0</span>
+            </button>
+            <button type="button" class="status-stat" data-view="active" title="僅顯示進行中">
+                <span>進行中</span><span class="stat-count" id="stat-active">0</span>
+            </button>
+            <button type="button" class="status-stat" data-view="pending" title="僅顯示待決議">
+                <span>待決議</span><span class="stat-count" id="stat-pending">0</span>
+            </button>
+            <button type="button" class="status-stat" data-view="done" title="僅顯示已完成">
+                <span>已完成</span><span class="stat-count" id="stat-done">0</span>
+            </button>
+            <button type="button" class="status-stat" data-view="cancelled" title="僅顯示取消">
+                <span>取消</span><span class="stat-count" id="stat-cancelled">0</span>
+            </button>
+        </div>
+    </aside>
+
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script>
+        (function () {
+            var ORDER = ['active', 'pending', 'done', 'cancelled'];
+            var LABELS = {
+                active: '進行中',
+                pending: '待決議',
+                done: '已完成',
+                cancelled: '取消'
+            };
+
+            function statusCycleTitle() {
+                return '點選切換：' + ORDER.map(function (k) {
+                    return LABELS[k];
+                }).join(' → ');
+            }
+
+            var tbody = document.getElementById('items-body');
+            var filterEl = document.getElementById('filter-unfinished');
+            var searchEl = document.getElementById('keyword-search');
+            var statusFloat = document.getElementById('status-float');
+            var sheet = document.querySelector('.sheet');
+
+            var viewMode = 'all';
+            var selectedSection = null;
+            var lastInsertAnchor = null;
+            var lastEditableTarget = null;
+            var importObjectUrls = [];
+            var AUTOSAVE_KEY = 'meeting-minutes-autosave-v1';
+            var allowDraftPersist = false;
+            var suppressDraftSave = false;
+            var draftSaveTimer = null;
+
+            function escapeAttr(s) {
+                return String(s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            function escapeHtmlText(s) {
+                return String(s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            function prepareUrl(url) {
+                url = String(url || '').trim();
+                if (!url) return '';
+                if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+                return url;
+            }
+
+            function revokeImportObjectUrls() {
+                for (var ri = 0; ri < importObjectUrls.length; ri++) {
+                    try {
+                        URL.revokeObjectURL(importObjectUrls[ri]);
+                    } catch (er) {}
+                }
+                importObjectUrls = [];
+            }
+
+            function dateKeyFromText(text) {
+                var t = String(text || '').replace(/\s+/g, '');
+                var m = t.match(/(\d{4})[\/.\-年](\d{1,2})[\/.\-月](\d{1,2})/);
+                if (m) {
+                    return m[1] + ('0' + m[2]).slice(-2) + ('0' + m[3]).slice(-2);
+                }
+                m = t.match(/(\d{4})(\d{2})(\d{2})/);
+                if (m) return m[1] + m[2] + m[3];
+                return '';
+            }
+
+            function extFromMime(mime) {
+                var m = String(mime || '')
+                    .split(';')[0]
+                    .trim()
+                    .toLowerCase();
+                if (m === 'image/png') return 'png';
+                if (m === 'image/jpeg' || m === 'image/jpg') return 'jpg';
+                if (m === 'image/gif') return 'gif';
+                if (m === 'image/webp') return 'webp';
+                if (m === 'image/svg+xml') return 'svg';
+                return 'bin';
+            }
+
+            function itemImageStem(sectionDateKey, itemIdx) {
+                if (itemIdx < 100) {
+                    return sectionDateKey + '_' + ('0' + itemIdx).slice(-2);
+                }
+                return sectionDateKey + '_' + itemIdx;
+            }
+
+            async function addImageToZip(zip, stemBase, src) {
+                var s = String(src || '').trim();
+                if (s.indexOf('data:') === 0) {
+                    var raw = s.replace(/\s/g, '');
+                    var m = /^data:([^;,]+);base64,(.*)$/i.exec(raw);
+                    if (!m) return null;
+                    var mt = m[1].split(';')[0].trim();
+                    var ext = extFromMime(mt);
+                    var fname = stemBase + '.' + ext;
+                    zip.file('images/' + fname, m[2], { base64: true });
+                    return fname;
+                }
+                if (/^https?:\/\//i.test(s)) {
+                    try {
+                        var res = await fetch(s);
+                        if (!res.ok) return null;
+                        var blob = await res.blob();
+                        var ext = extFromMime(blob.type || '') || 'bin';
+                        var fname2 = stemBase + '.' + ext;
+                        zip.file('images/' + fname2, blob);
+                        return fname2;
+                    } catch (fe) {
+                        return null;
+                    }
+                }
+                return null;
+            }
+
+            async function replaceImagesInHtml(html, zip, stemBase, sharedCounter) {
+                var wrap = document.createElement('div');
+                wrap.innerHTML = html;
+                var imgs = wrap.querySelectorAll('img');
+                var localN = 0;
+                for (var ii = 0; ii < imgs.length; ii++) {
+                    var img = imgs[ii];
+                    var src = img.getAttribute('src');
+                    if (!src) continue;
+                    var seq = sharedCounter ? ++sharedCounter.n : ++localN;
+                    var stem = stemBase + '_' + seq;
+                    var fname = await addImageToZip(zip, stem, src);
+                    if (fname) {
+                        img.setAttribute('src', '__MM_IMG__/' + fname);
+                    }
+                }
+                return wrap.innerHTML;
+            }
+
+            async function buildExportPayload(zip) {
+                var metaDateCell = sheet.querySelector('table.meta td.date-emphasis');
+                var metaDateKey = dateKeyFromText(metaDateCell ? metaDateCell.textContent : '') || 'nodate';
+
+                var meta = [];
+                var metaCells = sheet.querySelectorAll('table.meta td.value[contenteditable="true"]');
+                var metaImgCounter = { n: 0 };
+                var stemMeta = metaDateKey + '_M';
+                for (var mi = 0; mi < metaCells.length; mi++) {
+                    var htmlM = await replaceImagesInHtml(
+                        metaCells[mi].innerHTML,
+                        zip,
+                        stemMeta,
+                        metaImgCounter
+                    );
+                    meta.push(htmlM);
+                }
+
+                var items = [];
+                var sectionDateKey = metaDateKey;
+                var itemIdx = 0;
+                var ch = tbody.children;
+                for (var ri = 0; ri < ch.length; ri++) {
+                    var tr = ch[ri];
+                    if (tr.classList.contains('date-section')) {
+                        var stEl = tr.querySelector('.section-title');
+                        var titleHtml = stEl ? stEl.innerHTML : '';
+                        sectionDateKey = dateKeyFromText(stEl ? stEl.textContent : '') || metaDateKey;
+                        var secStem = sectionDateKey + '_S';
+                        var secCounter = { n: 0 };
+                        titleHtml = await replaceImagesInHtml(titleHtml, zip, secStem, secCounter);
+                        items.push({ type: 'section', title: titleHtml });
+                    } else if (tr.classList.contains('item-row')) {
+                        itemIdx++;
+                        var reportEl = tr.querySelector('.col-report');
+                        var resEl = tr.querySelector('.col-resolution');
+                        var btn = tr.querySelector('.status-btn');
+                        var reportHtml = reportEl ? reportEl.innerHTML : '';
+                        var resHtml = resEl ? resEl.innerHTML : '';
+                        var status = btn ? btn.getAttribute('data-status') || 'active' : 'active';
+                        var rowStem = itemImageStem(sectionDateKey, itemIdx);
+                        var shared = { n: 0 };
+                        reportHtml = await replaceImagesInHtml(reportHtml, zip, rowStem, shared);
+                        resHtml = await replaceImagesInHtml(resHtml, zip, rowStem, shared);
+                        items.push({
+                            type: 'item',
+                            report: reportHtml,
+                            resolution: resHtml,
+                            status: status
+                        });
+                    }
+                }
+
+                return {
+                    format: 'meeting-minutes-bundle',
+                    version: 1,
+                    meta: meta,
+                    items: items,
+                    ui: {
+                        viewMode: viewMode,
+                        filterUnfinished: filterEl ? !!filterEl.checked : false,
+                        search: searchEl && searchEl.value ? searchEl.value : ''
+                    }
+                };
+            }
+
+            function collectDraftPayloadSync() {
+                var meta = [];
+                var metaCells = sheet.querySelectorAll('table.meta td.value[contenteditable="true"]');
+                for (var mi = 0; mi < metaCells.length; mi++) {
+                    meta.push(metaCells[mi].innerHTML);
+                }
+                var items = [];
+                var ch = tbody.children;
+                for (var ri = 0; ri < ch.length; ri++) {
+                    var tr = ch[ri];
+                    if (tr.classList.contains('date-section')) {
+                        var stEl = tr.querySelector('.section-title');
+                        items.push({ type: 'section', title: stEl ? stEl.innerHTML : '' });
+                    } else if (tr.classList.contains('item-row')) {
+                        var reportEl = tr.querySelector('.col-report');
+                        var resEl = tr.querySelector('.col-resolution');
+                        var btn = tr.querySelector('.status-btn');
+                        items.push({
+                            type: 'item',
+                            report: reportEl ? reportEl.innerHTML : '',
+                            resolution: resEl ? resEl.innerHTML : '',
+                            status: btn ? btn.getAttribute('data-status') || 'active' : 'active'
+                        });
+                    }
+                }
+                return {
+                    format: 'meeting-minutes-bundle',
+                    version: 1,
+                    savedAt: Date.now(),
+                    meta: meta,
+                    items: items,
+                    ui: {
+                        viewMode: viewMode,
+                        filterUnfinished: filterEl ? !!filterEl.checked : false,
+                        search: searchEl && searchEl.value ? searchEl.value : ''
+                    }
+                };
+            }
+
+            function clearAutoSaveDraft() {
+                try {
+                    localStorage.removeItem(AUTOSAVE_KEY);
+                } catch (e) {}
+            }
+
+            function saveDraftToLocalStorage() {
+                if (suppressDraftSave || !allowDraftPersist) return;
+                try {
+                    var payload = collectDraftPayloadSync();
+                    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(payload));
+                } catch (e) {
+                    if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+                        try {
+                            alert(
+                                '自動暫存失敗：內容（含圖片）超過瀏覽器儲存上限，請盡快匯出 ZIP 備份。'
+                            );
+                        } catch (e2) {}
+                    }
+                }
+            }
+
+            function scheduleDraftSave() {
+                if (!allowDraftPersist || suppressDraftSave) return;
+                if (draftSaveTimer) {
+                    clearTimeout(draftSaveTimer);
+                }
+                draftSaveTimer = window.setTimeout(function () {
+                    draftSaveTimer = null;
+                    saveDraftToLocalStorage();
+                }, 500);
+            }
+
+            function flushDraftSaveNow() {
+                if (!allowDraftPersist || suppressDraftSave) return;
+                if (draftSaveTimer) {
+                    clearTimeout(draftSaveTimer);
+                    draftSaveTimer = null;
+                }
+                saveDraftToLocalStorage();
+            }
+
+            function triggerDownload(blob, filename) {
+                var a = document.createElement('a');
+                var u = URL.createObjectURL(blob);
+                a.href = u;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.setTimeout(function () {
+                    URL.revokeObjectURL(u);
+                }, 600);
+            }
+
+            function defaultExportZipFilename() {
+                var d = new Date();
+                var y = d.getFullYear();
+                var m = ('0' + (d.getMonth() + 1)).slice(-2);
+                var day = ('0' + d.getDate()).slice(-2);
+                return y + m + day + '會議記錄.zip';
+            }
+
+            async function runExportZip() {
+                if (typeof JSZip === 'undefined') {
+                    alert('無法匯出：JSZip 未載入，請檢查網路後重試。');
+                    return;
+                }
+                var btnEx = document.getElementById('btn-export-zip');
+                if (btnEx) btnEx.disabled = true;
+                try {
+                    var zip = new JSZip();
+                    var payload = await buildExportPayload(zip);
+                    zip.file('meeting-minutes.json', JSON.stringify(payload));
+                    var blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+                    triggerDownload(blob, defaultExportZipFilename());
+                    clearAutoSaveDraft();
+                } catch (ex) {
+                    alert('匯出失敗：' + (ex && ex.message ? ex.message : String(ex)));
+                } finally {
+                    if (btnEx) btnEx.disabled = false;
+                }
+            }
+
+            function resolveImportPlaceholders(html, urlMap) {
+                if (html == null) return '';
+                return String(html).replace(/__MM_IMG__\/([^"'\s>]+)/g, function (_all, fname) {
+                    var u = urlMap[fname];
+                    return u || '';
+                });
+            }
+
+            function applyMinutesData(data, urlMap) {
+                urlMap = urlMap || {};
+                suppressDraftSave = true;
+                try {
+                    var metaCells2 = sheet.querySelectorAll('table.meta td.value[contenteditable="true"]');
+                    var metaArr = data.meta || [];
+                    for (var i = 0; i < metaCells2.length && i < metaArr.length; i++) {
+                        metaCells2[i].innerHTML = resolveImportPlaceholders(metaArr[i], urlMap);
+                    }
+
+                    while (tbody.firstChild) {
+                        tbody.removeChild(tbody.firstChild);
+                    }
+                    for (var j = 0; j < data.items.length; j++) {
+                        var item = data.items[j];
+                        if (item.type === 'section') {
+                            var trS = document.createElement('tr');
+                            trS.className = 'date-section';
+                            trS.setAttribute('data-row-type', 'section');
+                            var tHtml = resolveImportPlaceholders(item.title || '', urlMap);
+                            trS.innerHTML =
+                                '<td colspan="4" contenteditable="true" class="section-title">' +
+                                tHtml +
+                                '</td>';
+                            tbody.appendChild(trS);
+                        } else if (item.type === 'item') {
+                            var trI = document.createElement('tr');
+                            trI.className = 'item-row';
+                            trI.setAttribute('data-row-type', 'item');
+                            var st = item.status || 'active';
+                            if (!LABELS[st]) st = 'active';
+                            var rep = resolveImportPlaceholders(item.report || '&nbsp;', urlMap);
+                            var reso = resolveImportPlaceholders(item.resolution || '&nbsp;', urlMap);
+                            trI.innerHTML =
+                                '<td class="col-num"></td>' +
+                                '<td class="col-report" contenteditable="true">' +
+                                rep +
+                                '</td>' +
+                                '<td class="col-resolution" contenteditable="true">' +
+                                reso +
+                                '</td>' +
+                                '<td class="col-track"><button type="button" class="status-btn" data-status="' +
+                                escapeAttr(st) +
+                                '"></button></td>';
+                            var sbtn = trI.querySelector('.status-btn');
+                            if (sbtn) applyStatus(sbtn, st);
+                            tbody.appendChild(trI);
+                        }
+                    }
+
+                    lastInsertAnchor = null;
+                    if (data.ui) {
+                        if (data.ui.viewMode) viewMode = data.ui.viewMode;
+                        if (filterEl && typeof data.ui.filterUnfinished === 'boolean') {
+                            filterEl.checked = data.ui.filterUnfinished;
+                        }
+                        if (searchEl && typeof data.ui.search === 'string') {
+                            searchEl.value = data.ui.search;
+                        }
+                    }
+                } finally {
+                    suppressDraftSave = false;
+                }
+            }
+
+            async function runImportZip(file) {
+                if (!file || !file.size) return;
+                if (typeof JSZip === 'undefined') {
+                    alert('無法匯入：JSZip 未載入。');
+                    return;
+                }
+                try {
+                    var zip = await JSZip.loadAsync(file);
+                    var jf = zip.file('meeting-minutes.json');
+                    if (!jf) {
+                        alert('ZIP 內找不到 meeting-minutes.json。');
+                        return;
+                    }
+                    var txt = await jf.async('string');
+                    var data = JSON.parse(txt);
+                    if (!data || data.format !== 'meeting-minutes-bundle' || !Array.isArray(data.items)) {
+                        alert('檔案格式不符（須為本頁匯出的 bundle）。');
+                        return;
+                    }
+
+                    revokeImportObjectUrls();
+                    var urlMap = {};
+                    var tasks = [];
+                    zip.forEach(function (relPath, zf) {
+                        if (zf.dir || relPath.indexOf('images/') !== 0) return;
+                        var shortName = relPath.replace(/^images\//, '');
+                        tasks.push(
+                            zf.async('blob').then(function (blob) {
+                                var ou = URL.createObjectURL(blob);
+                                importObjectUrls.push(ou);
+                                urlMap[shortName] = ou;
+                            })
+                        );
+                    });
+                    await Promise.all(tasks);
+
+                    applyMinutesData(data, urlMap);
+                    setSelectedSection(tbody.querySelector('tr.date-section'));
+                    applyFilter();
+                    refreshPrintRangeSelects();
+                } catch (im) {
+                    alert('匯入失敗：' + (im && im.message ? im.message : String(im)));
+                }
+            }
+
+            function focusEditableForInsert() {
+                var target = lastEditableTarget;
+                if (!target || !sheet.contains(target)) {
+                    alert('請先點選要輸入的儲存格（上方表格或下方報告／決議等），再按插入。');
+                    return null;
+                }
+                target.focus();
+                return target;
+            }
+
+            function insertHtmlIntoEditable(html) {
+                var target = focusEditableForInsert();
+                if (!target) return false;
+                var sel = window.getSelection();
+                if (sel.rangeCount > 0) {
+                    var range = sel.getRangeAt(0);
+                    if (!target.contains(range.commonAncestorContainer)) {
+                        range = document.createRange();
+                        range.selectNodeContents(target);
+                        range.collapse(false);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    }
+                } else {
+                    var r = document.createRange();
+                    r.selectNodeContents(target);
+                    r.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(r);
+                }
+                try {
+                    document.execCommand('insertHTML', false, html);
+                } catch (err) {
+                    return false;
+                }
+                scheduleDraftSave();
+                return true;
+            }
+
+            if (sheet) {
+                sheet.addEventListener('focusin', function (e) {
+                    var t = e.target;
+                    if (t && t.getAttribute && t.getAttribute('contenteditable') === 'true') {
+                        lastEditableTarget = t;
+                    }
+                });
+                sheet.addEventListener('paste', function (e) {
+                    var items = e.clipboardData && e.clipboardData.items;
+                    if (!items) return;
+                    for (var i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') === -1) continue;
+                        var ed = document.activeElement;
+                        if (!ed || ed.getAttribute('contenteditable') !== 'true' || !sheet.contains(ed)) {
+                            return;
+                        }
+                        e.preventDefault();
+                        var blob = items[i].getAsFile();
+                        if (!blob) return;
+                        lastEditableTarget = ed;
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            var src = String(ev.target.result || '');
+                            var safeSrc = src.replace(/"/g, '&quot;');
+                            insertHtmlIntoEditable(
+                                '<img src="' + safeSrc + '" alt="" style="max-width:100%;height:auto;vertical-align:middle;">'
+                            );
+                        };
+                        reader.readAsDataURL(blob);
+                        return;
+                    }
+                });
+                sheet.addEventListener(
+                    'blur',
+                    function (e) {
+                        var t = e.target;
+                        if (t && t.getAttribute && t.getAttribute('contenteditable') === 'true') {
+                            scheduleDraftSave();
+                        }
+                    },
+                    true
+                );
+                sheet.addEventListener(
+                    'input',
+                    function (e) {
+                        var t = e.target;
+                        if (t && t.getAttribute && t.getAttribute('contenteditable') === 'true') {
+                            scheduleDraftSave();
+                        }
+                    },
+                    true
+                );
+            }
+
+            function itemStatus(tr) {
+                var btn = tr.querySelector('.status-btn');
+                return btn ? btn.getAttribute('data-status') || 'active' : 'active';
+            }
+
+            function itemMatchesKeyword(tr) {
+                var q = searchEl && searchEl.value ? searchEl.value.trim().toLowerCase() : '';
+                if (!q) return true;
+                var text = (tr.textContent || '').toLowerCase();
+                return text.indexOf(q) !== -1;
+            }
+
+            function hasActiveItemFilter() {
+                if (viewMode !== 'all') return true;
+                if (filterEl && filterEl.checked) return true;
+                return !!(searchEl && searchEl.value && searchEl.value.trim());
+            }
+
+            function isItemRowHidden(tr) {
+                if (!tr.classList.contains('item-row')) return false;
+                var st = itemStatus(tr);
+                var byStatus = false;
+                if (viewMode !== 'all') {
+                    byStatus = st !== viewMode;
+                } else if (filterEl && filterEl.checked) {
+                    byStatus = st === 'done' || st === 'cancelled';
+                }
+                var byKeyword = !itemMatchesKeyword(tr);
+                return byStatus || byKeyword;
+            }
+
+            function sectionHasAnyVisible(sec) {
+                var el = sec.nextElementSibling;
+                while (el && !el.classList.contains('date-section')) {
+                    if (el.classList.contains('item-row') && !isItemRowHidden(el)) {
+                        return true;
+                    }
+                    el = el.nextElementSibling;
+                }
+                return false;
+            }
+
+            function isRenumberFiltered() {
+                return hasActiveItemFilter();
+            }
+
+            function normEditablePlainText(td) {
+                return (td.textContent || '')
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\u200b/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
+
+            function isEditableCellEmpty(td) {
+                if (!td) return true;
+                if (normEditablePlainText(td).length > 0) return false;
+                if (td.querySelector('img,table,video')) return false;
+                return true;
+            }
+
+            function tryDeleteIfEmptyItemRow(tr) {
+                if (!tr || !tr.parentNode || !tbody.contains(tr) || !tr.classList.contains('item-row')) return;
+                var report = tr.querySelector('.col-report');
+                var resolution = tr.querySelector('.col-resolution');
+                if (!report || !resolution) return;
+                if (!isEditableCellEmpty(report) || !isEditableCellEmpty(resolution)) return;
+                if (
+                    !confirm(
+                        '「報告．檢討事項」與「決議事項」皆為空白，是否刪除此議題列？'
+                    )
+                ) {
+                    return;
+                }
+                if (lastInsertAnchor === tr) lastInsertAnchor = null;
+                tr.remove();
+                applyFilter();
+                refreshPrintRangeSelects();
+            }
+
+            function renumber() {
+                var rows = tbody.querySelectorAll('tr.item-row');
+                if (!isRenumberFiltered()) {
+                    for (var i = 0; i < rows.length; i++) {
+                        var numCell = rows[i].querySelector('.col-num');
+                        if (numCell) numCell.textContent = String(i + 1);
+                    }
+                    return;
+                }
+                var k = 0;
+                for (var j = 0; j < rows.length; j++) {
+                    var tr = rows[j];
+                    if (tr.classList.contains('filter-hide')) continue;
+                    k++;
+                    var nc = tr.querySelector('.col-num');
+                    if (nc) nc.textContent = String(k);
+                }
+            }
+
+            function updateStats() {
+                var c = { active: 0, pending: 0, done: 0, cancelled: 0 };
+                var itemRows = tbody.querySelectorAll('tr.item-row');
+                for (var i = 0; i < itemRows.length; i++) {
+                    var st = itemStatus(itemRows[i]);
+                    if (st === 'active') c.active++;
+                    else if (st === 'pending') c.pending++;
+                    else if (st === 'done') c.done++;
+                    else if (st === 'cancelled') c.cancelled++;
+                }
+                var total = c.active + c.pending + c.done + c.cancelled;
+                var elAll = document.getElementById('stat-all');
+                var elA = document.getElementById('stat-active');
+                var elP = document.getElementById('stat-pending');
+                var elD = document.getElementById('stat-done');
+                var elC = document.getElementById('stat-cancelled');
+                if (elAll) elAll.textContent = String(total);
+                if (elA) elA.textContent = String(c.active);
+                if (elP) elP.textContent = String(c.pending);
+                if (elD) elD.textContent = String(c.done);
+                if (elC) elC.textContent = String(c.cancelled);
+            }
+
+            function syncPanelSelection() {
+                if (!statusFloat) return;
+                var buttons = statusFloat.querySelectorAll('.status-stat');
+                for (var i = 0; i < buttons.length; i++) {
+                    var b = buttons[i];
+                    var v = b.getAttribute('data-view');
+                    b.classList.toggle('is-selected', v === viewMode);
+                }
+            }
+
+            function setSelectedSection(row) {
+                lastInsertAnchor = null;
+                if (selectedSection && selectedSection.classList) {
+                    selectedSection.classList.remove('is-active');
+                }
+                selectedSection = row || null;
+                if (selectedSection && selectedSection.classList) {
+                    selectedSection.classList.add('is-active');
+                }
+            }
+
+            function getSectionTail(sectionRow) {
+                var tail = sectionRow;
+                var el = sectionRow.nextElementSibling;
+                while (el && !el.classList.contains('date-section')) {
+                    tail = el;
+                    el = el.nextElementSibling;
+                }
+                return tail;
+            }
+
+            function insertAfter(newNode, refNode) {
+                if (!refNode || !refNode.parentNode) {
+                    tbody.appendChild(newNode);
+                    return;
+                }
+                if (refNode.nextSibling) {
+                    refNode.parentNode.insertBefore(newNode, refNode.nextSibling);
+                } else {
+                    refNode.parentNode.appendChild(newNode);
+                }
+            }
+
+            function applyStatus(btn, key) {
+                btn.setAttribute('data-status', key);
+                btn.textContent = LABELS[key] || key;
+                btn.title = statusCycleTitle();
+            }
+
+            function cycleStatus(btn) {
+                var cur = btn.getAttribute('data-status') || 'active';
+                var idx = ORDER.indexOf(cur);
+                if (idx < 0) idx = 0;
+                var next = ORDER[(idx + 1) % ORDER.length];
+                applyStatus(btn, next);
+                applyFilter();
+            }
+
+            function applyFilter() {
+                var rows = tbody.querySelectorAll('tr');
+                for (var i = 0; i < rows.length; i++) {
+                    var tr = rows[i];
+                    if (tr.classList.contains('item-row')) {
+                        tr.classList.toggle('filter-hide', isItemRowHidden(tr));
+                    }
+                }
+                var list = tbody.querySelectorAll('tr');
+                for (var j = 0; j < list.length; j++) {
+                    var sec = list[j];
+                    if (!sec.classList.contains('date-section')) continue;
+                    if (!hasActiveItemFilter()) {
+                        sec.classList.remove('filter-hide');
+                    } else {
+                        sec.classList.toggle('filter-hide', !sectionHasAnyVisible(sec));
+                    }
+                }
+                renumber();
+                updateStats();
+                syncPanelSelection();
+                scheduleDraftSave();
+            }
+
+            function addRow() {
+                var tr = document.createElement('tr');
+                tr.className = 'item-row';
+                tr.setAttribute('data-row-type', 'item');
+                tr.innerHTML =
+                    '<td class="col-num"></td>' +
+                    '<td class="col-report" contenteditable="true">&nbsp;</td>' +
+                    '<td class="col-resolution" contenteditable="true">&nbsp;</td>' +
+                    '<td class="col-track">' +
+                    '<button type="button" class="status-btn" data-status="active">' + LABELS.active + '</button>' +
+                    '</td>';
+                var ref = lastInsertAnchor;
+                if (!ref || !tbody.contains(ref) || !ref.classList.contains('item-row')) {
+                    ref =
+                        selectedSection && selectedSection.parentNode === tbody
+                            ? getSectionTail(selectedSection)
+                            : null;
+                }
+                if (ref && ref.classList.contains('item-row') && tbody.contains(ref)) {
+                    insertAfter(tr, ref);
+                } else if (selectedSection && selectedSection.parentNode === tbody) {
+                    insertAfter(tr, getSectionTail(selectedSection));
+                } else {
+                    tbody.appendChild(tr);
+                }
+                lastInsertAnchor = tr;
+                var newStatus = tr.querySelector('.status-btn');
+                if (newStatus) applyStatus(newStatus, 'active');
+                applyFilter();
+                var firstEditable = tr.querySelector('td.col-report');
+                if (firstEditable) firstEditable.focus();
+            }
+
+            function refreshPrintRangeSelects() {
+                var selFrom = document.getElementById('print-range-from');
+                var selTo = document.getElementById('print-range-to');
+                if (!selFrom || !selTo) return;
+                var sections = tbody.querySelectorAll('tr.date-section');
+                var prevFrom = selFrom.value;
+                var prevTo = selTo.value;
+                selFrom.innerHTML = '';
+                selTo.innerHTML = '';
+                var n = sections.length;
+                if (n === 0) {
+                    var ox = document.createElement('option');
+                    ox.value = '0';
+                    ox.textContent = '（尚無日期區段）';
+                    selFrom.appendChild(ox);
+                    selTo.appendChild(ox.cloneNode(true));
+                    return;
+                }
+                for (var i = 0; i < n; i++) {
+                    var title = (sections[i].textContent || '').replace(/\s+/g, ' ').trim() || '區段 ' + (i + 1);
+                    if (title.length > 42) title = title.slice(0, 42) + '…';
+                    var oFrom = document.createElement('option');
+                    oFrom.value = String(i);
+                    oFrom.textContent = title;
+                    selFrom.appendChild(oFrom);
+                    var oTo = document.createElement('option');
+                    oTo.value = String(i);
+                    oTo.textContent = title;
+                    selTo.appendChild(oTo);
+                }
+                var maxIdx = String(n - 1);
+                if (prevFrom !== '' && parseInt(prevFrom, 10) >= 0 && parseInt(prevFrom, 10) < n) {
+                    selFrom.value = prevFrom;
+                } else {
+                    selFrom.value = '0';
+                }
+                if (prevTo !== '' && parseInt(prevTo, 10) >= 0 && parseInt(prevTo, 10) < n) {
+                    selTo.value = prevTo;
+                } else {
+                    selTo.value = maxIdx;
+                }
+            }
+
+            function clearPrintRangeClasses() {
+                var trs = tbody.querySelectorAll('tr');
+                for (var i = 0; i < trs.length; i++) {
+                    trs[i].classList.remove('print-temp-show', 'print-temp-hide');
+                }
+            }
+
+            function applyPrintRangeClasses(startIdx, endIdx) {
+                clearPrintRangeClasses();
+                var sections = tbody.querySelectorAll('tr.date-section');
+                if (!sections.length) return false;
+                if (startIdx > endIdx) {
+                    var tmp = startIdx;
+                    startIdx = endIdx;
+                    endIdx = tmp;
+                }
+                var currentBlock = -1;
+                var rows = tbody.children;
+                for (var r = 0; r < rows.length; r++) {
+                    var tr = rows[r];
+                    if (tr.classList.contains('date-section')) {
+                        currentBlock = -1;
+                        for (var si = 0; si < sections.length; si++) {
+                            if (sections[si] === tr) {
+                                currentBlock = si;
+                                break;
+                            }
+                        }
+                        var showSec = currentBlock >= startIdx && currentBlock <= endIdx;
+                        tr.classList.add(showSec ? 'print-temp-show' : 'print-temp-hide');
+                    } else if (tr.classList.contains('item-row')) {
+                        var showItem = currentBlock >= 0 && currentBlock >= startIdx && currentBlock <= endIdx;
+                        tr.classList.add(showItem ? 'print-temp-show' : 'print-temp-hide');
+                    }
+                }
+                return true;
+            }
+
+            function defaultSectionTitle() {
+                var d = new Date();
+                var y = d.getFullYear();
+                var m = d.getMonth() + 1;
+                var day = d.getDate();
+                return y + '/' + m + '/' + day + ' 會議';
+            }
+
+            function addSection() {
+                var tr = document.createElement('tr');
+                tr.className = 'date-section';
+                tr.setAttribute('data-row-type', 'section');
+                tr.innerHTML =
+                    '<td colspan="4" contenteditable="true" class="section-title">' + defaultSectionTitle() + '</td>';
+                if (selectedSection && selectedSection.parentNode === tbody) {
+                    insertAfter(tr, getSectionTail(selectedSection));
+                } else {
+                    tbody.appendChild(tr);
+                }
+                setSelectedSection(tr);
+                applyFilter();
+                refreshPrintRangeSelects();
+                var title = tr.querySelector('.section-title');
+                if (title) {
+                    title.focus();
+                    try {
+                        var r = document.createRange();
+                        r.selectNodeContents(title);
+                        r.collapse(false);
+                        var sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(r);
+                    } catch (e) {}
+                }
+            }
+
+            tbody.addEventListener('click', function (e) {
+                var t = e.target;
+                var itemRow = t && t.closest ? t.closest('tr.item-row') : null;
+                if (itemRow && tbody.contains(itemRow)) {
+                    lastInsertAnchor = itemRow;
+                }
+                var sectionRow = t && t.closest ? t.closest('tr.date-section') : null;
+                if (sectionRow && tbody.contains(sectionRow)) {
+                    setSelectedSection(sectionRow);
+                }
+                if (t && t.classList && t.classList.contains('status-btn')) {
+                    e.preventDefault();
+                    cycleStatus(t);
+                }
+            });
+
+            tbody.addEventListener('focusin', function (e) {
+                var t = e.target;
+                var row = t && t.closest ? t.closest('tr.item-row') : null;
+                if (row && tbody.contains(row)) {
+                    lastInsertAnchor = row;
+                }
+            });
+
+            tbody.addEventListener('keydown', function (e) {
+                var t = e.target;
+                if (t && t.classList && t.classList.contains('section-title') && e.key === 'Enter') {
+                    e.preventDefault();
+                    t.blur();
+                }
+            });
+
+            tbody.addEventListener(
+                'blur',
+                function (e) {
+                    var t = e.target;
+                    if (t && t.classList && t.classList.contains('section-title')) {
+                        refreshPrintRangeSelects();
+                    }
+                    if (
+                        t &&
+                        t.classList &&
+                        (t.classList.contains('col-report') || t.classList.contains('col-resolution'))
+                    ) {
+                        var row = t.closest && t.closest('tr.item-row');
+                        if (row && tbody.contains(row)) {
+                            window.setTimeout(function () {
+                                var ae = document.activeElement;
+                                if (ae && row.contains(ae)) return;
+                                tryDeleteIfEmptyItemRow(row);
+                            }, 0);
+                        }
+                    }
+                },
+                true
+            );
+
+            document.getElementById('add-row').addEventListener('click', addRow);
+            document.getElementById('add-section').addEventListener('click', addSection);
+
+            var btnExportZip = document.getElementById('btn-export-zip');
+            var btnImportZip = document.getElementById('btn-import-zip');
+            var importZipInput = document.getElementById('import-zip-input');
+            if (btnExportZip) {
+                btnExportZip.addEventListener('click', function () {
+                    runExportZip();
+                });
+            }
+            if (btnImportZip && importZipInput) {
+                btnImportZip.addEventListener('click', function () {
+                    importZipInput.click();
+                });
+                importZipInput.addEventListener('change', function () {
+                    var f = this.files && this.files[0];
+                    this.value = '';
+                    if (f) runImportZip(f);
+                });
+            }
+
+            if (filterEl) filterEl.addEventListener('change', applyFilter);
+            if (searchEl) searchEl.addEventListener('input', applyFilter);
+
+            (function bindRichEditing() {
+                var btnLink = document.getElementById('insert-link');
+                var btnImgUrl = document.getElementById('insert-image-url');
+                var btnImgFile = document.getElementById('insert-image-file');
+                var fileIn = document.getElementById('image-file-input');
+                if (btnLink) {
+                    btnLink.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                    });
+                    btnLink.addEventListener('click', function () {
+                        var url = prompt('請輸入連結網址（例如 https://example.com）');
+                        url = prepareUrl(url);
+                        if (!url) return;
+                        var label = prompt('顯示文字（留空則顯示網址）', '');
+                        if (label === null) return;
+                        label = label.trim() || url;
+                        var html =
+                            '<a href="' +
+                            escapeAttr(url) +
+                            '" target="_blank" rel="noopener noreferrer">' +
+                            escapeHtmlText(label) +
+                            '</a>';
+                        insertHtmlIntoEditable(html);
+                    });
+                }
+                if (btnImgUrl) {
+                    btnImgUrl.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                    });
+                    btnImgUrl.addEventListener('click', function () {
+                        var url = prompt('請輸入圖片網址（需為網路上可開啟的圖片連結）');
+                        url = prepareUrl(url);
+                        if (!url) return;
+                        var alt = prompt('圖片說明（可留空）', '');
+                        if (alt === null) return;
+                        var html =
+                            '<img src="' +
+                            escapeAttr(url) +
+                            '" alt="' +
+                            escapeAttr(alt || '') +
+                            '" style="max-width:100%;height:auto;vertical-align:middle;">';
+                        insertHtmlIntoEditable(html);
+                    });
+                }
+                if (btnImgFile && fileIn) {
+                    btnImgFile.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                    });
+                    btnImgFile.addEventListener('click', function () {
+                        if (!lastEditableTarget || !sheet.contains(lastEditableTarget)) {
+                            alert('請先點選要插入圖片的儲存格。');
+                            return;
+                        }
+                        fileIn.click();
+                    });
+                    fileIn.addEventListener('change', function () {
+                        var f = this.files && this.files[0];
+                        this.value = '';
+                        if (!f || !f.type.match(/^image\//)) return;
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            var src = String(ev.target.result || '').replace(/"/g, '&quot;');
+                            insertHtmlIntoEditable(
+                                '<img src="' +
+                                    src +
+                                    '" alt="" style="max-width:100%;height:auto;vertical-align:middle;">'
+                            );
+                        };
+                        reader.readAsDataURL(f);
+                    });
+                }
+            })();
+
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'hidden') {
+                    flushDraftSaveNow();
+                }
+            });
+            window.addEventListener('pagehide', flushDraftSaveNow);
+
+            if (statusFloat) {
+                statusFloat.addEventListener('click', function (e) {
+                    var btn = e.target && e.target.closest && e.target.closest('.status-stat');
+                    if (!btn || !statusFloat.contains(btn)) return;
+                    var v = btn.getAttribute('data-view');
+                    if (!v) return;
+                    viewMode = v;
+                    applyFilter();
+                });
+            }
+
+            var btnPrintRange = document.getElementById('btn-print-range');
+            if (btnPrintRange) {
+                btnPrintRange.addEventListener('click', function () {
+                    var sections = tbody.querySelectorAll('tr.date-section');
+                    if (!sections.length) {
+                        alert('請先新增至少一個「日期區段」再列印。');
+                        return;
+                    }
+                    var selFrom = document.getElementById('print-range-from');
+                    var selTo = document.getElementById('print-range-to');
+                    var a = parseInt(selFrom && selFrom.value, 10);
+                    var b = parseInt(selTo && selTo.value, 10);
+                    if (isNaN(a) || isNaN(b)) return;
+                    a = Math.max(0, Math.min(sections.length - 1, a));
+                    b = Math.max(0, Math.min(sections.length - 1, b));
+                    applyPrintRangeClasses(a, b);
+                    window.print();
+                });
+            }
+
+            window.addEventListener('afterprint', function () {
+                clearPrintRangeClasses();
+            });
+
+            function initAllStatusButtonTitles() {
+                var btns = tbody.querySelectorAll('.status-btn');
+                for (var i = 0; i < btns.length; i++) {
+                    var k = btns[i].getAttribute('data-status') || 'active';
+                    if (!LABELS[k]) k = 'active';
+                    applyStatus(btns[i], k);
+                }
+            }
+
+            (function draftBootstrap() {
+                allowDraftPersist = false;
+                var raw = null;
+                try {
+                    raw = localStorage.getItem(AUTOSAVE_KEY);
+                } catch (e) {
+                    raw = null;
+                }
+                if (raw) {
+                    try {
+                        var data = JSON.parse(raw);
+                        if (
+                            data &&
+                            data.format === 'meeting-minutes-bundle' &&
+                            Array.isArray(data.items)
+                        ) {
+                            if (
+                                confirm(
+                                    '偵測到上次尚未成功匯出 ZIP 前留下的瀏覽器暫存（可減少斷電或誤關分頁造成的資料遺失）。\n\n是否還原暫存？\n\n按「取消」則以本頁內建範例開啟（暫存檔仍保留於本機，下次開啟可再選擇還原）。'
+                                )
+                            ) {
+                                applyMinutesData(data, {});
+                                setSelectedSection(tbody.querySelector('tr.date-section'));
+                                applyFilter();
+                                refreshPrintRangeSelects();
+                                initAllStatusButtonTitles();
+                                allowDraftPersist = true;
+                                return;
+                            }
+                        }
+                    } catch (e2) {}
+                }
+                setSelectedSection(tbody.querySelector('tr.date-section'));
+                applyFilter();
+                refreshPrintRangeSelects();
+                initAllStatusButtonTitles();
+                allowDraftPersist = true;
+            })();
+        })();
+    </script>
+</body>
+</html>
