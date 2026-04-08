@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- 添加 SheetJS 庫 -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --base-font-size: 16px;
@@ -151,6 +152,67 @@
             background: #f8f9fa;
             border-radius: 8px;
         }
+        /* 左側暫存懸浮面板 */
+        .draft-float-panel {
+            position: fixed;
+            left: max(12px, env(safe-area-inset-left));
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 9998;
+            font-size: 0.95rem;
+        }
+        .draft-float-panel-inner {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+            padding: 14px 12px;
+            width: 168px;
+            box-sizing: border-box;
+        }
+        .draft-float-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 0 0 10px 0;
+            font-size: 0.95em;
+            text-align: center;
+        }
+        .draft-float-panel .draft-float-btn {
+            width: 100%;
+            margin: 0 0 8px 0;
+            padding: 10px 8px;
+            font-size: 0.9em;
+            box-sizing: border-box;
+        }
+        .draft-float-panel .draft-float-btn-clear {
+            background: #e9ecef;
+            color: #495057;
+            margin-bottom: 6px;
+        }
+        .draft-float-panel .draft-float-btn-clear:hover {
+            background: #dee2e6;
+        }
+        .draft-float-hint {
+            margin: 0;
+            font-size: 0.72em;
+            color: #868e96;
+            line-height: 1.35;
+        }
+        .draft-float-panel .draft-status {
+            display: block;
+            margin-top: 8px;
+            font-size: 0.72em;
+            color: #6c757d;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+        @media screen and (max-width: 768px) {
+            .draft-float-panel {
+                top: auto;
+                bottom: max(12px, env(safe-area-inset-bottom));
+                transform: none;
+            }
+        }
 
         .btn {
             padding: 8px 15px;
@@ -208,11 +270,7 @@
             border-style: solid;
         }
 
-        .photo-cell img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
+        /* 螢幕預覽圖改由 .photo-thumb-wrap 內的縮圖／預覽負責 */
 
         .photo-cell .upload-btn {
             position: absolute;
@@ -243,8 +301,7 @@
             padding: 2px 6px;
         }
 
-        .photo-cell:hover .remove-btn,
-        .photo-cell img:hover ~ .remove-btn {
+        .photo-cell:hover .remove-btn {
             display: block;
         }
 
@@ -675,8 +732,56 @@
             justify-content: flex-start;
             height: 100%;
         }
-        .photo-cell img {
-            margin-bottom: 8px;
+        /* 儲存格內縮圖 + 滑鼠懸停顯示約 2.5 倍大預覽（同一 wrap 內可移入預覽圖不會閃爍） */
+        @media screen {
+            .photo-thumb-wrap {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                max-width: 100%;
+                width: 100%;
+                margin-bottom: 8px;
+                z-index: 1;
+            }
+            .photo-cell:hover .photo-thumb-wrap,
+            .photo-thumb-wrap:hover {
+                z-index: 40;
+            }
+            .photo-thumb-wrap .photo-thumb {
+                display: block;
+                max-height: 120px;
+                max-width: 100%;
+                width: auto;
+                height: auto;
+                object-fit: contain;
+                cursor: zoom-in;
+            }
+            .photo-thumb-wrap .photo-thumb-preview {
+                display: none;
+                position: absolute;
+                left: 50%;
+                top: 100%;
+                margin-top: 6px;
+                /* 版面與縮圖相同，再以 2.5 倍顯示（非完整原圖尺寸） */
+                max-height: 120px;
+                max-width: 100%;
+                width: auto;
+                height: auto;
+                object-fit: contain;
+                transform: translate(-50%, 0) scale(2.5);
+                transform-origin: center top;
+                background: #fff;
+                padding: 4px;
+                border-radius: 6px;
+                box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+                border: 1px solid rgba(0, 0, 0, 0.08);
+                cursor: zoom-out;
+                pointer-events: auto;
+            }
+            .photo-thumb-wrap:hover .photo-thumb-preview {
+                display: block;
+            }
         }
         .photo-cell-fields {
             width: 100%;
@@ -822,6 +927,7 @@
                 page-break-after: always;
                 break-after: page;
             }
+            /* 寬度由 printTable() 依「欄×列」以 inline style 覆寫（預設 2 欄與 gap 10mm 一致） */
             .print-photo-cell {
                 page-break-inside: avoid;
                 break-inside: avoid;
@@ -1060,6 +1166,13 @@
                 <button class="btn btn-primary" onclick="printTable()">
                     <i class="fas fa-print"></i> 列印表格
                 </button>
+                <button type="button" class="btn btn-secondary" onclick="exportPicSheetZip()">
+                    <i class="fas fa-file-zipper"></i> 匯出 ZIP
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('importPicSheetZip').click()">
+                    <i class="fas fa-file-import"></i> 匯入 ZIP
+                    <input type="file" id="importPicSheetZip" accept=".zip,application/zip" style="display:none" onchange="handleImportPicSheetZip(this)">
+                </button>
             </div>
 
             <table class="photo-table" id="photoTable">
@@ -1085,9 +1198,31 @@
         </div>
     </main>
 
+    <div id="draftFloatPanel" class="draft-float-panel" aria-label="瀏覽器暫存">
+        <div class="draft-float-panel-inner">
+            <div class="draft-float-title">瀏覽器暫存</div>
+            <button type="button" class="btn btn-primary draft-float-btn" onclick="saveDraftNowManual()" title="立即將目前內容寫入瀏覽器儲存空間">
+                <i class="fas fa-floppy-disk"></i> 設置暫存
+            </button>
+            <button type="button" class="btn btn-secondary draft-float-btn draft-float-btn-clear" onclick="clearDraftFromStorage()" title="刪除瀏覽器內備份（不影響目前畫面）">
+                <i class="fas fa-trash-can"></i> 清除暫存
+            </button>
+            <p class="draft-float-hint">編輯時仍會自動暫存；關閉分頁前也會再存一次。</p>
+            <span class="draft-status" id="draftStatus" aria-live="polite"></span>
+        </div>
+    </div>
+
     <script>
         // 全域變數保存每張照片的欄位值
         window.photoFieldValues = [];
+
+        const PIACSHEET_DRAFT_KEY = 'PicSheet_html_draft_v1';
+        let _picSheetDraftTimer = null;
+
+        function setDraftStatusMessage(msg) {
+            const el = document.getElementById('draftStatus');
+            if (el) el.textContent = msg || '';
+        }
 
         // 表格操作
         function addRow() {
@@ -1267,13 +1402,354 @@
             setPhotoTableColumns();
         }
 
-        // 初始化時清空預設欄位
-        document.addEventListener('DOMContentLoaded', function() {
-            const container = document.getElementById('customFieldsContainer');
-            container.innerHTML = '';
+        /** 依儲存格順序收集目前已匯入的照片（略過空格），供批量／拖曳附加新檔時沿用 */
+        function collectExistingPhotosFromTable() {
+            const table = document.getElementById('photoTable');
+            const cells = Array.from(table.querySelectorAll('.photo-cell'));
+            const images = [];
+            const filenames = [];
+            const allFieldValues = [];
+            cells.forEach((cell, gridIdx) => {
+                const img = cell.querySelector('img');
+                if (!img) return;
+                images.push(img.src);
+                filenames.push(cell.dataset.filename || '');
+                const fv = window.photoFieldValues && window.photoFieldValues[gridIdx];
+                allFieldValues.push(fv ? { ...fv } : {});
+            });
+            return { images, filenames, allFieldValues };
+        }
+
+        function gatherDraftSnapshot() {
+            const collected = collectExistingPhotosFromTable();
+            const fields = Array.from(document.querySelectorAll('.custom-field')).map(field => {
+                const nameInput = field.querySelector('input[placeholder="欄位名稱"]');
+                const valueInput = field.querySelector('.global-value');
+                return {
+                    name: nameInput.value,
+                    value: valueInput.value,
+                    filenameMapping: field.querySelector('.filename-mapping').checked
+                };
+            });
+            const selectedFields = Array.from(document.querySelectorAll('.field-checkbox-item input[type="checkbox"]'))
+                .filter(cb => cb.checked)
+                .map(cb => (cb.nextElementSibling && cb.nextElementSibling.textContent) ? cb.nextElementSibling.textContent.trim() : '');
+            return {
+                version: 1,
+                savedAt: new Date().toISOString(),
+                columnCount: document.getElementById('columnCount').value,
+                filenamePattern: document.getElementById('filenamePattern').value,
+                isPatternLocked: document.querySelector('.filename-mapping-config .lock-btn').classList.contains('locked'),
+                fields: fields,
+                selectedFields: selectedFields,
+                mainTitle: document.querySelector('.preview-custom-titles input.title-main').value,
+                subTitle: document.querySelector('.preview-custom-titles input.title-sub').value,
+                showTitleOnEveryPage: document.getElementById('showTitleOnEveryPage').checked,
+                images: collected.images,
+                filenames: collected.filenames,
+                photoFieldValues: collected.allFieldValues
+            };
+        }
+
+        function saveDraftToStorage() {
+            try {
+                const payload = gatherDraftSnapshot();
+                localStorage.setItem(PIACSHEET_DRAFT_KEY, JSON.stringify(payload));
+                const t = new Date(payload.savedAt);
+                setDraftStatusMessage('已暫存於瀏覽器（' + t.toLocaleString('zh-TW') + '）');
+            } catch (e) {
+                console.error('暫存失敗', e);
+                if (e.name === 'QuotaExceededError' || e.code === 22) {
+                    setDraftStatusMessage('暫存失敗：照片過多或檔案過大，請匯出欄位設定或減少照片張數');
+                } else {
+                    setDraftStatusMessage('暫存失敗');
+                }
+            }
+        }
+
+        function scheduleSaveDraft() {
+            clearTimeout(_picSheetDraftTimer);
+            _picSheetDraftTimer = setTimeout(saveDraftToStorage, 600);
+        }
+
+        /** 手動立即寫入暫存（略過防抖） */
+        function saveDraftNowManual() {
+            clearTimeout(_picSheetDraftTimer);
+            saveDraftToStorage();
+        }
+
+        /** 空白起始狀態（與初次載入頁面預設一致） */
+        function initBlankPicSheetPage(options) {
+            const skipScheduleDraft = options && options.skipScheduleDraft;
+            document.getElementById('customFieldsContainer').innerHTML = '';
+            document.querySelector('.preview-custom-titles input.title-main').value = '';
+            document.querySelector('.preview-custom-titles input.title-sub').value = '';
+            document.getElementById('showTitleOnEveryPage').checked = true;
+            document.getElementById('columnCount').value = '2*3';
+            document.getElementById('filenamePattern').value = '日期-案名-標題';
+            const lockBtn = document.querySelector('.filename-mapping-config .lock-btn');
+            if (lockBtn) {
+                lockBtn.classList.remove('locked');
+                lockBtn.classList.add('unlocked');
+                lockBtn.innerHTML = '<i class="fas fa-lock"></i><span>鎖定</span>';
+                lockBtn.title = '點擊鎖定檔名組成順序';
+                document.getElementById('filenamePattern').disabled = false;
+                document.getElementById('filenamePattern').style.backgroundColor = '';
+            }
+            document.getElementById('photoTable').innerHTML = '<tbody><tr><td class="photo-cell" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><input type="file" class="file-input" accept="image/*" onchange="handleImageUpload(this)"><div class="upload-btn"><i class="fas fa-cloud-upload-alt fa-2x"></i><div>點擊上傳照片</div><div class="drag-text">或拖曳圖片至此</div></div><div class="remove-btn" onclick="removePhoto(this)"><i class="fas fa-times"></i></div></td></tr></tbody>';
+            window.photoFieldValues = [];
             showOrHideFilenamePatternConfig();
+            updatePreviewTitles();
             updatePreviewTable();
-        });
+            if (!skipScheduleDraft) {
+                scheduleSaveDraft();
+            } else {
+                setDraftStatusMessage('');
+            }
+        }
+
+        function clearDraftFromStorage() {
+            if (!confirm('確定要清除瀏覽器內的暫存備份？\n（不影響目前畫面上的內容；之後編輯或按「設置暫存」會再寫入）')) return;
+            try {
+                localStorage.removeItem(PIACSHEET_DRAFT_KEY);
+            } catch (e) { /* ignore */ }
+            setDraftStatusMessage('暫存已清除');
+        }
+
+        function picSheetDataURLtoBlob(dataUrl) {
+            const i = dataUrl.indexOf(',');
+            const head = dataUrl.slice(0, i);
+            const b64 = dataUrl.slice(i + 1);
+            const mimeM = head.match(/data:([^;]+)/);
+            const mime = mimeM ? mimeM[1] : 'image/jpeg';
+            const bin = atob(b64);
+            const arr = new Uint8Array(bin.length);
+            for (let k = 0; k < bin.length; k++) arr[k] = bin.charCodeAt(k);
+            return new Blob([arr], { type: mime });
+        }
+
+        function picSheetExtFromDataUrl(dataUrl) {
+            const m = dataUrl.match(/^data:([^;]+);/);
+            const mime = (m && m[1]) ? m[1].toLowerCase() : 'image/jpeg';
+            if (mime.includes('png')) return 'png';
+            if (mime.includes('gif')) return 'gif';
+            if (mime.includes('webp')) return 'webp';
+            if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';
+            return 'jpg';
+        }
+
+        function picSheetMimeFromExt(ext) {
+            const e = (ext || 'jpg').toLowerCase().replace(/^\./, '');
+            if (e === 'png') return 'image/png';
+            if (e === 'gif') return 'image/gif';
+            if (e === 'webp') return 'image/webp';
+            return 'image/jpeg';
+        }
+
+        /** 檔名用：移除 Windows／各系統不允許字元 */
+        function picSheetSanitizeFilenamePart(s, maxLen) {
+            const t = String(s == null ? '' : s)
+                .replace(/[\u0000-\u001f<>:"/\\|?*\x7F]/g, '_')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, maxLen || 80);
+            return t || '';
+        }
+
+        /** 依自訂欄位順序（與畫面一致），將各格下方表格的值以「-」串成檔名主干 */
+        function picSheetBuildPhotoStemFromFields(fieldValues, fieldNamesInOrder) {
+            const parts = fieldNamesInOrder.map(name => {
+                const v = fieldValues && fieldValues[name];
+                return picSheetSanitizeFilenamePart(v != null && v !== '' ? String(v) : '', 60);
+            }).filter(Boolean);
+            let stem = parts.join('-');
+            stem = stem.replace(/-+/g, '-').replace(/^-|-$/g, '');
+            return stem || 'photo';
+        }
+
+        /** 匯出 ZIP 檔名：日期時間 + 主標題 + 副標題 */
+        function picSheetBuildZipDownloadName() {
+            const pad = n => String(n).padStart(2, '0');
+            const d = new Date();
+            const datePart =
+                d.getFullYear()
+                + pad(d.getMonth() + 1)
+                + pad(d.getDate())
+                + '_'
+                + pad(d.getHours())
+                + pad(d.getMinutes());
+            const mainRaw = document.querySelector('.preview-custom-titles input.title-main').value || '';
+            const subRaw = document.querySelector('.preview-custom-titles input.title-sub').value || '';
+            let main = picSheetSanitizeFilenamePart(mainRaw || '未命名', 40);
+            let sub = picSheetSanitizeFilenamePart(subRaw, 40);
+            let name = datePart + '_' + main;
+            if (sub) name += '_' + sub;
+            return name.replace(/_+/g, '_') + '.zip';
+        }
+
+        function picSheetDownloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        async function exportPicSheetZip() {
+            if (typeof JSZip === 'undefined') {
+                alert('ZIP 元件未載入，請檢查網路後重試');
+                return;
+            }
+            const collected = collectExistingPhotosFromTable();
+            if (!collected.images.length) {
+                alert('請先匯入至少一張照片再匯出');
+                return;
+            }
+            const fieldNamesInOrder = Array.from(document.querySelectorAll('.custom-field')).map(field =>
+                (field.querySelector('input[placeholder="欄位名稱"]') || {}).value || ''
+            ).filter(Boolean);
+            const fieldsMeta = Array.from(document.querySelectorAll('.custom-field')).map(field => ({
+                name: field.querySelector('input[placeholder="欄位名稱"]').value,
+                value: field.querySelector('.global-value').value,
+                filenameMapping: field.querySelector('.filename-mapping').checked
+            }));
+            const selectedFieldsMeta = Array.from(document.querySelectorAll('.field-checkbox-item input[type="checkbox"]'))
+                .filter(cb => cb.checked)
+                .map(cb => (cb.nextElementSibling && cb.nextElementSibling.textContent)
+                    ? cb.nextElementSibling.textContent.trim() : '');
+            const manifest = {
+                format: 'PicSheetZip',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                columnCount: document.getElementById('columnCount').value,
+                mainTitle: document.querySelector('.preview-custom-titles input.title-main').value,
+                subTitle: document.querySelector('.preview-custom-titles input.title-sub').value,
+                showTitleOnEveryPage: document.getElementById('showTitleOnEveryPage').checked,
+                filenamePattern: document.getElementById('filenamePattern').value,
+                isPatternLocked: document.querySelector('.filename-mapping-config .lock-btn').classList.contains('locked'),
+                fields: fieldsMeta,
+                selectedFields: selectedFieldsMeta,
+                photoFieldValues: collected.allFieldValues.map(fv => ({ ...fv })),
+                zipImagePaths: []
+            };
+
+            const zip = new JSZip();
+            const imgFolder = zip.folder('images');
+            const used = new Set();
+
+            for (let i = 0; i < collected.images.length; i++) {
+                const fv = collected.allFieldValues[i] || {};
+                let stem = picSheetBuildPhotoStemFromFields(fv, fieldNamesInOrder);
+                stem = picSheetSanitizeFilenamePart(stem, 100) || 'photo';
+                const n = String(i + 1).padStart(4, '0');
+                const ext = picSheetExtFromDataUrl(collected.images[i]);
+                let base = n + '-' + stem + '.' + ext;
+                let dup = 2;
+                while (used.has(base)) {
+                    base = n + '-' + stem + '_' + dup + '.' + ext;
+                    dup++;
+                }
+                used.add(base);
+                const path = 'images/' + base;
+                manifest.zipImagePaths.push(path);
+                imgFolder.file(base, picSheetDataURLtoBlob(collected.images[i]));
+            }
+
+            zip.file('PicSheet-manifest.json', JSON.stringify(manifest, null, 2));
+            try {
+                const out = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+                picSheetDownloadBlob(out, picSheetBuildZipDownloadName());
+            } catch (e) {
+                console.error(e);
+                alert('匯出失敗：' + (e.message || e));
+            }
+        }
+
+        async function handleImportPicSheetZip(input) {
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+            if (typeof JSZip === 'undefined') {
+                alert('ZIP 元件未載入，請檢查網路後重試');
+                return;
+            }
+            try {
+                const zip = await JSZip.loadAsync(file);
+                const mf = zip.file('PicSheet-manifest.json');
+                if (!mf) {
+                    alert('無效的檔案：缺少 PicSheet-manifest.json');
+                    return;
+                }
+                const text = await mf.async('string');
+                const manifest = JSON.parse(text);
+                if (manifest.format !== 'PicSheetZip' || manifest.version !== 1) {
+                    alert('無法匯入：不是本系統的 PicSheet ZIP（版本不相容）');
+                    return;
+                }
+
+                const paths = Array.isArray(manifest.zipImagePaths) && manifest.zipImagePaths.length
+                    ? manifest.zipImagePaths
+                    : Object.keys(zip.files)
+                        .filter(p => {
+                            const f = zip.files[p];
+                            return f && !f.dir && /^images\//i.test(p) && !/\.json$/i.test(p);
+                        })
+                        .sort();
+
+                if (!paths.length) {
+                    alert('ZIP 內沒有照片檔');
+                    return;
+                }
+
+                const images = [];
+                const filenames = [];
+                const fileToDataURL = (blob) =>
+                    new Promise((resolve, reject) => {
+                        const r = new FileReader();
+                        r.onload = () => resolve(r.result);
+                        r.onerror = () => reject(r.error);
+                        r.readAsDataURL(blob);
+                    });
+                for (const rel of paths) {
+                    const zf = zip.file(rel.replace(/^\//, ''));
+                    if (!zf || zf.dir) continue;
+                    const u8 = await zf.async('uint8array');
+                    const base = rel.split('/').pop() || 'image.jpg';
+                    const ext = (base.split('.').pop() || 'jpg').toLowerCase();
+                    const mime = picSheetMimeFromExt(ext);
+                    const blob = new Blob([u8], { type: mime });
+                    images.push(await fileToDataURL(blob));
+                    filenames.push(base);
+                }
+
+                if (!images.length) {
+                    alert('無法讀取 ZIP 內的影像檔');
+                    return;
+                }
+
+                applyFieldConfigFromObject(manifest);
+                document.getElementById('columnCount').value =
+                    (manifest.columnCount != null && manifest.columnCount !== '') ? manifest.columnCount : '2*3';
+                const pfv = Array.isArray(manifest.photoFieldValues)
+                    ? manifest.photoFieldValues.map(o =>
+                        (o && typeof o === 'object') ? { ...o } : {})
+                    : [];
+
+                while (pfv.length < images.length) pfv.push({});
+                if (pfv.length > images.length) pfv.length = images.length;
+
+                renderPhotoTable(images, filenames, pfv);
+                updatePreviewTable();
+                scheduleSaveDraft();
+                alert('匯入完成（共 ' + images.length + ' 張）');
+            } catch (e) {
+                console.error(e);
+                alert('匯入失敗：' + (e.message || e));
+            }
+        }
 
         // 批量上傳處理
         function handleBatchUpload(input) {
@@ -1314,10 +1790,7 @@
             }));
             console.log('自訂欄位設定:', customFields);
 
-            // 只用新匯入檔案重建三個陣列，確保 index 對齊
-            let images = [];
-            let filenames = [];
-            let allFieldValues = [];
+            let { images, filenames, allFieldValues } = collectExistingPhotosFromTable();
             let loaded = 0;
 
             files.forEach((file, i) => {
@@ -1395,11 +1868,15 @@
             const cells = document.querySelectorAll('.photo-cell');
             const cellsWithImages = Array.from(cells).filter(cell => cell.querySelector('img'));
             
-            // 列印：每 6 張圖（含說明）一頁，固定以 2 欄×3 列 配置計算格子尺寸（與預覽欄×列設定無關）
-            const PRINT_ITEMS_PER_PAGE = 6;
-            const columnCount = 2;
-            const rowCount = 3;
-            const cellsPerPage = PRINT_ITEMS_PER_PAGE;
+            if (!cellsWithImages.length) {
+                alert('沒有可列印的照片');
+                return;
+            }
+            
+            // 列印：依「欄×列」輸入（與預覽相同 parseColumnRowFormat），每頁欄數×列數張圖
+            const columnRowFormat = document.getElementById('columnCount').value;
+            const { columns: columnCount, rows: rowCount } = parseColumnRowFormat(columnRowFormat);
+            const cellsPerPage = columnCount * rowCount;
             const totalPages = Math.ceil(cellsWithImages.length / cellsPerPage);
             
             // 計算A4紙張可用尺寸 (A4: 297mm 高；@page margin 1cm 與下列一致)
@@ -1411,11 +1888,15 @@
             // 計算標題高度（如果有標題且要在每頁顯示，或只在第一頁顯示）
             const titleHeightMM = (mainTitle || subTitle) ? 35 : 0; // 主標題+副標題+間距約35mm
             
-            // 可列印高度（寬度交由 CSS 2 欄 + gap 10mm，與 @page 左右各 1cm 對齊）
+            // 可列印高度（寬度由下列 flex + gap 與 @page 左右各 1cm 對齊）
             const usableHeightMM = pageHeightMM - marginTBMM - titleHeightMM - (gapMM * (rowCount - 1));
             
-            // 每格高度（寬度由列印 CSS 之 2 欄 flex 決定，與 usableWidthMM 數學一致）
+            // 每格高度；每格寬度 = (100% − (欄數−1)×gap) / 欄數
             const cellHeightMM = usableHeightMM / rowCount;
+            const cellWidthCalc =
+                columnCount <= 1
+                    ? '100%'
+                    : `calc((100% - ${(columnCount - 1) * gapMM}mm) / ${columnCount})`;
             
             // 為每頁創建內容
             for (let page = 0; page < totalPages; page++) {
@@ -1441,8 +1922,7 @@
                 // 如果這頁的單元格少於cellsPerPage個，添加空白單元格
                 while (pageCells.length < cellsPerPage) {
                     const emptyCell = document.createElement('div');
-                    emptyCell.className = 'print-photo-cell';
-                    emptyCell.style.height = `${cellHeightMM}mm`;
+                    emptyCell.className = 'print-placeholder';
                     pageCells.push(emptyCell);
                 }
                 
@@ -1458,14 +1938,16 @@
                 pageDiv.style.boxSizing = 'border-box';
                 pageDiv.style.justifyContent = 'flex-start';
                 
-                // 處理這頁的每個單元格（寬度交由 @media print 之 flex + max-width，避免超出紙張右緣）
+                // 處理這頁的每個單元格（寬度由欄數與 gap 計算，見 cellWidthCalc）
                 pageCells.forEach((cell, index) => {
                     const printCell = document.createElement('div');
                     printCell.className = 'print-photo-cell';
                     printCell.style.height = `${cellHeightMM}mm`;
                     printCell.style.overflow = 'hidden';
+                    printCell.style.flex = `1 1 ${cellWidthCalc}`;
+                    printCell.style.maxWidth = cellWidthCalc;
                     
-                    if (cell.querySelector('img')) {
+                    if (cell.querySelector && cell.querySelector('img')) {
                         // 複製欄位區塊（如有）
                         let fieldsDiv = null;
                         let fieldsHeightPx = 0;
@@ -1583,30 +2065,7 @@
             }));
             console.log('自訂欄位設定:', customFields);
 
-            const table = document.getElementById('photoTable');
-            const cells = Array.from(table.querySelectorAll('.photo-cell'));
-            let images = cells.map(cell => {
-                const img = cell.querySelector('img');
-                return img ? img.src : null;
-            }).filter(src => src);
-            let filenames = cells.map(cell => cell.dataset.filename || '');
-            let allFieldValues = cells.map(cell => {
-                const filename = cell.dataset.filename;
-                if (!filename) return {};
-                const filenameWithoutExt = filename.split('.').slice(0, -1).join('.');
-                const filenameParts = filenameWithoutExt.split('-');
-                const fieldValues = {};
-                if (hasFilenameMapping) {
-                    patternParts.forEach((part, index) => {
-                        customFields.forEach(field => {
-                            if (field.name === part && field.filenameMapping) {
-                                fieldValues[field.name] = filenameParts[index];
-                            }
-                        });
-                    });
-                }
-                return fieldValues;
-            });
+            let { images, filenames, allFieldValues } = collectExistingPhotosFromTable();
             let loaded = 0;
 
             Array.from(files).forEach((file, i) => {
@@ -1793,12 +2252,23 @@
                     removeBtn.innerHTML = '<i class="fas fa-times"></i>';
                     content.appendChild(removeBtn);
 
-                    // 圖片
+                    // 圖片（縮圖 + 懸停預覽，同 src 利於列印仍用第一張圖）
                     let filename = '';
                     if (images[idx]) {
-                        const img = document.createElement('img');
-                        img.src = images[idx];
-                        content.insertBefore(img, uploadBtn);
+                        const thumbWrap = document.createElement('div');
+                        thumbWrap.className = 'photo-thumb-wrap';
+                        const imgThumb = document.createElement('img');
+                        imgThumb.className = 'photo-thumb';
+                        imgThumb.src = images[idx];
+                        imgThumb.alt = '';
+                        const imgPreview = document.createElement('img');
+                        imgPreview.className = 'photo-thumb-preview';
+                        imgPreview.src = images[idx];
+                        imgPreview.alt = '';
+                        imgPreview.setAttribute('aria-hidden', 'true');
+                        thumbWrap.appendChild(imgThumb);
+                        thumbWrap.appendChild(imgPreview);
+                        content.insertBefore(thumbWrap, uploadBtn);
                         uploadBtn.style.display = 'none';
                         if (filenames && filenames[idx]) {
                             filename = filenames[idx];
@@ -1858,6 +2328,7 @@
             }
             // 渲染結束後同步全域
             window.photoFieldValues = allFieldValues;
+            scheduleSaveDraft();
         }
 
         // 修改 toggleFilenameMapping，勾選/取消時自動顯示/隱藏檔名組成順序設定欄，並即時分割填值
@@ -1905,6 +2376,73 @@
                 input.disabled = true;
                 input.style.backgroundColor = '#f5f5f5';
             }
+            scheduleSaveDraft();
+        }
+
+        /** 由設定物件還原自訂欄位、檔名規則、鎖定與標題（匯入 JSON／瀏覽器暫存共用） */
+        function applyFieldConfigFromObject(config) {
+            const container = document.getElementById('customFieldsContainer');
+            container.innerHTML = '';
+            document.querySelectorAll('.field-checkbox-item input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+            (config.selectedFields || []).forEach(fieldName => {
+                const checkbox = Array.from(document.querySelectorAll('.field-checkbox-item input[type="checkbox"]'))
+                    .find(cb => cb.nextElementSibling && cb.nextElementSibling.textContent === fieldName);
+                if (checkbox) checkbox.checked = true;
+            });
+            (config.fields || []).forEach(field => {
+                const newField = createFieldElement(field.name);
+                const valueInput = newField.querySelector('.global-value');
+                const filenameMapping = newField.querySelector('.filename-mapping');
+                valueInput.value = field.value != null ? field.value : '';
+                filenameMapping.checked = !!field.filenameMapping;
+                if (field.filenameMapping) {
+                    valueInput.readOnly = true;
+                }
+                container.appendChild(newField);
+            });
+            document.getElementById('filenamePattern').value = config.filenamePattern != null ? config.filenamePattern : '';
+            const lockBtn = document.querySelector('.filename-mapping-config .lock-btn');
+            if (config.isPatternLocked) {
+                lockBtn.classList.remove('unlocked');
+                lockBtn.classList.add('locked');
+                lockBtn.innerHTML = '<i class="fas fa-lock"></i><span>已鎖定</span>';
+                lockBtn.title = '點擊解除鎖定';
+                document.getElementById('filenamePattern').disabled = true;
+                document.getElementById('filenamePattern').style.backgroundColor = '#f5f5f5';
+            } else {
+                lockBtn.classList.remove('locked');
+                lockBtn.classList.add('unlocked');
+                lockBtn.innerHTML = '<i class="fas fa-lock"></i><span>鎖定</span>';
+                lockBtn.title = '點擊鎖定檔名組成順序';
+                document.getElementById('filenamePattern').disabled = false;
+                document.getElementById('filenamePattern').style.backgroundColor = '';
+            }
+            if (config.mainTitle != null) {
+                document.querySelector('.preview-custom-titles input.title-main').value = config.mainTitle;
+            }
+            if (config.subTitle != null) {
+                document.querySelector('.preview-custom-titles input.title-sub').value = config.subTitle;
+            }
+            if (config.showTitleOnEveryPage !== undefined) {
+                document.getElementById('showTitleOnEveryPage').checked = !!config.showTitleOnEveryPage;
+            }
+            updatePreviewTitles();
+            showOrHideFilenamePatternConfig();
+        }
+
+        function applyDraftSnapshot(draft) {
+            if (!draft || draft.version !== 1) return;
+            applyFieldConfigFromObject(draft);
+            document.getElementById('columnCount').value = (draft.columnCount != null && draft.columnCount !== '') ? draft.columnCount : '2*3';
+            const imgs = Array.isArray(draft.images) ? draft.images : [];
+            const fns = Array.isArray(draft.filenames) ? draft.filenames : [];
+            const pfv = Array.isArray(draft.photoFieldValues) ? draft.photoFieldValues : [];
+            renderPhotoTable(imgs, fns, pfv);
+            updatePreviewTable();
+            const msgTime = draft.savedAt ? new Date(draft.savedAt).toLocaleString('zh-TW') : '';
+            setDraftStatusMessage('已從瀏覽器暫存還原' + (msgTime ? '（' + msgTime + '）' : ''));
         }
 
         // 修改 exportFieldConfig 函數，加入檔名組成順序的鎖定狀態
@@ -1986,79 +2524,10 @@
             reader.onload = function(e) {
                 try {
                     const config = JSON.parse(e.target.result);
-                    
-                    // 清空現有欄位
-                    const container = document.getElementById('customFieldsContainer');
-                    container.innerHTML = '';
-                    
-                    // 重置所有預設欄位的勾選狀態
-                    document.querySelectorAll('.field-checkbox-item input[type="checkbox"]').forEach(cb => {
-                        cb.checked = false;
-                    });
-
-                    // 還原預設欄位的勾選狀態
-                    config.selectedFields.forEach(fieldName => {
-                        const checkbox = Array.from(document.querySelectorAll('.field-checkbox-item input[type="checkbox"]'))
-                            .find(cb => cb.nextElementSibling.textContent === fieldName);
-                        if (checkbox) {
-                            checkbox.checked = true;
-                            // 不要呼叫 toggleField，避免重複產生欄位
-                        }
-                    });
-
-                    // 還原自訂欄位
-                    config.fields.forEach(field => {
-                        const newField = createFieldElement(field.name);
-                        const valueInput = newField.querySelector('.global-value');
-                        const filenameMapping = newField.querySelector('.filename-mapping');
-                        
-                        valueInput.value = field.value;
-                        filenameMapping.checked = field.filenameMapping;
-                        if (field.filenameMapping) {
-                            valueInput.readOnly = true;
-                        }
-                        
-                        container.appendChild(newField);
-                    });
-
-                    // 還原檔名組成順序
-                    document.getElementById('filenamePattern').value = config.filenamePattern;
-                    
-                    // 還原鎖定狀態
-                    const lockBtn = document.querySelector('.filename-mapping-config .lock-btn');
-                    if (config.isPatternLocked) {
-                        lockBtn.classList.remove('unlocked');
-                        lockBtn.classList.add('locked');
-                        lockBtn.innerHTML = '<i class="fas fa-lock"></i><span>已鎖定</span>';
-                        lockBtn.title = '點擊解除鎖定';
-                        document.getElementById('filenamePattern').disabled = true;
-                        document.getElementById('filenamePattern').style.backgroundColor = '#f5f5f5';
-                    } else {
-                        lockBtn.classList.remove('locked');
-                        lockBtn.classList.add('unlocked');
-                        lockBtn.innerHTML = '<i class="fas fa-lock"></i><span>鎖定</span>';
-                        lockBtn.title = '點擊鎖定檔名組成順序';
-                        document.getElementById('filenamePattern').disabled = false;
-                        document.getElementById('filenamePattern').style.backgroundColor = '';
-                    }
-
-                    // 還原標題
-                    if (config.mainTitle) {
-                        document.querySelector('.preview-custom-titles input.title-main').value = config.mainTitle;
-                    }
-                    if (config.subTitle) {
-                        document.querySelector('.preview-custom-titles input.title-sub').value = config.subTitle;
-                    }
-                    if (config.showTitleOnEveryPage !== undefined) {
-                        document.getElementById('showTitleOnEveryPage').checked = config.showTitleOnEveryPage;
-                    }
-                    updatePreviewTitles();
-
-                    // 更新預覽和表格
-                    showOrHideFilenamePatternConfig();
+                    applyFieldConfigFromObject(config);
                     updatePreviewTable();
                     setPhotoTableColumns();
-
+                    scheduleSaveDraft();
                     alert('欄位設定已成功匯入！' + (importDateTime ? `\n檔案日期時間：${importDateTime}` : ''));
                 } catch (error) {
                     alert('匯入失敗：檔案格式不正確');
@@ -2091,11 +2560,13 @@
             } else {
                 printTitleSub.style.display = 'none';
             }
+            scheduleSaveDraft();
         }
 
         function clearAllPhotos() {
             document.getElementById('photoTable').innerHTML = '<tbody><tr><td class="photo-cell" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"><input type="file" class="file-input" accept="image/*" onchange="handleImageUpload(this)"><div class="upload-btn"><i class="fas fa-cloud-upload-alt fa-2x"></i><div>點擊上傳照片</div><div class="drag-text">或拖曳圖片至此</div></div><div class="remove-btn" onclick="removePhoto(this)"><i class="fas fa-times"></i></div></td></tr></tbody>';
             window.photoFieldValues = [];
+            scheduleSaveDraft();
         }
 
         const availableFields = [
@@ -2119,7 +2590,48 @@
                 container.appendChild(div);
             });
         }
-        document.addEventListener('DOMContentLoaded', renderAvailableFields);
+        document.addEventListener('DOMContentLoaded', function() {
+            renderAvailableFields();
+            let draft = null;
+            let hasDraft = false;
+            try {
+                const raw = localStorage.getItem(PIACSHEET_DRAFT_KEY);
+                if (raw) {
+                    draft = JSON.parse(raw);
+                    hasDraft = !!(draft && draft.version === 1);
+                    if (!hasDraft) draft = null;
+                }
+            } catch (e) {
+                draft = null;
+                hasDraft = false;
+                try {
+                    localStorage.removeItem(PIACSHEET_DRAFT_KEY);
+                } catch (e2) { /* ignore */ }
+            }
+            if (hasDraft) {
+                const restore = confirm(
+                    '偵測到先前儲存的暫存資料，是否還原？\n\n' +
+                    '· 按「確定」：還原上次編輯內容\n' +
+                    '· 按「取消」：以空白頁開始，並刪除該暫存檔'
+                );
+                if (restore) {
+                    applyDraftSnapshot(draft);
+                } else {
+                    try {
+                        localStorage.removeItem(PIACSHEET_DRAFT_KEY);
+                    } catch (err) { /* ignore */ }
+                    initBlankPicSheetPage({ skipScheduleDraft: true });
+                    setDraftStatusMessage('已略過暫存，以空白頁開始');
+                }
+            } else {
+                initBlankPicSheetPage({ skipScheduleDraft: true });
+            }
+        });
+
+        window.addEventListener('beforeunload', function() {
+            clearTimeout(_picSheetDraftTimer);
+            saveDraftToStorage();
+        });
 
         // LOGO點擊計數功能
         let clickCount = 0;
