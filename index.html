@@ -23,9 +23,9 @@
 
         header {
             background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            padding: 20px 0;
-            margin-bottom: 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            padding: 16px 0;
+            margin-bottom: 20px;
         }
 
         .header-content {
@@ -47,51 +47,57 @@
         }
 
         .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 24px;
         }
 
         .card {
             background: #fff;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
+            border-radius: 8px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border: 1px solid #e8e8e8;
         }
 
         .card h2 {
             color: #2c3e50;
-            margin-top: 0;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
+            margin: 0 0 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .card p {
+            margin: 0;
+            font-size: 0.94rem;
+            color: #555;
         }
 
         .defect-link {
-            display: inline-block;
+            display: block;
+            text-align: center;
             background-color: #4CAF50;
             color: white;
-            padding: 12px 24px;
+            padding: 10px 16px;
             text-decoration: none;
-            border-radius: 5px;
-            margin-top: 15px;
-            transition: background-color 0.3s ease;
+            border-radius: 6px;
+            margin-top: 12px;
+            font-size: 0.92rem;
+            transition: opacity 0.2s ease;
         }
 
         .defect-link:hover {
-            background-color: #45a049;
+            opacity: 0.92;
         }
 
         .author-info {
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 12px;
         }
 
         .author-avatar {
@@ -134,10 +140,6 @@
         }
 
         @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-
             .header-content {
                 flex-direction: column;
                 text-align: center;
@@ -229,6 +231,19 @@
     <main class="container">
         <div class="main-content">
             <div class="card">
+                <h2><i class="fas fa-user"></i> 關於作者</h2>
+                <div class="author-info">
+                    <img src="http://cwh800729.github.io/CWH-LOGO" alt="http://cwh800729.github.io/CWH-LOGO" class="author-avatar">
+                    <div class="author-details">
+                        <h3 class="author-name">陳維宏</h3>
+                        <p class="author-bio">內業作業強調標準化及高效率，最終目的為自動化及圖像化，希望解放雙手，降低重複操作，用極致的懶創造極致的高效，解救人生。</p>
+                        <a href="..." class="author-link" target="_blank">
+                            <i class="fas fa-globe"></i> 訪問我的部落格
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
                 <h2><i class="fas fa-clipboard-list"></i> 缺失表格系統V12</h2>
                 <p>工程缺失管理系統，用於記錄工程現場缺失項目。系統提供完整的缺失標記、照片管理、進度追蹤等功能。</p>
                 <a href="http://cwh800729.github.io/V9.html" class="defect-link">
@@ -239,7 +254,7 @@
             <div class="card">
                 <h2><i class="fas fa-file-zipper"></i> 缺失表格系統 資料分析／統整</h2>
                 <p>讀取 缺失表格系統V12「匯出資料」產生的 ZIP，支援多專案匯入、全專案缺失整合與篩選、廠商統計與列印分頁，方便檢視與彙整。</p>
-                <a href="http://cwh800729.github.io/V12-Analyzer.html" class="defect-link" style="background-color: #2c5282;">
+                <a href="http://cwh800729.github.io/V12Analyzer.html" class="defect-link" style="background-color: #2c5282;">
                     <i class="fas fa-external-link-alt"></i> 進入匯出資料分析
                 </a>
             </div>
@@ -269,6 +284,14 @@
             </div>
 
             <div class="card">
+                <h2><i class="fas fa-file-lines"></i> 會議記錄</h2>
+                <p>會議基本資料、多場次議題與進度追蹤、圖文插入、篩選列印與 ZIP 匯出／匯入；並支援瀏覽器暫存降低誤關分頁遺失風險。</p>
+                <a href="http://cwh800729.github.io/meeting-minutes.html" class="defect-link" style="background-color: #37474f;">
+                    <i class="fas fa-external-link-alt"></i> 進入會議記錄
+                </a>
+            </div>
+
+            <div class="card">
                 <h2><i class="fas fa-chart-line"></i> 美股資訊查詢系統</h2>
                 <p>美股投資組合管理，包含股票市值計算、配息日期追蹤，以及台幣換美金匯率計算功能。</p>
                 <a href="http://cwh800729.github.io/StockInfo.html" class="defect-link" style="background-color: #9b59b6;">
@@ -276,19 +299,7 @@
                 </a>
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-user"></i> 關於作者</h2>
-                <div class="author-info">
-                    <img src="http://cwh800729.github.io/CWH-LOGO" alt="http://cwh800729.github.io/CWH-LOGO" class="author-avatar">
-                    <div class="author-details">
-                        <h3 class="author-name">陳維宏</h3>
-                        <p class="author-bio">內業作業強調標準化及高效率，最終目的為自動化及圖像化，希望解放雙手，降低重複操作，用極致的懶創造極致的高效，解救人生。</p>
-                        <a href="..." class="author-link" target="_blank">
-                            <i class="fas fa-globe"></i> 訪問我的部落格
-                        </a>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </main>
 
