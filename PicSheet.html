@@ -564,44 +564,43 @@
             }
         }
 
-        .preview-section {
-            margin-bottom: 30px;
+        .title-settings-section {
+            margin-bottom: 20px;
             padding: 20px;
             background: white;
             border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            max-width: 420px;
-            margin-left: auto;
-            margin-right: auto;
         }
-        .preview-title {
-            font-size: var(--h1-size);
+        .title-settings-section h3.title-settings-heading {
+            margin: 0 0 14px 0;
+            font-size: var(--h3-size);
             color: #2c3e50;
-            margin: 0 0 20px 0;
-            text-align: center;
         }
         .preview-custom-titles {
-            margin-bottom: 20px;
-            text-align: center;
+            margin-bottom: 0;
+            text-align: left;
+            max-width: 520px;
         }
         .preview-custom-titles input {
             width: 100%;
-            padding: 8px;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 8px 10px;
             margin-bottom: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            text-align: center;
+            text-align: left;
             font-family: inherit;
         }
         .preview-custom-titles input.title-main {
-            font-size: 1.5em;
-        }
-        .preview-custom-titles input.title-sub {
             font-size: 1.25em;
         }
+        .preview-custom-titles input.title-sub {
+            font-size: 1.05em;
+        }
         .preview-custom-titles .title-options {
-            margin: 10px 0;
-            text-align: center;
+            margin: 6px 0 0 0;
+            text-align: left;
         }
         .preview-custom-titles .title-checkbox {
             display: inline-flex;
@@ -640,92 +639,9 @@
                 display: none;
             }
         }
-        .preview-photo-vertical {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .preview-photo-vertical .preview-photo-container {
-            margin-bottom: 10px;
-        }
-        .preview-photo-vertical .preview-photo {
-            width: 300px;
-            height: 300px;
-            object-fit: contain;
-            border: 1px solid #333;
-            background: #fff;
-        }
-        .preview-photo-vertical .preview-placeholder {
-            width: 300px;
-            height: 300px;
-            background: #fff;
-            border: 2px dashed #ddd;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #95a5a6;
-            font-size: var(--cell-text-size);
-            gap: 10px;
-            position: relative;
-        }
-        .preview-logo-fade {
-            width: 180px;
-            height: 180px;
-            object-fit: contain;
-            opacity: 0.5;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-        }
-        .preview-fields-vertical {
-            width: 100%;
-            margin-top: 10px;
-        }
-        .preview-field-row {
-            display: flex;
-            flex-direction: row;
-            border-bottom: 1px solid #333;
-            min-height: 36px;
-        }
-        .preview-field-label {
-            width: 80px;
-            background: #fff;
-            color: #222;
-            font-weight: bold;
-            padding: 6px 8px;
-            border-right: 1px solid #333;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-        }
-        .preview-field-value {
-            flex: 1;
-            background: #fff;
-            color: #222;
-            padding: 6px 8px;
-            display: flex;
-            align-items: center;
-        }
         @media screen and (max-width: 480px) {
-            .preview-photo-vertical .preview-photo,
-            .preview-photo-vertical .preview-placeholder {
-                width: 180px;
-                height: 180px;
-            }
-            .preview-section {
-                padding: 8px;
-            }
-            .preview-field-label {
-                width: 60px;
-                font-size: 0.9em;
-            }
-            .preview-field-value {
-                font-size: 0.9em;
+            .title-settings-section {
+                padding: 14px;
             }
         }
         .column-selector {
@@ -1105,8 +1021,8 @@
     </header>
 
     <main class="container">
-        <div class="preview-section">
-            <div class="preview-title">預覽畫面</div>
+        <div class="title-settings-section">
+            <h3 class="title-settings-heading">標題設定</h3>
             <div class="preview-custom-titles">
                 <input type="text" class="title-main" placeholder="請輸入主標題" oninput="updatePreviewTitles()">
                 <input type="text" class="title-sub" placeholder="請輸入副標題" oninput="updatePreviewTitles()">
@@ -1119,18 +1035,6 @@
                 <div class="print-title">
                     <div class="title-main"></div>
                     <div class="title-sub"></div>
-                </div>
-            </div>
-            <div class="preview-photo-vertical">
-                <div class="preview-photo-container">
-                    <div class="preview-placeholder" id="previewPhoto">
-                        <a href="https://CWH800729.github.io/index.html"><img src="https://CWH800729.github.io/CWH-LOGO" class="preview-logo-fade" alt="logo"></a>
-                        <span style="z-index:1;">拖曳或點擊上傳照片</span>
-                        <span class="preview-photo-info" style="z-index:1;">此照片將作為批量匯入的模板</span>
-                    </div>
-                </div>
-                <div class="preview-fields-vertical" id="previewFieldsVertical">
-                    <!-- 動態欄位將在這裡生成 -->
                 </div>
             </div>
         </div>
@@ -1155,7 +1059,7 @@
                     <label for="filenamePattern" class="has-tooltip" data-tooltip="請依照照片檔名的組成順序填寫，並以 - 分隔。
 例如：日期-案名-標題，檔名需為 2023-工程A-外觀.jpg
 
-此順序需與檔名完全一致，否則無法自動帶入欄位。">檔名組成順序：</label>
+此檔名組成需與欄位名稱一致，否則無法自動帶入欄位。">檔名組成順序：</label>
                     <div class="input-group">
                         <input type="text" id="filenamePattern" placeholder="例如：日期-案名-標題" value="日期-案名-標題" oninput="updatePreviewTable();setPhotoTableColumns();">
                         <button type="button" class="lock-btn unlocked" onclick="toggleFilenamePatternLock(this)" title="點擊鎖定檔名組成順序">
@@ -1181,6 +1085,9 @@
                 <button class="batch-upload-btn" onclick="document.getElementById('batchUpload').click()">
                     <i class="fas fa-folder-open"></i> 批量匯入照片
                     <input type="file" id="batchUpload" accept="image/*" multiple onchange="handleBatchUpload(this)">
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="refreshPhotoFieldsFromFilenames()" title="依目前每張照片的檔名與「檔名組成順序」重新填入有勾選「由檔名帶入」的欄位；不需重新選檔">
+                    <i class="fas fa-arrows-rotate"></i> 依檔名更新欄位
                 </button>
                 <button class="btn btn-secondary" onclick="clearAllPhotos()">
                     <i class="fas fa-trash"></i> 清空照片
@@ -1226,7 +1133,7 @@
             <button type="button" class="btn btn-primary draft-float-btn" onclick="saveDraftNowManual()" title="立即將目前內容寫入瀏覽器儲存空間">
                 <i class="fas fa-floppy-disk"></i> 設置暫存
             </button>
-            <p class="draft-float-hint">編輯時仍會自動暫存；關閉分頁前也會再存一次。若重新整理時選擇不還原暫存，瀏覽器備份會自動刪除。</p>
+            <p class="draft-float-hint">編輯時即會自動暫存；關閉分頁前也會再存一次。若重新整理時選擇不還原暫存，瀏覽器備份會自動刪除。</p>
             <span class="draft-status" id="draftStatus" aria-live="polite"></span>
         </div>
     </div>
@@ -1236,6 +1143,9 @@
         window.photoFieldValues = [];
 
         const PIACSHEET_DRAFT_KEY = 'PicSheet_html_draft_v1';
+        /** 與 initBlankPicSheetPage 預設一致，用於判斷是否為「空白」而不寫暫存 */
+        const PIACSHEET_DEFAULT_COLUMN = '2*3';
+        const PIACSHEET_DEFAULT_FILENAME_PATTERN = '日期-案名-標題';
         let _picSheetDraftTimer = null;
 
         function setDraftStatusMessage(msg) {
@@ -1256,7 +1166,7 @@
             setPhotoTableColumns();
         }
 
-        // 照片上傳處理
+        // 照片上傳處理（對齊「有圖格子」順序，並保留 photoFieldValues）
         function handleImageUpload(input) {
             const file = input.files[0];
             if (file) {
@@ -1264,42 +1174,62 @@
                 reader.onload = function(e) {
                     const table = document.getElementById('photoTable');
                     const cells = Array.from(table.querySelectorAll('.photo-cell'));
-                    let images = cells.map(cell => {
-                        const img = cell.querySelector('img');
-                        return img ? img.src : null;
-                    }).filter(src => src);
-                    let filenames = cells.map(cell => cell.dataset.filename || '');
-                    const cell = input.parentElement.parentElement;
-                    const idx = cells.indexOf(cell);
-                    if (idx !== -1) {
-                        images[idx] = e.target.result;
-                        filenames[idx] = file.name;
-                        cell.dataset.filename = file.name;
-                    } else {
-                        images.push(e.target.result);
-                        filenames.push(file.name);
+                    const cell = input.closest('.photo-cell');
+                    if (!cell) return;
+                    const gridIdx = cells.indexOf(cell);
+                    if (gridIdx === -1) return;
+
+                    let photoIdx = 0;
+                    for (let i = 0; i < gridIdx; i++) {
+                        if (cells[i].querySelector('img')) photoIdx++;
                     }
-                    renderPhotoTable(images, filenames);
+                    const hadImg = !!cell.querySelector('img');
+
+                    const { images, filenames, allFieldValues } = collectExistingPhotosFromTable();
+                    const imgs = images.slice();
+                    const fns = filenames.slice();
+                    const pfv = allFieldValues.map(o => ({ ...o }));
+
+                    cell.dataset.filename = file.name;
+                    if (hadImg) {
+                        imgs[photoIdx] = e.target.result;
+                        fns[photoIdx] = file.name;
+                    } else {
+                        imgs.splice(photoIdx, 0, e.target.result);
+                        fns.splice(photoIdx, 0, file.name);
+                        pfv.splice(photoIdx, 0, {});
+                    }
+                    renderPhotoTable(imgs, fns, pfv);
                 };
                 reader.readAsDataURL(file);
             }
         }
 
         function removePhoto(button) {
-            const cell = button.parentElement.parentElement;
+            const cell = button.closest('.photo-cell');
+            if (!cell) return;
             const table = document.getElementById('photoTable');
             const cells = Array.from(table.querySelectorAll('.photo-cell'));
-            let images = cells.map(cell => {
-                const img = cell.querySelector('img');
-                return img ? img.src : null;
-            }).filter(src => src);
-            let filenames = cells.map(cell => cell.dataset.filename || '');
-            const idx = cells.indexOf(cell);
-            if (idx !== -1) {
-                images.splice(idx, 1);
-                filenames.splice(idx, 1);
+            const gridIdx = cells.indexOf(cell);
+            if (gridIdx === -1) return;
+
+            let photoOrdinal = 0;
+            let removeAt = -1;
+            for (let i = 0; i < cells.length; i++) {
+                if (!cells[i].querySelector('img')) continue;
+                if (i === gridIdx) {
+                    removeAt = photoOrdinal;
+                    break;
+                }
+                photoOrdinal++;
             }
-            renderPhotoTable(images, filenames);
+            if (removeAt === -1) return;
+
+            const { images, filenames, allFieldValues } = collectExistingPhotosFromTable();
+            images.splice(removeAt, 1);
+            filenames.splice(removeAt, 1);
+            allFieldValues.splice(removeAt, 1);
+            renderPhotoTable(images, filenames, allFieldValues);
         }
 
         // 自訂欄位拖曳排序相關函數
@@ -1439,6 +1369,95 @@
             return { images, filenames, allFieldValues };
         }
 
+        /**
+         * 在照片已匯入前提下，依目前「檔名組成順序」與各欄「由檔名帶入」設定，重新解析每格 dataset 檔名並重繪下方欄位（不重選檔）。
+         */
+        function refreshPhotoFieldsFromFilenames() {
+            const hasFilenameMapping = Array.from(document.querySelectorAll('.custom-field')).some(field =>
+                field.querySelector('.filename-mapping').checked
+            );
+            if (!hasFilenameMapping) {
+                alert('請先在自訂欄位勾選「由檔名帶入」，或無須依檔名更新。');
+                return;
+            }
+            const isPatternLocked = document.querySelector('.filename-mapping-config .lock-btn').classList.contains('locked');
+            if (!isPatternLocked) {
+                alert('請先鎖定「檔名組成順序」，再依檔名更新欄位。');
+                return;
+            }
+
+            const collected = collectExistingPhotosFromTable();
+            if (!collected.images.length) {
+                alert('目前沒有照片，無法更新欄位。');
+                return;
+            }
+
+            const pattern = document.getElementById('filenamePattern').value.trim();
+            const patternParts = pattern.split('-').map(part => part.trim());
+            const customFields = Array.from(document.querySelectorAll('.custom-field')).map(field => ({
+                name: field.querySelector('input[placeholder="欄位名稱"]').value,
+                value: field.querySelector('.global-value').value,
+                filenameMapping: field.querySelector('.filename-mapping').checked
+            }));
+
+            const allFieldValues = [];
+            const mismatches = [];
+
+            collected.filenames.forEach((fname, i) => {
+                const prev = (collected.allFieldValues[i] && typeof collected.allFieldValues[i] === 'object')
+                    ? { ...collected.allFieldValues[i] }
+                    : {};
+                const merged = { ...prev };
+
+                const filenameWithoutExt = (fname || '').split('.').slice(0, -1).join('.');
+                const filenameParts = filenameWithoutExt.split('-');
+
+                if (filenameParts.length !== patternParts.length) {
+                    if (fname) mismatches.push(fname);
+                } else {
+                    patternParts.forEach((part, index) => {
+                        customFields.forEach(field => {
+                            if (field.name === part && field.filenameMapping) {
+                                merged[field.name] = filenameParts[index];
+                            }
+                        });
+                    });
+                }
+                allFieldValues.push(merged);
+            });
+
+            if (mismatches.length) {
+                const show = mismatches.length <= 6
+                    ? mismatches.join('\n')
+                    : mismatches.slice(0, 6).join('\n') + '\n…等共 ' + mismatches.length + ' 個檔名';
+                alert('以下檔名與「檔名組成順序」段落數不符，該張維持原欄位內容：\n' + show);
+            }
+
+            renderPhotoTable(collected.images.slice(), collected.filenames.slice(), allFieldValues);
+            updatePreviewTable();
+        }
+
+        /** 有任何編輯意義才寫入 localStorage；空白時不存並移除舊鍵 */
+        function isPicSheetDraftWorthSaving() {
+            const collected = collectExistingPhotosFromTable();
+            if (collected.images.length > 0) return true;
+            const main = (document.querySelector('.preview-custom-titles input.title-main') || {}).value || '';
+            const sub = (document.querySelector('.preview-custom-titles input.title-sub') || {}).value || '';
+            if (main.trim() || sub.trim()) return true;
+            if (document.querySelectorAll('.custom-field').length > 0) return true;
+            const anyFieldChecked = Array.from(document.querySelectorAll('.field-checkbox-item input[type="checkbox"]')).some(cb => cb.checked);
+            if (anyFieldChecked) return true;
+            const colEl = document.getElementById('columnCount');
+            if (colEl && colEl.value.trim() !== PIACSHEET_DEFAULT_COLUMN) return true;
+            const fpEl = document.getElementById('filenamePattern');
+            if (fpEl && fpEl.value.trim() !== PIACSHEET_DEFAULT_FILENAME_PATTERN) return true;
+            if (document.querySelector('.filename-mapping-config .lock-btn') &&
+                document.querySelector('.filename-mapping-config .lock-btn').classList.contains('locked')) {
+                return true;
+            }
+            return false;
+        }
+
         function gatherDraftSnapshot() {
             const collected = collectExistingPhotosFromTable();
             const fields = Array.from(document.querySelectorAll('.custom-field')).map(field => {
@@ -1471,6 +1490,13 @@
         }
 
         function saveDraftToStorage() {
+            if (!isPicSheetDraftWorthSaving()) {
+                try {
+                    localStorage.removeItem(PIACSHEET_DRAFT_KEY);
+                } catch (e) { /* ignore */ }
+                setDraftStatusMessage('');
+                return;
+            }
             try {
                 const payload = gatherDraftSnapshot();
                 localStorage.setItem(PIACSHEET_DRAFT_KEY, JSON.stringify(payload));
@@ -1504,8 +1530,8 @@
             document.querySelector('.preview-custom-titles input.title-main').value = '';
             document.querySelector('.preview-custom-titles input.title-sub').value = '';
             document.getElementById('showTitleOnEveryPage').checked = true;
-            document.getElementById('columnCount').value = '2*3';
-            document.getElementById('filenamePattern').value = '日期-案名-標題';
+            document.getElementById('columnCount').value = PIACSHEET_DEFAULT_COLUMN;
+            document.getElementById('filenamePattern').value = PIACSHEET_DEFAULT_FILENAME_PATTERN;
             const lockBtn = document.querySelector('.filename-mapping-config .lock-btn');
             if (lockBtn) {
                 lockBtn.classList.remove('locked');
@@ -1803,12 +1829,29 @@
 
             let { images, filenames, allFieldValues } = collectExistingPhotosFromTable();
             let loaded = 0;
+            const formatMismatchNames = [];
+
+            function finishBatchUploadIfDone() {
+                if (loaded !== files.length) return;
+                if (formatMismatchNames.length) {
+                    const n = formatMismatchNames.length;
+                    const sample = formatMismatchNames.slice(0, 5).join('、');
+                    const tail = n > 5 ? `…（僅列出前 5 個，共 ${n} 張）` : '';
+                    alert(
+                        `有 ${n} 張照片的檔名與「檔名組成順序」不符（預期 ${patternParts.length} 段，以「-」分隔；格式：${pattern}）。\n` +
+                        `已仍匯入照片；該批「由檔名帶入」欄位為空，請手動填寫，或修正檔名後按「依檔名更新欄位」。\n\n` +
+                        `檔名範例：${sample}${tail}`
+                    );
+                }
+                console.log('所有檔案處理完成，開始渲染表格');
+                window.photoFieldValues = allFieldValues;
+                renderPhotoTable(images, filenames, allFieldValues);
+            }
 
             files.forEach((file, i) => {
                 console.log(`處理檔案 ${i + 1}/${files.length}:`, file.name);
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    // 解析檔名
                     const filenameWithoutExt = file.name.split('.').slice(0, -1).join('.');
                     const filenameParts = filenameWithoutExt.split('-');
                     console.log('解析後的檔名:', {
@@ -1817,21 +1860,21 @@
                         parts: filenameParts
                     });
 
-                    // 只有在有欄位勾選"由檔名代入"時才檢查檔名格式
                     if (hasFilenameMapping && filenameParts.length !== patternParts.length) {
-                        console.error('檔名格式不符合:', {
+                        console.warn('檔名格式不符合（仍匯入）:', {
                             expected: patternParts,
-                            actual: filenameParts
+                            actual: filenameParts,
+                            file: file.name
                         });
-                        alert(`檔案 "${file.name}" 的格式不符合設定！\n預期格式：${pattern}\n實際格式：${filenameWithoutExt}`);
+                        formatMismatchNames.push(file.name);
+                        images.push(e.target.result);
+                        filenames.push(file.name);
+                        allFieldValues.push({});
                         loaded++;
-                        if (loaded === files.length) {
-                            renderPhotoTable(images, filenames, allFieldValues);
-                        }
+                        finishBatchUploadIfDone();
                         return;
                     }
 
-                    // 建立檔名對應的欄位值映射
                     const fieldValues = {};
                     if (hasFilenameMapping) {
                         patternParts.forEach((part, index) => {
@@ -1845,18 +1888,12 @@
                     }
                     console.log('當前檔案的欄位值映射:', fieldValues);
 
-                    // 儲存圖片和檔名，以及對應的欄位值
                     images.push(e.target.result);
                     filenames.push(file.name);
                     allFieldValues.push(fieldValues);
                     loaded++;
 
-                    if (loaded === files.length) {
-                        console.log('所有檔案處理完成，開始渲染表格');
-                        console.log('所有檔案的欄位值映射:', allFieldValues);
-                        window.photoFieldValues = allFieldValues;
-                        renderPhotoTable(images, filenames, allFieldValues);
-                    }
+                    finishBatchUploadIfDone();
                 };
                 reader.readAsDataURL(file);
             });
@@ -2078,12 +2115,29 @@
 
             let { images, filenames, allFieldValues } = collectExistingPhotosFromTable();
             let loaded = 0;
+            const formatMismatchNames = [];
+
+            function finishDropIfDone() {
+                if (loaded !== files.length) return;
+                if (formatMismatchNames.length) {
+                    const n = formatMismatchNames.length;
+                    const sample = formatMismatchNames.slice(0, 5).join('、');
+                    const tail = n > 5 ? `…（僅列出前 5 個，共 ${n} 張）` : '';
+                    alert(
+                        `有 ${n} 張照片的檔名與「檔名組成順序」不符（預期 ${patternParts.length} 段，以「-」分隔；格式：${pattern}）。\n` +
+                        `已仍匯入照片；該批「由檔名帶入」欄位為空，請手動填寫，或修正檔名後按「依檔名更新欄位」。\n\n` +
+                        `檔名範例：${sample}${tail}`
+                    );
+                }
+                console.log('所有檔案處理完成，開始渲染表格');
+                window.photoFieldValues = allFieldValues;
+                renderPhotoTable(images, filenames, allFieldValues);
+            }
 
             Array.from(files).forEach((file, i) => {
                 console.log(`處理檔案 ${i + 1}/${files.length}:`, file.name);
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    // 解析檔名
                     const filenameWithoutExt = file.name.split('.').slice(0, -1).join('.');
                     const filenameParts = filenameWithoutExt.split('-');
                     console.log('解析後的檔名:', {
@@ -2092,21 +2146,21 @@
                         parts: filenameParts
                     });
 
-                    // 只有在有欄位勾選"由檔名代入"時才檢查檔名格式
                     if (hasFilenameMapping && filenameParts.length !== patternParts.length) {
-                        console.error('檔名格式不符合:', {
+                        console.warn('檔名格式不符合（仍匯入）:', {
                             expected: patternParts,
-                            actual: filenameParts
+                            actual: filenameParts,
+                            file: file.name
                         });
-                        alert(`檔案 "${file.name}" 的格式不符合設定！\n預期格式：${pattern}\n實際格式：${filenameWithoutExt}`);
+                        formatMismatchNames.push(file.name);
+                        images.push(e.target.result);
+                        filenames.push(file.name);
+                        allFieldValues.push({});
                         loaded++;
-                        if (loaded === files.length) {
-                            renderPhotoTable(images, filenames, allFieldValues);
-                        }
+                        finishDropIfDone();
                         return;
                     }
 
-                    // 建立檔名對應的欄位值映射
                     const fieldValues = {};
                     if (hasFilenameMapping) {
                         patternParts.forEach((part, index) => {
@@ -2120,18 +2174,12 @@
                     }
                     console.log('當前檔案的欄位值映射:', fieldValues);
 
-                    // 儲存圖片和檔名，以及對應的欄位值
                     images.push(e.target.result);
                     filenames.push(file.name);
                     allFieldValues.push(fieldValues);
                     loaded++;
 
-                    if (loaded === files.length) {
-                        console.log('所有檔案處理完成，開始渲染表格');
-                        console.log('所有檔案的欄位值映射:', allFieldValues);
-                        window.photoFieldValues = allFieldValues;
-                        renderPhotoTable(images, filenames, allFieldValues);
-                    }
+                    finishDropIfDone();
                 };
                 reader.readAsDataURL(file);
             });
@@ -2146,31 +2194,8 @@
             }
         });
 
-        // 修改預覽表格更新函數，改為直向欄位
+        // 自訂欄位變更時重新同步下方照片表格
         function updatePreviewTable() {
-            const previewFields = document.getElementById('previewFieldsVertical');
-            if (!previewFields) return;
-            previewFields.innerHTML = '';
-            // 獲取所有啟用的欄位
-            const activeFields = Array.from(document.querySelectorAll('.custom-field'))
-                .map(field => ({
-                    name: field.querySelector('input[placeholder="欄位名稱"]').value,
-                    value: field.querySelector('.global-value').value
-                }));
-            activeFields.forEach(field => {
-                const row = document.createElement('div');
-                row.className = 'preview-field-row';
-                const label = document.createElement('div');
-                label.className = 'preview-field-label';
-                label.textContent = field.name;
-                const value = document.createElement('div');
-                value.className = 'preview-field-value';
-                value.textContent = field.value;
-                row.appendChild(label);
-                row.appendChild(value);
-                previewFields.appendChild(row);
-            });
-            // 重新渲染下方表格，保留每張照片的欄位值
             setPhotoTableColumns();
         }
 
@@ -2620,10 +2645,10 @@
                 } catch (e2) { /* ignore */ }
             }
             if (hasDraft) {
-                const restore = confirm(
-                    '偵測到先前儲存的暫存資料，是否還原？\n\n' +
-                    '· 按「確定」：還原上次編輯內容\n' +
-                    '· 按「取消」：以空白頁開始，並刪除該暫存檔'
+                const restore = window.confirm(
+                    '偵測到瀏覽器暫存檔，是否載入還原？\n\n' +
+                    '· 確定：載入暫存內容\n' +
+                    '· 取消：以空白頁開始，並清除暫存（之後重新整理不會再詢問）'
                 );
                 if (restore) {
                     applyDraftSnapshot(draft);
@@ -2632,7 +2657,7 @@
                         localStorage.removeItem(PIACSHEET_DRAFT_KEY);
                     } catch (err) { /* ignore */ }
                     initBlankPicSheetPage({ skipScheduleDraft: true });
-                    setDraftStatusMessage('已略過暫存，以空白頁開始');
+                    setDraftStatusMessage('');
                 }
             } else {
                 initBlankPicSheetPage({ skipScheduleDraft: true });
