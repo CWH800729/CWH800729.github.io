@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>照片表格製作</title>
+    <title>照片表格製作系統</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- 添加 SheetJS 庫 -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -762,6 +762,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
             display: none;
         }
         .filename-mapping-config label {
@@ -810,6 +811,13 @@
         }
         .filename-mapping-config .lock-btn i {
             font-size: 1.1em;
+        }
+        .filename-mapping-config .mapping-note {
+            flex-basis: 100%;
+            margin: 2px 0 0;
+            color: #8f98a3;
+            font-size: 0.88em;
+            line-height: 1.35;
         }
 
         /* 列印樣式 */
@@ -1013,7 +1021,7 @@
                         </a>
                         <div class="click-count" id="clickCount">0</div>
                     </div>
-                    <h1 class="site-title">照片表格製作系統</h1>
+                    <h1 class="site-title">照片表格製作</h1>
                 </div>
                 <p class="site-author">系統作者：陳維宏</p>
             </div>
@@ -1057,9 +1065,7 @@
                 </div>
                 <div class="filename-mapping-config" id="filenameMappingConfig">
                     <label for="filenamePattern" class="has-tooltip" data-tooltip="請依照照片檔名的組成順序填寫，並以 - 分隔。
-例如：日期-案名-標題，檔名需為 2023-工程A-外觀.jpg
-
-此檔名組成需與欄位名稱一致，否則無法自動帶入欄位。">檔名組成順序：</label>
+例如：日期-案名-標題，檔名需為 2023-工程A-外觀.jpg">檔名組成順序：</label>
                     <div class="input-group">
                         <input type="text" id="filenamePattern" placeholder="例如：日期-案名-標題" value="日期-案名-標題" oninput="updatePreviewTable();setPhotoTableColumns();">
                         <button type="button" class="lock-btn unlocked" onclick="toggleFilenamePatternLock(this)" title="點擊鎖定檔名組成順序">
@@ -1067,7 +1073,10 @@
                             <span>鎖定</span>
                         </button>
                     </div>
-                    <span style="color:#888;font-size:0.95em;">（以 - 分隔，順序需與檔名一致）</span>
+                    <div class="mapping-note">說明：
+                        <br>請依照照片檔名的組成填寫，並以 - 分隔。
+                        <br>以「-」分隔，欄位說明與照片檔名組成名稱需一致，否則無法自動帶入欄位。
+                        <br>例如：日期-案名-標題，檔名為：2026-工程A-外觀.jpg，則日期=2026，案名=工程A，標題=外觀，並依該規則代入。"</div>
                 </div>
                 <div id="customFieldsContainer">
                     <!-- 動態欄位將在這裡生成 -->
