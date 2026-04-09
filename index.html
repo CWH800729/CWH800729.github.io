@@ -49,77 +49,112 @@
         .main-content {
             display: flex;
             flex-direction: column;
-            gap: 14px;
-            margin-bottom: 24px;
+            gap: 8px;
+            margin-bottom: 20px;
         }
 
         .card {
             background: #fff;
             border-radius: 8px;
-            padding: 18px 20px;
+            padding: 12px 14px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             border: 1px solid #e8e8e8;
         }
 
+        /* 功能條目：左側按鈕、右側標題與說明（節省垂直空間） */
+        .card-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+        }
+
+        .card-aside {
+            flex-shrink: 0;
+        }
+
+        .card-body {
+            flex: 1;
+            min-width: 0;
+        }
+
         .card h2 {
             color: #2c3e50;
-            margin: 0 0 8px;
-            font-size: 1.1rem;
+            margin: 0 0 4px;
+            font-size: 0.98rem;
             font-weight: 600;
             border-bottom: none;
             padding-bottom: 0;
+            line-height: 1.25;
         }
 
         .card p {
             margin: 0;
-            font-size: 0.94rem;
+            font-size: 0.82rem;
+            line-height: 1.35;
             color: #555;
         }
 
         .defect-link {
-            display: block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
             background-color: #4CAF50;
             color: white;
-            padding: 10px 16px;
+            padding: 7px 12px;
             text-decoration: none;
             border-radius: 6px;
-            margin-top: 12px;
-            font-size: 0.92rem;
+            margin-top: 0;
+            font-size: 0.82rem;
             transition: opacity 0.2s ease;
+            white-space: nowrap;
+            max-width: 11.5em;
+            line-height: 1.2;
+            box-sizing: border-box;
         }
 
         .defect-link:hover {
             opacity: 0.92;
         }
 
+        .card-author {
+            padding: 10px 12px;
+        }
+
         .author-info {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-top: 12px;
+            gap: 10px;
+            margin-top: 6px;
         }
 
         .author-avatar {
-            width: 60px;
-            height: 60px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             object-fit: cover;
+            flex-shrink: 0;
         }
 
         .author-details {
             flex: 1;
+            min-width: 0;
         }
 
         .author-name {
             font-weight: bold;
-            margin: 0;
+            margin: 0 0 2px;
+            font-size: 0.95rem;
             color: #2c3e50;
         }
 
         .author-bio {
-            margin: 5px 0;
+            margin: 0 0 4px;
             color: #666;
+            font-size: 0.8rem;
+            line-height: 1.35;
         }
 
         .author-link {
@@ -143,6 +178,18 @@
             .header-content {
                 flex-direction: column;
                 text-align: center;
+            }
+
+            .card-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .defect-link {
+                max-width: none;
+                width: 100%;
+                white-space: normal;
             }
         }
 
@@ -230,7 +277,7 @@
 
     <main class="container">
         <div class="main-content">
-            <div class="card">
+            <div class="card card-author">
                 <h2><i class="fas fa-user"></i> 關於作者</h2>
                 <div class="author-info">
                     <img src="http://cwh800729.github.io/CWH-LOGO" alt="http://cwh800729.github.io/CWH-LOGO" class="author-avatar">
@@ -243,60 +290,88 @@
                     </div>
                 </div>
             </div>
-            <div class="card">
-                <h2><i class="fas fa-clipboard-list"></i> 缺失表格系統V12</h2>
-                <p>工程缺失管理系統，用於記錄工程現場缺失項目。系統提供完整的缺失標記、照片管理、進度追蹤等功能。</p>
-                <a href="http://cwh800729.github.io/V9.html" class="defect-link">
-                    <i class="fas fa-external-link-alt"></i> 進入缺失表格系統
-                </a>
+            <div class="card card-row">
+                <div class="card-aside">
+                    <a href="http://cwh800729.github.io/V9.html" class="defect-link">
+                        <i class="fas fa-external-link-alt"></i> 進入系統
+                    </a>
+                </div>
+                <div class="card-body">
+                    <h2><i class="fas fa-clipboard-list"></i> 缺失表格系統V12</h2>
+                    <p>工程缺失管理：現場缺失紀錄、照片、進度追蹤。</p>
+                </div>
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-file-zipper"></i> 缺失表格系統 資料分析／統整</h2>
-                <p>讀取 缺失表格系統V12「匯出資料」產生的 ZIP，支援多專案匯入、全專案缺失整合與篩選、廠商統計與列印分頁，方便檢視與彙整。</p>
-                <a href="http://cwh800729.github.io/V12Analyzer.html" class="defect-link" style="background-color: #2c5282;">
-                    <i class="fas fa-external-link-alt"></i> 進入匯出資料分析
-                </a>
+            <div class="card card-row">
+                <div class="card-aside">
+                    <a href="http://cwh800729.github.io/V12Analyzer.html" class="defect-link" style="background-color: #2c5282;">
+                        <i class="fas fa-external-link-alt"></i> 進入資料分析
+                    </a>
+                </div>
+                <div class="card-body">
+                    <h2><i class="fas fa-file-zipper"></i> 缺失表格系統 資料分析／統整</h2>
+                    <p>讀取 V12 匯出 ZIP：多專案整合、篩選、廠商統計與列印分頁。</p>
+                </div>
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-images"></i> 照片表格製作系統</h2>
-                <p>照片表格製作，支援照片上傳、自訂欄位、自動解析檔名（測試中）等功能，懶人化建立標準化的照片表格文件。</p>
-                <a href="http://cwh800729.github.io/PicSheet.html" class="defect-link" style="background-color: #3498db;">
-                    <i class="fas fa-external-link-alt"></i> 進入照片表格製作系統
-                </a>
+            <div class="card card-row">
+                <div class="card-aside">
+                    <a href="http://cwh800729.github.io/PicSheet.html" class="defect-link" style="background-color: #3498db;">
+                        <i class="fas fa-external-link-alt"></i> 進入照片表格
+                    </a>
+                </div>
+                <div class="card-body">
+                    <h2><i class="fas fa-images"></i> 照片表格製作系統</h2>
+                    <p>上傳照片、自訂欄位、檔名解析（測試中），快速產出標準化照片表。</p>
+                </div>
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-calculator"></i> 水溝高程換算</h2>
-                <p>水溝高程計算，用於計算水溝的高程差、坡度，提供即時結果顯示。</p>
-                <a href="http://cwh800729.github.io/DitchEL.html" class="defect-link" style="background-color: #3498db;">
-                    <i class="fas fa-external-link-alt"></i> 進入水溝高程換算系統
-                </a>
+            <div class="card card-row">
+                <div class="card-aside">
+                    <a href="http://cwh800729.github.io/DitchEL.html" class="defect-link" style="background-color: #3498db;">
+                        <i class="fas fa-external-link-alt"></i> 進入水溝換算
+                    </a>
+                </div>
+                <div class="card-body">
+                    <h2><i class="fas fa-calculator"></i> 水溝高程換算</h2>
+                    <p>高程差、坡度計算，即時顯示結果。</p>
+                </div>
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-layer-group"></i> 連續壁灌漿記錄表</h2>
-                <p>連續壁灌漿記錄管理系統，用於記錄和管理連續壁灌漿施工過程中的各項數據。</p>
-                <a href="http://cwh800729.github.io/DiaphragmWall.html" class="defect-link" style="background-color: #e67e22;">
-                    <i class="fas fa-external-link-alt"></i> 進入連續壁灌漿記錄系統
-                </a>
+            <div class="card card-row">
+                <div class="card-aside">
+                    <a href="http://cwh800729.github.io/DiaphragmWall.html" class="defect-link" style="background-color: #e67e22;">
+                        <i class="fas fa-external-link-alt"></i> 進入灌漿記錄
+                    </a>
+                </div>
+                <div class="card-body">
+                    <h2><i class="fas fa-layer-group"></i> 連續壁灌漿記錄表</h2>
+                    <p>灌漿施工數據之紀錄與管理。</p>
+                </div>
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-file-lines"></i> 會議記錄</h2>
-                <p>會議基本資料、多場次議題與進度追蹤、圖文插入、篩選列印與 ZIP 匯出／匯入；並支援瀏覽器暫存降低誤關分頁遺失風險。</p>
-                <a href="http://cwh800729.github.io/meeting-minutes.html" class="defect-link" style="background-color: #37474f;">
-                    <i class="fas fa-external-link-alt"></i> 進入會議記錄
-                </a>
+            <div class="card card-row">
+                <div class="card-aside">
+                    <a href="http://cwh800729.github.io/meeting-minutes.html" class="defect-link" style="background-color: #37474f;">
+                        <i class="fas fa-external-link-alt"></i> 進入會議記錄
+                    </a>
+                </div>
+                <div class="card-body">
+                    <h2><i class="fas fa-file-lines"></i> 會議記錄</h2>
+                    <p>議題與進度、圖文插入、列印與 ZIP 匯出／匯入；支援瀏覽器暫存。</p>
+                </div>
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-chart-line"></i> 美股資訊查詢系統</h2>
-                <p>美股投資組合管理，包含股票市值計算、配息日期追蹤，以及台幣換美金匯率計算功能。</p>
-                <a href="http://cwh800729.github.io/StockInfo.html" class="defect-link" style="background-color: #9b59b6;">
-                    <i class="fas fa-external-link-alt"></i> 進入美股資訊查詢系統
-                </a>
+            <div class="card card-row">
+                <div class="card-aside">
+                    <a href="http://cwh800729.github.io/StockInfo.html" class="defect-link" style="background-color: #9b59b6;">
+                        <i class="fas fa-external-link-alt"></i> 進入美股查詢
+                    </a>
+                </div>
+                <div class="card-body">
+                    <h2><i class="fas fa-chart-line"></i> 美股資訊查詢系統</h2>
+                    <p>持倉市值、配息追蹤、台幣／美金匯率換算。</p>
+                </div>
             </div>
 
             
