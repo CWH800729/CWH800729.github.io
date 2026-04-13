@@ -146,12 +146,21 @@
       margin-bottom: 10px;
     }
 
-    /* 狀態文字樣式 */
-    .status { 
+    /* 修繕進度欄：可點選狀態以小框框標示（不影響其他表格） */
+    #defectTable td.status {
       cursor: pointer;
-      font-size: 14px;
+      user-select: none;
+      font-size: 12pt;
+      vertical-align: middle;
+      background-color: #fafafa;
+      border-radius: 4px;
+      box-shadow: inset 0 0 0 1px #b5b5b5;
     }
-    
+    #defectTable td.status:hover {
+      background-color: #f0f6fc;
+      box-shadow: inset 0 0 0 1px #4a7dcb;
+    }
+
     /* 可點擊的點位編號樣式 */
     td.clickable { 
       color: blue; 
@@ -204,10 +213,6 @@
     input[type="text"] { 
       width: 95%; 
       padding: 4px;
-    }
-    
-    .status { 
-      cursor: pointer; 
     }
     
     td.clickable { 
@@ -704,32 +709,35 @@
       background-color: #5a6268;
     }
 
-    /* 統計表格樣式 */
+    /* 統計表格樣式（精簡高度，少佔版面） */
     .summary-container {
-      margin: 30px 0;
-      padding: 20px;
+      margin: 14px 0;
+      padding: 8px 12px 10px;
       background-color: #f8f9fa;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
 
     .summary-title {
-      font-size: 20px;
+      font-size: 15px;
+      font-weight: 600;
       color: #333;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #dee2e6;
+      margin: 0 0 6px 0;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #dee2e6;
     }
 
     .summary-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
+      margin-top: 4px;
+      font-size: 12px;
     }
 
     .summary-table th,
     .summary-table td {
-      padding: 12px;
+      padding: 5px 8px;
+      line-height: 1.3;
       text-align: center;
       border: 1px solid #dee2e6;
     }
@@ -737,6 +745,7 @@
     .summary-table th {
       background-color: #e9ecef;
       font-weight: bold;
+      font-size: 11px;
     }
 
     .summary-table tr:nth-child(even) {
@@ -763,12 +772,13 @@
       color: #007bff;
     }
 
-    .progress-bar {
-      height: 20px;
+    .summary-table .progress-bar {
+      height: 12px;
       background-color: #e9ecef;
-      border-radius: 10px;
+      border-radius: 6px;
       overflow: hidden;
-      margin-top: 5px;
+      margin: 2px auto 0;
+      max-width: 120px;
     }
 
     .progress-fill {
