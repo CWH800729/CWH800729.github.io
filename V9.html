@@ -1423,7 +1423,7 @@
 
   <!-- 移動操作提示到這裡並移除 display: none -->
   <div id="drawInstruction" class="instruction-message">
-    <i class="fas fa-info-circle"></i> 操作說明：請在平面圖上點擊缺失位置，並拖曳滑鼠來指示箭頭方向。完成後會自動開啟照片上傳視窗。
+    <i class="fas fa-info-circle"></i> 操作說明：請在平面圖上點擊缺失位置，並拖曳滑鼠來指示箭頭方向。完成後會自動開啟照片上傳視窗。若要修正既有箭頭，可拖曳<strong>箭頭末端</strong>改方向，或拖曳<strong>起點圓點</strong>移動起點（箭頭尖端位置維持不變；不會變更已儲存的點位照片與表格內容）。
   </div>
 
   <div class="keyword-section">
@@ -1725,6 +1725,9 @@
     let startPoint = null;
     let currentPoint = null;
     let previewEndPoint = null; // 新增：用於儲存拖曳時的預覽終點
+    /** 拖曳修正箭頭：null | 'tip' 末端 | 'tail' 起點（圓點）；不改 id，照片與表格對應不變 */
+    let arrowAdjustKind = null;
+    let arrowAdjustPointIndex = null;
     let originalImage = null;
     let scaleFactor = 1; // 新增：用於追蹤圖片縮放比例
     let originalWidth = 0; // 新增：儲存原始圖片寬度
@@ -2100,6 +2103,41 @@
       };
     }
 
+    /** 箭頭末端／起點（畫布座標）點擊容許半徑（px）；僅幾何調整，不影響點位 id 與照片對應 */
+    const ARROW_TIP_HIT_PX = 14;
+    const ARROW_START_HIT_PX = 16;
+
+    function findArrowEndHitAtCanvas(canvasX, canvasY) {
+      for (let i = points.length - 1; i >= 0; i--) {
+        const pt = points[i];
+        const endCanvas = reverseTransformCoordinates(pt.x + pt.dx, pt.y + pt.dy);
+        const dist = Math.hypot(canvasX - endCanvas.x, canvasY - endCanvas.y);
+        if (dist <= ARROW_TIP_HIT_PX) return i;
+      }
+      return -1;
+    }
+
+    function findArrowStartHitAtCanvas(canvasX, canvasY) {
+      for (let i = points.length - 1; i >= 0; i--) {
+        const pt = points[i];
+        const startCanvas = reverseTransformCoordinates(pt.x, pt.y);
+        const dist = Math.hypot(canvasX - startCanvas.x, canvasY - startCanvas.y);
+        if (dist <= ARROW_START_HIT_PX) return i;
+      }
+      return -1;
+    }
+
+    function endArrowAdjust() {
+      if (!arrowAdjustKind) return;
+      arrowAdjustKind = null;
+      arrowAdjustPointIndex = null;
+      scheduleSessionAutosave();
+      draw();
+    }
+
+    window.addEventListener('mouseup', endArrowAdjust);
+    window.addEventListener('touchend', endArrowAdjust);
+
     // 修改：圖片載入處理
     imageUploader.addEventListener("change", async function () {
       const file = this.files[0];
@@ -2270,6 +2308,31 @@
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+
+      const hitTip = findArrowEndHitAtCanvas(x, y);
+      if (hitTip >= 0) {
+        arrowAdjustKind = 'tip';
+        arrowAdjustPointIndex = hitTip;
+        const pt = points[hitTip];
+        highlightedId = pt.id;
+        points.forEach(p => {
+          p.singleHighlight = (p.id === pt.id);
+        });
+        draw();
+        return;
+      }
+      const hitTail = findArrowStartHitAtCanvas(x, y);
+      if (hitTail >= 0) {
+        arrowAdjustKind = 'tail';
+        arrowAdjustPointIndex = hitTail;
+        const pt = points[hitTail];
+        highlightedId = pt.id;
+        points.forEach(p => {
+          p.singleHighlight = (p.id === pt.id);
+        });
+        draw();
+        return;
+      }
       
       // 轉換為原始座標
       const originalCoords = transformCoordinates(x, y);
@@ -2406,8 +2469,37 @@
     }
 
     canvas.addEventListener("mousemove", function(e) {
-      if (!isDragging) return;
-      
+      if (arrowAdjustKind && arrowAdjustPointIndex !== null) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const originalCoords = transformCoordinates(x, y);
+        const pt = points[arrowAdjustPointIndex];
+        if (arrowAdjustKind === 'tip') {
+          pt.dx = originalCoords.x - pt.x;
+          pt.dy = originalCoords.y - pt.y;
+        } else {
+          const endX = pt.x + pt.dx;
+          const endY = pt.y + pt.dy;
+          pt.x = originalCoords.x;
+          pt.y = originalCoords.y;
+          pt.dx = endX - pt.x;
+          pt.dy = endY - pt.y;
+        }
+        canvas.style.cursor = 'grabbing';
+        draw();
+        return;
+      }
+      if (!isDragging) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const onTip = findArrowEndHitAtCanvas(x, y);
+        const onTail = onTip >= 0 ? -1 : findArrowStartHitAtCanvas(x, y);
+        canvas.style.cursor = (onTip >= 0 || onTail >= 0) ? 'grab' : 'default';
+        return;
+      }
+
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -2419,11 +2511,16 @@
         y: originalCoords.y
       };
       
+      canvas.style.cursor = 'default';
       // 重新繪製以顯示預覽箭頭
       draw();
     });
 
     canvas.addEventListener("mouseup", function(e) {
+      if (arrowAdjustKind) {
+        endArrowAdjust();
+        return;
+      }
       if (!isDragging) return;
       isDragging = false;
       
@@ -3982,6 +4079,31 @@
       const touch = e.touches[0];
       const x = touch.clientX - rect.left;
       const y = touch.clientY - rect.top;
+
+      const hitTip = findArrowEndHitAtCanvas(x, y);
+      if (hitTip >= 0) {
+        arrowAdjustKind = 'tip';
+        arrowAdjustPointIndex = hitTip;
+        const pt = points[hitTip];
+        highlightedId = pt.id;
+        points.forEach(p => {
+          p.singleHighlight = (p.id === pt.id);
+        });
+        draw();
+        return;
+      }
+      const hitTail = findArrowStartHitAtCanvas(x, y);
+      if (hitTail >= 0) {
+        arrowAdjustKind = 'tail';
+        arrowAdjustPointIndex = hitTail;
+        const pt = points[hitTail];
+        highlightedId = pt.id;
+        points.forEach(p => {
+          p.singleHighlight = (p.id === pt.id);
+        });
+        draw();
+        return;
+      }
       
       // 轉換為原始座標
       const originalCoords = transformCoordinates(x, y);
@@ -3996,6 +4118,27 @@
 
     canvas.addEventListener('touchmove', function(e) {
       e.preventDefault(); // 防止頁面滾動
+      if (arrowAdjustKind && arrowAdjustPointIndex !== null && e.touches[0]) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        const originalCoords = transformCoordinates(x, y);
+        const pt = points[arrowAdjustPointIndex];
+        if (arrowAdjustKind === 'tip') {
+          pt.dx = originalCoords.x - pt.x;
+          pt.dy = originalCoords.y - pt.y;
+        } else {
+          const endX = pt.x + pt.dx;
+          const endY = pt.y + pt.dy;
+          pt.x = originalCoords.x;
+          pt.y = originalCoords.y;
+          pt.dx = endX - pt.x;
+          pt.dy = endY - pt.y;
+        }
+        draw();
+        return;
+      }
       if (!isDragging) return;
       
       const rect = canvas.getBoundingClientRect();
@@ -4015,6 +4158,10 @@
 
     canvas.addEventListener('touchend', function(e) {
       e.preventDefault(); // 防止頁面滾動
+      if (arrowAdjustKind) {
+        endArrowAdjust();
+        return;
+      }
       if (!isDragging) return;
       isDragging = false;
       
