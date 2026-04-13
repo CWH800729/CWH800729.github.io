@@ -308,10 +308,6 @@
       padding: 15px;
     }
 
-    .title-container {
-      margin-bottom: 10px;
-    }
-
     .date-display {
       font-size: 18px;
       color: #666;
@@ -887,29 +883,69 @@
       }
     }
 
-    /* 頁碼和標題樣式 */
-    .print-footer {
-      display: none;
-      position: fixed;
-      bottom: 20px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 12pt;
+    /* 頁首：LOGO 右側為「系統作者＋大標題」上下緊密排列 */
+    .title-container {
+      margin-bottom: 10px;
+      width: 100%;
+      max-width: 1200px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 14px;
     }
 
-    .page-number {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      font-size: 12pt;
+    .header-title-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 2px;
+      flex: 1 1 200px;
+      min-width: 0;
+    }
+
+    .header-author {
+      font-size: 10pt;
+      color: #a8a8a8;
+      margin: 0;
+      padding: 0;
+      line-height: 1.15;
+    }
+
+    .header-title-stack .title-input {
+      width: 100%;
+      margin: 0;
+      padding: 2px 0;
+      line-height: 1.2;
+    }
+
+    /* 頁尾：僅重複顯示文件標題（螢幕）；列印時隱藏整塊 */
+    .page-footer {
+      margin-top: 28px;
+      padding-top: 12px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .footer-content {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .footer-title {
+      font-size: 14pt;
+      font-weight: bold;
+      text-align: center;
+      color: #333;
     }
 
     /* 列印樣式調整 */
     @media print {
       @page {
         size: A4;
-        margin: 1.5cm;
+        /* 略縮邊界，讓照片 3×2 網格盡量貼滿紙張可印範圍 */
+        margin: 10mm;
       }
 
       body {
@@ -932,8 +968,71 @@
         position: relative;
       }
 
+      /* 頁首列印：LOGO、系統作者、標題、屋主、電話、日期、總缺失數皆輸出 */
       .page-header {
-        margin-bottom: 15px;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .page-header .header-title-stack {
+        gap: 1px !important;
+      }
+
+      .page-header .header-author {
+        color: #b0b0b0 !important;
+        font-size: 9pt !important;
+        line-height: 1.15 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .page-header .title-container {
+        justify-content: flex-start !important;
+        align-items: flex-start !important;
+        margin-bottom: 8px !important;
+      }
+
+      .page-header .title-input {
+        display: block !important;
+        border: none !important;
+        background: transparent !important;
+        font-size: 16pt !important;
+        font-weight: bold !important;
+        color: #000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        line-height: 1.2 !important;
+      }
+
+      .page-header .owner-info {
+        display: flex !important;
+        justify-content: space-between !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        margin: 6px 0 !important;
+        padding: 0 !important;
+      }
+
+      .page-header .owner-info input {
+        border: none !important;
+        background: transparent !important;
+        font-size: 11pt !important;
+        color: #000 !important;
+        padding: 2px 0 !important;
+      }
+
+      .page-header .date-display {
+        display: flex !important;
+        justify-content: center !important;
+        gap: 16px !important;
+        font-size: 11pt !important;
+        color: #000 !important;
+        margin-top: 4px !important;
+      }
+
+      .page-footer {
+        display: none !important;
       }
 
       .title-input {
@@ -948,24 +1047,27 @@
         font-size: 14pt;
       }
 
-      /* 調整平面圖容器 */
+      /* 平面圖：列印時勿用縮放／固定高度，避免裁切或空白頁 */
       .canvas-container {
-        transform: scale(0.75);
+        transform: none !important;
         transform-origin: top center;
-        margin: 0 auto;
-        max-width: 100%;
-        overflow: hidden;
-        height: calc(100vh - 200px); /* 預留簽名區域空間 */
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        margin: 0 auto 10px !important;
+        max-width: 100% !important;
+        overflow: visible !important;
+        height: auto !important;
+        min-height: 0 !important;
+        display: block !important;
+        text-align: center;
       }
 
-      /* 調整平面圖透明度 */
       #floorCanvas {
-        opacity: 0.7; /* 平面圖淡化30% */
-        max-height: 100%;
+        opacity: 1 !important;
+        max-width: 100% !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: none !important;
         object-fit: contain;
+        page-break-inside: avoid;
       }
 
       /* 簽名區域：列印時使用文件流，避免固定於頁底蓋住缺失照片總覽等後段內容 */
@@ -1012,12 +1114,14 @@
         padding-bottom: 200px; /* 為簽名區域預留空間 */
       }
 
-      /* 隱藏不需要的元素 */
+      /* 隱藏不需要的元素（避免列印時被關鍵字區塊擠掉前段有效內容） */
+      .keyword-section,
       .print-button-container,
       .action-buttons,
       .filter-container,
       #keywordTable,
       #toggleKeywordBtn,
+      #pdfPageSelector,
       .settings-btn,
       #drawInstruction,
       button:not(.signature-canvas),
@@ -1061,59 +1165,6 @@
       #defectTable th:nth-child(2),
       #defectTable td:nth-child(2) {
         width: 85%;
-      }
-
-      /* 頁尾樣式：每頁固定顯示頁碼 */
-      .page-footer {
-        display: block;
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 8mm;
-        width: 100%;
-        text-align: center;
-        font-size: 10pt;
-        background: transparent;
-      }
-
-      .page-footer .footer-content {
-        justify-content: center;
-      }
-
-      .page-footer .footer-title {
-        display: none !important;
-      }
-
-      .page-footer .footer-page {
-        font-size: 0;
-      }
-
-      .page-footer .footer-page::after {
-        font-size: 10pt;
-        content: "第 " counter(page) " 頁，共 " attr(data-total-pages) " 頁";
-      }
-
-      /* 作者資訊樣式 */
-      .author-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        padding: 10px;
-        border-top: 1px solid #ccc;
-        background-color: white;
-        font-size: 10pt;
-      }
-
-      /* 缺失照片總覽從新頁開始列印 */
-      .photo-overview-container {
-        page-break-before: always;
-        break-before: page;
-      }
-
-      /* 移除元素間的多餘空白 */
-      * {
-        margin-bottom: 0;
       }
 
       /* 確保箭頭清晰可見 */
@@ -1227,82 +1278,176 @@
       display: none;
     }
 
-    /* 照片總覽表格樣式 */
+    /* 照片總覽：三橫列、每橫列 2 張（2 欄×3 橫列）一組 6 格；列印同版型 */
     .photo-overview-container {
-      margin: 30px 0;
-      padding: 20px;
+      margin: 24px 0;
+      padding: 16px;
       background-color: #f8f9fa;
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     .photo-overview-title {
-      font-size: 20px;
+      font-size: 18px;
       color: #333;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
+      margin: 0 0 12px 0;
+      padding-bottom: 8px;
       border-bottom: 2px solid #dee2e6;
     }
 
     .photo-overview-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .photo-overview-sheet {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-      padding: 20px;
-      background-color: white;
-      border-radius: 4px;
-      border: 1px dashed #ccc;
+      grid-template-rows: repeat(3, minmax(120px, 160px));
+      gap: 10px;
+      padding: 12px;
+      background: #fff;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+      box-sizing: border-box;
     }
 
     .photo-overview-item {
-      text-align: center;
-      padding: 10px;
-      border: 1px dashed #ccc;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border: 1px solid #555;
       border-radius: 4px;
-      background-color: white;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .photo-overview-img-wrap {
+      flex: 1 1 auto;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      box-sizing: border-box;
+      background: #fafafa;
     }
 
     .photo-overview-item img {
       max-width: 100%;
+      max-height: 100%;
+      width: auto;
       height: auto;
-      margin-bottom: 10px;
-      border: 1px solid #eee;
-      border-radius: 4px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .photo-overview-img-wrap img {
+      cursor: zoom-in;
     }
 
     .photo-overview-item .point-number {
-      font-size: 16px;
+      flex-shrink: 0;
+      font-size: 13px;
       font-weight: bold;
-      color: #333;
-      padding: 5px;
-      background-color: #f8f9fa;
-      border-radius: 4px;
+      color: #222;
+      padding: 6px 8px;
+      text-align: center;
+      background: #eceff1;
+      border-top: 1px solid #bbb;
     }
 
     @media print {
+      /* A4、上下左右各 10mm → 可印寬高約 190mm × 277mm */
       .photo-overview-container {
-        position: relative;
-        z-index: 1;
-        margin-top: 10mm;
-        page-break-before: auto;
-        break-before: auto;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        box-shadow: none !important;
+        page-break-before: always;
+        break-before: page;
+        width: 100% !important;
+      }
+
+      .photo-overview-title {
+        font-size: 11pt;
+        margin: 0 0 2mm 0 !important;
+        padding: 0 0 2mm 0 !important;
+        border-bottom: 1px solid #333 !important;
+        page-break-after: avoid;
+        break-after: avoid;
       }
 
       .photo-overview-grid {
-        border: 1px dashed #999;
+        gap: 0;
+        width: 100% !important;
       }
 
-      /* 單格可斷頁，避免一整塊與簽名卡在同一頁造成擠壓 */
+      /* 三橫列、每橫列 2 張（2 欄×3 橫列）；高度均分以貼滿 A4 可印區 */
+      .photo-overview-sheet {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        grid-template-rows: repeat(3, 1fr) !important;
+        gap: 2mm !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: 277mm !important;
+        border: 1px solid #000 !important;
+        border-radius: 0 !important;
+        background: #fff !important;
+        box-sizing: border-box !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      /* 與「缺失照片總覽」標題同一頁的第一組，留標題空間 */
+      .photo-overview-sheet--first {
+        height: 258mm !important;
+      }
+
+      .photo-overview-sheet:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+      }
+
       .photo-overview-item {
-        border: 1px dashed #999;
-        page-break-inside: avoid;
-        break-inside: avoid;
+        display: flex !important;
+        flex-direction: column !important;
+        border: 1px solid #000 !important;
+        border-radius: 0 !important;
+        min-height: 0 !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      .photo-overview-img-wrap {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        padding: 1.5mm !important;
+        background: #fff !important;
+      }
+
+      .photo-overview-item .point-number {
+        flex-shrink: 0 !important;
+        font-size: 8pt !important;
+        padding: 1mm 2mm !important;
+        border-top: 1px solid #000 !important;
+        background: #f0f0f0 !important;
       }
 
       .photo-overview-item img {
-        max-height: 65mm;
-        object-fit: contain;
-        border: 1px solid #999;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        width: auto !important;
+        height: auto !important;
+        object-fit: contain !important;
+        cursor: default !important;
       }
     }
 
@@ -1361,16 +1506,19 @@
   </style>
 </head>
 <body>
-  <!-- 新增標題列 -->
+  <!-- 標題列：LOGO 右側為系統作者＋大標題（上下緊排）；列印含屋主／電話／日期／總缺失數 -->
   <div class="page-header">
-    <div class="title-container" style="display: flex; align-items: center; gap: 20px;">
+    <div class="title-container" style="display: flex;">
       <a href="https://CWH800729.github.io/index.html"><img src="https://CWH800729.github.io/CWH-LOGO" alt="logo" style="width:75px; height:75px; object-fit:contain; border-radius:16px;"></a>
-      <input type="text" 
-             class="title-input" 
-             id="pageTitle" 
-             placeholder="請輸入標題..."
-             oninput="saveTitle()"
-             value="平面圖標記 + 缺失表格">
+      <div class="header-title-stack">
+        <div class="header-author">系統作者：CWH800729.wordpress.com</div>
+        <input type="text" 
+               class="title-input" 
+               id="pageTitle" 
+               placeholder="請輸入標題..."
+               oninput="saveTitle()"
+               value="平面圖標記 + 缺失表格">
+      </div>
     </div>
     <!-- 新增屋主和聯絡電話輸入欄位 -->
     <div class="owner-info" style="display: flex; justify-content: space-between; margin: 10px 0; padding: 0 20px;">
@@ -1528,10 +1676,6 @@
     </div>
   </div>
 
-  <!-- 添加頁碼和標題 -->
-  <div class="print-footer" id="printFooter"></div>
-  <div class="page-number" id="printPageNumber"></div>
-
   <!-- 添加統計表格 -->
   <div class="summary-container">
     <h3 class="summary-title">廠商修繕狀態統計表</h3>
@@ -1593,25 +1737,18 @@
     正在生成截圖，請稍候...
   </div>
 
-  <!-- 添加頁尾 -->
-  <div class="page-footer">
-    <div class="footer-content">
-      <div class="footer-title" id="footerTitle"></div>
-      <div class="footer-page" id="footerPage"></div>
-    </div>
-  </div>
-
-  <!-- 添加作者資訊 -->
-  <div class="author-footer">
-    <div>系統作者：CWH800729.wordpress.com</div>
-    <!--<div>網址：<a href="https://CWH800729.wordpress.com" target="_blank">https://CWH800729.wordpress.com</a></div>>
-  </div>
-
-  <!-- 新增照片總覽表格 -->
+  <!-- 缺失照片總覽：置於頁尾區塊之前，列印時順序為表格／簽名／統計／照片／頁尾，避免內容被遮住 -->
   <div class="photo-overview-container">
     <h3 class="photo-overview-title">缺失照片總覽</h3>
     <div class="photo-overview-grid" id="photoOverviewGrid">
-      <!-- 照片項目將由 JavaScript 動態生成 -->
+      <!-- 每頁 6 張（三橫列×每橫列 2 張）由 JavaScript 填入 .photo-overview-sheet -->
+    </div>
+  </div>
+
+  <!-- 頁尾：僅螢幕顯示與標題同步之文字；列印隱藏（作者已改至頁首 LOGO 上方） -->
+  <div class="page-footer">
+    <div class="footer-content">
+      <div class="footer-title" id="footerTitle"></div>
     </div>
   </div>
 
@@ -3403,6 +3540,19 @@
     // 添加關閉預覽的事件監聽
     document.getElementById('closePreview').addEventListener('click', closePhotoPreview);
     document.getElementById('overlay').addEventListener('click', closePhotoPreview);
+    document.getElementById('photoPreviewContainer').addEventListener('click', function(e) {
+      if (e.target === e.currentTarget) {
+        closePhotoPreview();
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Escape') return;
+      const overlay = document.getElementById('overlay');
+      if (overlay && overlay.style.display === 'block') {
+        closePhotoPreview();
+      }
+    });
 
     // 確保照片上傳處理程序正確綁定
     document.getElementById('photoUploader').addEventListener("change", function() {
@@ -4021,42 +4171,9 @@
       });
     }
 
-    // 更新列印頁碼和標題
-    function updatePrintFooter() {
-      const title = document.getElementById('pageTitle').value;
-      document.getElementById('printFooter').textContent = title;
-      
-      // 計算總頁數（假設每頁可容納25行）
-      const rowsPerPage = 25;
-      const totalRows = document.getElementById('defectBody').rows.length;
-      const totalPages = Math.ceil(totalRows / rowsPerPage);
-      
-      // 更新頁碼
-      document.getElementById('printPageNumber').textContent = `第 1 頁，共 ${totalPages} 頁`;
-    }
-
-    // 更新頁尾信息
-    function estimateTotalPrintPages() {
-      // A4 高度 297mm，@page 上下邊界各 1.5cm，換算可列印高度
-      const pxPerMm = 96 / 25.4;
-      const printableHeightPx = (297 - 30) * pxPerMm;
-      const contentHeightPx = document.body.scrollHeight;
-      return Math.max(1, Math.ceil(contentHeightPx / printableHeightPx));
-    }
-
     function updateFooter() {
       const title = document.getElementById('pageTitle').value;
       document.getElementById('footerTitle').textContent = title;
-      
-      // 計算總頁數（假設每頁可容納25行）
-      const rowsPerPage = 25;
-      const totalRows = document.getElementById('defectBody').rows.length;
-      const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
-      
-      const estimatedPages = Math.max(totalPages, estimateTotalPrintPages());
-      const footerPageEl = document.getElementById('footerPage');
-      footerPageEl.textContent = `第 1 頁，共 ${estimatedPages} 頁`;
-      footerPageEl.setAttribute('data-total-pages', String(estimatedPages));
     }
 
     // 在頁面載入時初始化
@@ -4346,7 +4463,7 @@
         footer.style.textAlign = 'center';
         footer.innerHTML = `
           <div style="font-size: 14pt; font-weight: bold;">${document.getElementById('pageTitle').value}</div>
-          <div style="font-size: 12pt;">${document.getElementById('footerPage').textContent}</div>
+          <div style="font-size: 10pt; color: #a8a8a8; text-align: left;">系統作者：CWH800729.wordpress.com</div>
         `;
         contentToCapture.appendChild(footer);
         
@@ -4394,12 +4511,11 @@
       }
     }
 
-    // 更新照片總覽表格
+    // 更新照片總覽：每 6 張一組（3×2，列印時一張 A4 一組）
     function updatePhotoOverview() {
       const grid = document.getElementById('photoOverviewGrid');
-      grid.innerHTML = ''; // 清空現有內容
+      grid.innerHTML = '';
 
-      // 收集所有有照片的點位
       const pointsWithPhotos = Array.from(defectBody.rows)
         .filter(row => pointPhotos['點' + row.cells[0].textContent])
         .map(row => ({
@@ -4408,24 +4524,39 @@
           description: row.cells[1].querySelector('input')?.value || row.cells[1].textContent
         }));
 
-      // 為每個點位創建照片項目
-      pointsWithPhotos.forEach(point => {
-        const item = document.createElement('div');
-        item.className = 'photo-overview-item';
-        
-        const img = document.createElement('img');
-        img.src = point.photo;
-        img.alt = `點位 ${point.id} 照片`;
-        img.title = point.description; // 添加提示文字
-        
-        const pointNumber = document.createElement('div');
-        pointNumber.className = 'point-number';
-        pointNumber.textContent = `點位 ${point.id}`;
-        
-        item.appendChild(img);
-        item.appendChild(pointNumber);
-        grid.appendChild(item);
-      });
+      const chunkSize = 6;
+      for (let i = 0; i < pointsWithPhotos.length; i += chunkSize) {
+        const sheet = document.createElement('div');
+        sheet.className = 'photo-overview-sheet';
+        if (i === 0) sheet.classList.add('photo-overview-sheet--first');
+        const chunk = pointsWithPhotos.slice(i, i + chunkSize);
+        chunk.forEach(point => {
+          const item = document.createElement('div');
+          item.className = 'photo-overview-item';
+
+          const wrap = document.createElement('div');
+          wrap.className = 'photo-overview-img-wrap';
+
+          const img = document.createElement('img');
+          img.src = point.photo;
+          img.alt = `點位 ${point.id} 照片`;
+          img.title = (point.description || '') + '（點擊放大）';
+          img.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+            showPhotoPreview('點' + point.id);
+          });
+
+          const pointNumber = document.createElement('div');
+          pointNumber.className = 'point-number';
+          pointNumber.textContent = `點位 ${point.id}`;
+
+          wrap.appendChild(img);
+          item.appendChild(wrap);
+          item.appendChild(pointNumber);
+          sheet.appendChild(item);
+        });
+        grid.appendChild(sheet);
+      }
     }
   </script>
 
