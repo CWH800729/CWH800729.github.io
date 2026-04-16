@@ -1,0 +1,2629 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>客戶變更分類與統計表</title>
+  <style>
+    :root {
+      --paper-width: 420mm;
+      --paper-height: 297mm;
+      --line: #7b7b7b;
+      --header-bg: #ece9d6;
+      --sub-bg: #f7f5e8;
+      --font: "PMingLiU", "新細明體", serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #efefef;
+      font-family: var(--font);
+      font-size: 16px;
+      color: #222;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      padding: 10px;
+      border-bottom: 1px solid #d1d1d1;
+      background: #fff;
+    }
+
+    .toolbar-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    button {
+      border: 1px solid #999;
+      background: #fff;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .page-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .paper {
+      width: var(--paper-width);
+      min-height: var(--paper-height);
+      background: #fff;
+      border: 1px solid #cfcfcf;
+      box-shadow: 0 1px 12px rgba(0, 0, 0, 0.14);
+      padding: 7mm;
+      position: relative;
+    }
+
+    .title {
+      margin: 0 0 4mm;
+      text-align: center;
+      font-size: 34px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 4mm;
+    }
+
+    .section {
+      margin-bottom: 4mm;
+    }
+
+    .section-title {
+      margin: 0;
+      border: 1px solid var(--line);
+      border-bottom: 0;
+      height: 9.5mm;
+      line-height: 9.5mm;
+      text-align: center;
+      font-size: 15px;
+      font-weight: 600;
+      background: var(--header-bg);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 5px 6px;
+      height: 9.5mm;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    th {
+      background: var(--header-bg);
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .subhead th {
+      background: var(--sub-bg);
+      font-size: 13px;
+    }
+
+    .fill {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      outline: 0;
+      font: inherit;
+      color: inherit;
+    }
+
+    .fill.center,
+    select.fill {
+      text-align: center;
+    }
+
+    select.fill {
+      text-align-last: center;
+    }
+
+    .mono {
+      font-family: var(--font);
+      letter-spacing: 0;
+    }
+
+    .non-default-code {
+      color: #0b4fb3;
+      font-weight: 700;
+    }
+
+    .material-code.status-withdraw,
+    .equipment-code.status-withdraw {
+      color: #b30000 !important;
+      font-weight: 700;
+    }
+
+    .material-code {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .status-withdraw {
+      color: #b30000;
+      font-weight: 700;
+    }
+
+    .hint {
+      margin-top: 2mm;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3mm;
+      align-items: start;
+    }
+
+    .stats-panel .summary-box {
+      border: 1px solid var(--line);
+      padding: 2mm 2.5mm;
+      min-height: 28mm;
+      max-height: 42mm;
+      overflow: auto;
+      background: #fcfcfc;
+    }
+
+    .stats-panel .summary-box h4 {
+      margin: 0 0 1.5mm;
+      font-size: 12px;
+    }
+
+    .stats-panel .summary-list {
+      margin: 0;
+      padding-left: 14px;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .add-row-btn {
+      margin-top: 2mm;
+      width: 100%;
+      font-size: 14px;
+      padding: 8px 10px;
+    }
+
+    .row-label-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .row-label-wrap .area-row-label {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .row-delete-btn {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      line-height: 1;
+      font-size: 18px;
+      border: 1px solid #999;
+      background: #f5f5f5;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .row-delete-btn:hover {
+      background: #ffe0e0;
+      border-color: #c00;
+    }
+
+    .stats-panel {
+      margin-top: 6mm;
+      padding-top: 4mm;
+      border-top: 2px dashed #9a9a9a;
+    }
+
+    .stats-panel::before {
+      content: "---- 統計摘要分頁 ----";
+      display: block;
+      margin-bottom: 3mm;
+      text-align: center;
+      color: #666;
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    .wide-col { width: 18%; }
+
+    .remarks-block {
+      margin-bottom: 3mm;
+    }
+
+    .remarks-subsection-title {
+      margin: 0;
+      padding: 2mm 2.5mm;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid var(--line);
+      border-bottom: 0;
+      background: var(--sub-bg);
+    }
+
+    .remarks-auto {
+      border: 1px solid var(--line);
+      min-height: 18mm;
+      padding: 2.5mm;
+      font-size: 13px;
+      line-height: 1.45;
+      background: #fafafa;
+    }
+
+    .remarks-auto-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .remarks-empty {
+      color: #777;
+      font-size: 12px;
+    }
+
+    .remarks-manual {
+      display: block;
+      width: 100%;
+      min-height: 32mm;
+      padding: 2.5mm;
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.45;
+      border: 1px solid var(--line);
+      resize: vertical;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    .remarks-signature {
+      display: block;
+      width: 100%;
+      min-height: 24mm;
+      padding: 2mm 2.5mm;
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.45;
+      border: 1px solid var(--line);
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    .rule-form {
+      border: 1px solid var(--line);
+      padding: 2mm;
+      background: #fff;
+      display: grid;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    .rule-three-column {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .rule-column {
+      min-width: 0;
+    }
+
+    .rule-form-row {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .rule-form-row label {
+      color: #444;
+    }
+
+    .rule-form-row input,
+    .rule-form-row select {
+      width: 100%;
+      border: 1px solid var(--line);
+      padding: 3px 5px;
+      font: inherit;
+      font-size: 12px;
+      background: #fff;
+    }
+
+    .rule-space-options {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .rule-space-options label {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .rule-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .rule-actions button {
+      flex: 1;
+      font-size: 12px;
+      padding: 5px 8px;
+    }
+
+    .rule-invalid {
+      outline: 2px solid #c92a2a;
+      background: #fff3f3 !important;
+    }
+
+    .rule-warnings {
+      border: 1px solid var(--line);
+      min-height: 14mm;
+      padding: 2.5mm;
+      font-size: 12px;
+      background: #fffaf0;
+    }
+
+    .rule-warnings ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .configured-rules {
+      border: 1px solid var(--line);
+      min-height: 16mm;
+      padding: 2mm 2.5mm;
+      font-size: 12px;
+      background: #fafafa;
+    }
+
+    .configured-rules ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .configured-rule-item {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .configured-rule-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .configured-rule-delete {
+      flex-shrink: 0;
+      padding: 2px 8px;
+      font-size: 12px;
+    }
+
+    .export-status {
+      position: absolute;
+      top: 4mm;
+      right: 8mm;
+      font-size: 12px;
+      color: #555;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #666;
+      opacity: 1;
+    }
+
+    @page {
+      size: A3 landscape;
+      margin: 0;
+    }
+
+    @media print {
+      html, body {
+        width: var(--paper-width);
+        height: var(--paper-height);
+        margin: 0;
+        padding: 0;
+        background: #fff;
+      }
+
+      .toolbar { display: none; }
+      .page-wrap { padding: 0; }
+      .paper {
+        border: 0;
+        box-shadow: none;
+        width: var(--paper-width);
+        height: var(--paper-height);
+        min-height: var(--paper-height);
+        overflow: hidden;
+      }
+
+      .no-print-from-stats {
+        display: none;
+      }
+
+      .add-row-btn,
+      .hint,
+      .row-delete-btn {
+        display: none;
+      }
+
+      .paper,
+      table,
+      th,
+      td {
+        font-size: 13px;
+      }
+
+      table th,
+      table td {
+        padding: 1.5mm 2mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">列印（A3 橫向）</button>
+    <button type="button" onclick="exportExcelFull()">匯出 Excel</button>
+    <button type="button" onclick="exportExcelJsonZip()">匯出 ZIP（Excel+JSON）</button>
+    <button type="button" onclick="document.getElementById('excelImportInput').click()">匯入 Excel</button>
+    <input type="file" id="excelImportInput" accept=".xlsx,.xls" style="display:none" onchange="importExcelFull(event)">
+    <button type="button" onclick="document.getElementById('zipImportInput').click()">匯入 ZIP</button>
+    <input type="file" id="zipImportInput" accept=".zip" style="display:none" onchange="importZip(event)">
+  </div>
+
+  <div class="page-wrap">
+    <article class="paper">
+      <h1 class="title">客戶變更分類與統計表</h1>
+      <div id="exportStatus" class="export-status"></div>
+
+      <div class="layout">
+        <section>
+          <div class="section">
+            <h3 class="section-title">起始基本資料</h3>
+            <table>
+              <tr>
+                <th>客戶名稱</th>
+                <td><input class="fill" id="clientName" placeholder="請輸入客戶名稱"></td>
+                <th>日期</th>
+                <td><input class="fill center mono" id="formDate"></td>
+                <th>棟別</th>
+                <td><input class="fill center" id="buildingNo"></td>
+                <th>樓層</th>
+                <td><input class="fill center" id="floorNo"></td>
+              </tr>
+              <tr>
+                <th>戶別</th>
+                <td><input class="fill center" id="unitNo"></td>
+                <th>變更次數</th>
+                <td><input class="fill center" id="changeRound" value="01"></td>
+                <th></th>
+                <td></td>
+                <th>案件編號</th>
+                <td><input class="fill center mono" id="caseNo"></td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">區域1：客餐廳與臥室建材代號（牆磚 / 地磚）</h3>
+            <table id="area1Table">
+              <thead>
+                <tr>
+                  <th>項目</th>
+                  <th>客餐廳</th>
+                  <th>主臥</th>
+                  <th>臥室1</th>
+                  <th>臥室2</th>
+                  <th>臥室3</th>
+                  <th><input class="fill center spare-space-name" data-spare-key="area1-spare1" placeholder="備用空間"></th>
+                  <th><input class="fill center spare-space-name" data-spare-key="area1-spare2" placeholder="備用空間"></th>
+                </tr>
+              </thead>
+              <tbody id="area1Body"></tbody>
+            </table>
+            <button type="button" class="add-row-btn" onclick="addAreaRow(1, 'material')">+ 新增列</button>
+            <div class="hint">「牆磚代號／地磚代號」為磁磚代號；其餘列與區域3相同，可填設備代號或輸入／選擇「保留」「退」。</div>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">區域2：廚房與衛浴分類（保留 / 退）</h3>
+            <table id="area2Table">
+              <thead>
+                <tr>
+                  <th>項目</th>
+                  <th>廚房</th>
+                  <th>主浴</th>
+                  <th>浴室1</th>
+                  <th>浴室2</th>
+                  <th><input class="fill center spare-space-name" data-spare-key="area2-spare1" placeholder="備用空間"></th>
+                  <th><input class="fill center spare-space-name" data-spare-key="area2-spare2" placeholder="備用空間"></th>
+                </tr>
+              </thead>
+              <tbody id="area2Body"></tbody>
+            </table>
+            <button type="button" class="add-row-btn" onclick="addAreaRow(2, 'material')">+ 新增列</button>
+            <div class="hint">「牆磚代號／地磚代號」為磁磚代號；其餘列與區域3相同，可填設備代號或輸入／選擇「保留」「退」。</div>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">區域3：浴室設備代號（主浴 / 浴室1 / 浴室2）</h3>
+            <table id="bathEquipmentTable">
+              <thead>
+                <tr>
+                  <th class="wide-col">設備項目</th>
+                  <th>主浴</th>
+                  <th>浴室1</th>
+                  <th>浴室2</th>
+                </tr>
+              </thead>
+              <tbody id="bathEquipmentBody"></tbody>
+            </table>
+            <button type="button" class="add-row-btn" onclick="addBathEquipmentRow()">+ 新增設備列</button>
+            <div class="hint">設備表同樣使用代號，與右側設備代號表對照。</div>
+          </div>
+        </section>
+
+        <aside>
+          <div class="section">
+            <h3 class="section-title">磁磚建材代號表</h3>
+            <table id="materialRefTable">
+              <thead>
+                <tr>
+                  <th style="width: 20%;">代號</th>
+                  <th style="width: 24%;">分類</th>
+                  <th>名稱 / 規格</th>
+                </tr>
+              </thead>
+              <tbody id="materialRefBody">
+                <tr><td><input class="fill center mono ref-material-code" value="A1"></td><td><input class="fill center ref-category" value="牆磚"></td><td><input class="fill ref-name" value="30x60 / SGP1S-21015"></td></tr>
+                <tr><td><input class="fill center mono ref-material-code" value="A2"></td><td><input class="fill center ref-category" value="牆磚"></td><td><input class="fill ref-name" value="30x60 / GPTSPS-2105"></td></tr>
+                <tr><td><input class="fill center mono ref-material-code" value="B1"></td><td><input class="fill center ref-category" value="地磚"></td><td><input class="fill ref-name" value="30x60 / 9TAI-0216"></td></tr>
+                <tr><td><input class="fill center mono ref-material-code" value="B2"></td><td><input class="fill center ref-category" value="地磚"></td><td><input class="fill ref-name" value="30x60 / 9TAI-0223"></td></tr>
+                <tr><td><input class="fill center mono ref-material-code" value="B3"></td><td><input class="fill center ref-category" value="地磚"></td><td><input class="fill ref-name" value="80x80 / SRAM-0625"></td></tr>
+              </tbody>
+            </table>
+            <button type="button" class="add-row-btn" onclick="addRefRow('material')">+ 新增建材代號列</button>
+            <div class="hint">每種建材一個代號，左側表格僅填代號即可。</div>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">設備代號表</h3>
+            <table id="equipmentRefTable">
+              <thead>
+                <tr>
+                  <th style="width: 20%;">代號</th>
+                  <th style="width: 24%;">分類</th>
+                  <th>名稱 / 規格</th>
+                </tr>
+              </thead>
+              <tbody id="equipmentRefBody">
+                <tr><td><input class="fill center mono ref-equipment-code" value="D1"></td><td><input class="fill center ref-category" value="馬桶"></td><td><input class="fill ref-name" value="SATIS S561CL"></td></tr>
+                <tr><td><input class="fill center mono ref-equipment-code" value="E1"></td><td><input class="fill center ref-category" value="面盆"></td><td><input class="fill ref-name" value="AL-623VFC-TW/BW1"></td></tr>
+                <tr><td><input class="fill center mono ref-equipment-code" value="F1"></td><td><input class="fill center ref-category" value="龍頭"></td><td><input class="fill ref-name" value="FA1680"></td></tr>
+                <tr><td><input class="fill center mono ref-equipment-code" value="H1"></td><td><input class="fill center ref-category" value="淋浴"></td><td><input class="fill ref-name" value="F5781 淋浴龍頭"></td></tr>
+                <tr><td><input class="fill center mono ref-equipment-code" value="N1"></td><td><input class="fill center ref-category" value="暖風機"></td><td><input class="fill ref-name" value="FV-30BU3W"></td></tr>
+              </tbody>
+            </table>
+            <button type="button" class="add-row-btn" onclick="addRefRow('equipment')">+ 新增設備代號列</button>
+            <div class="hint">設備表同樣使用代號，方便後續統計數量。</div>
+          </div>
+
+          <div class="section">
+            <div class="remarks-block">
+              <p class="remarks-subsection-title">人工註記</p>
+              <textarea id="remarksManual" class="remarks-manual" rows="6"></textarea>
+            </div>
+            <div class="remarks-block">
+              <p class="remarks-subsection-title">簽名</p>
+              <input id="remarksSignature" class="remarks-signature" placeholder="請輸入簽名">
+            </div>
+          </div>
+
+        </aside>
+      </div>
+
+      <section class="section stats-panel no-print-from-stats">
+        <h3 class="section-title">統計摘要（可匯出）</h3>
+        <div class="summary-grid">
+          <div class="summary-box">
+            <h4>建材代號使用次數</h4>
+            <ul class="summary-list" id="materialStats"></ul>
+          </div>
+          <div class="summary-box">
+            <h4>設備代號使用次數</h4>
+            <ul class="summary-list" id="equipmentStats"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section no-print-from-stats">
+        <h3 class="section-title">備註</h3>
+        <div class="remarks-block">
+          <p class="remarks-subsection-title">電腦自動判斷（與範本狀態不同）</p>
+          <div id="remarksAutoBody" class="remarks-auto" aria-live="polite">
+            <div class="remarks-empty">（無）</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section no-print-from-stats">
+        <h3 class="section-title">連動規則（免寫程式）</h3>
+        <div class="rule-three-column">
+          <div class="rule-column">
+            <div class="rule-form">
+              <div class="rule-form-row">
+                <label for="ruleTriggerTable">觸發區塊</label>
+                <select id="ruleTriggerTable">
+                  <option value="area2">區域2（廚房/衛浴）</option>
+                  <option value="area1">區域1（客餐廳/臥室）</option>
+                  <option value="bath">區域3（浴室設備）</option>
+                </select>
+              </div>
+              <div class="rule-form-row">
+                <label for="ruleTriggerItem">觸發項目</label>
+                <select id="ruleTriggerItem"></select>
+              </div>
+              <div class="rule-form-row">
+                <label for="ruleTriggerValues">觸發值</label>
+                <input id="ruleTriggerValues" placeholder="例如：退（多個請用逗號）">
+              </div>
+              <div class="rule-form-row">
+                <label for="ruleTargetTable">限制區塊</label>
+                <select id="ruleTargetTable">
+                  <option value="bath">區域3（浴室設備）</option>
+                  <option value="area2">區域2（廚房/衛浴）</option>
+                  <option value="area1">區域1（客餐廳/臥室）</option>
+                </select>
+              </div>
+              <div class="rule-form-row">
+                <label for="ruleTargetItem">限制項目</label>
+                <select id="ruleTargetItem"></select>
+              </div>
+              <div class="rule-form-row">
+                <label for="ruleRequiredKeywords">必含字詞</label>
+                <input id="ruleRequiredKeywords" placeholder="例如：退,點交">
+              </div>
+              <div class="rule-form-row">
+                <label>適用空間</label>
+                <div class="rule-space-options">
+                  <label><input type="checkbox" class="rule-space" value="主浴" checked>主浴</label>
+                  <label><input type="checkbox" class="rule-space" value="浴室1" checked>浴室1</label>
+                  <label><input type="checkbox" class="rule-space" value="浴室2" checked>浴室2</label>
+                </div>
+              </div>
+            </div>
+            <div class="rule-actions">
+              <button type="button" onclick="applyLinkedRuleFromForm()">儲存並套用</button>
+              <button type="button" onclick="loadSampleLinkedRuleForm()">載入範例</button>
+            </div>
+          </div>
+
+          <div class="rule-column">
+            <div class="remarks-block">
+              <p class="remarks-subsection-title">目前已設定規則</p>
+              <div id="configuredLinkedRules" class="configured-rules">（尚未設定）</div>
+            </div>
+          </div>
+
+          <div class="rule-column">
+            <div class="remarks-block">
+              <p class="remarks-subsection-title">連動檢查結果</p>
+              <div id="linkedRuleWarnings" class="rule-warnings">（無）</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </article>
+  </div>
+
+  <datalist id="materialCodeList"></datalist>
+  <datalist id="equipmentOrRtList"></datalist>
+  <datalist id="statusOptionList">
+    <option value="保留"></option>
+    <option value="退"></option>
+  </datalist>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script>
+    function setToday() {
+      const date = new Date();
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      document.getElementById("formDate").value = y + "/" + m + "/" + d;
+    }
+
+    function updateCaseNo() {
+      const dateRaw = document.getElementById("formDate").value.trim();
+      const date = dateRaw ? dateRaw.replace(/\//g, "") : "";
+      const floor = document.getElementById("floorNo").value.trim();
+      const unit = document.getElementById("unitNo").value.trim();
+      const round = document.getElementById("changeRound").value.trim();
+      const floorUnit = floor + unit;
+      document.getElementById("caseNo").value = date + "-" + floorUnit + "-" + round;
+    }
+
+    const AREA1_LAYOUT = [
+      { space: "客餐廳", spareKey: null },
+      { space: "主臥", spareKey: null },
+      { space: "臥室1", spareKey: null },
+      { space: "臥室2", spareKey: null },
+      { space: "臥室3", spareKey: null },
+      { space: "備用1", spareKey: "area1-spare1" },
+      { space: "備用2", spareKey: "area1-spare2" }
+    ];
+
+    const AREA2_LAYOUT = [
+      { space: "廚房", spareKey: null },
+      { space: "主浴", spareKey: null },
+      { space: "浴室1", spareKey: null },
+      { space: "浴室2", spareKey: null },
+      { space: "備用1", spareKey: "area2-spare1" },
+      { space: "備用2", spareKey: "area2-spare2" }
+    ];
+
+    const BATH_SPACES = ["主浴", "浴室1", "浴室2"];
+    const LINK_RULES_STORAGE_KEY = "customer-change-linked-rules-v1";
+    const DRAFT_STORAGE_KEY = "CustomerChangerDraftV1";
+    const EXPORT_STATUS_KEY = "CustomerChangerLastExport";
+    const SAMPLE_LINKED_RULES = [
+      {
+        name: "檯面石材退 -> 面盆需退/點交",
+        spaces: ["主浴", "浴室1", "浴室2"],
+        trigger: { table: "area2", item: "檯面石材", equalsAny: ["退"] },
+        target: { table: "bath", item: "面盆" },
+        require: { includesAny: ["退", "點交"] },
+        message: "當檯面石材為「退」時，面盆需包含「退」或「點交」。"
+      },
+      {
+        name: "檯面石材退 -> 面盆龍頭需退/點交",
+        spaces: ["主浴", "浴室1", "浴室2"],
+        trigger: { table: "area2", item: "檯面石材", equalsAny: ["退"] },
+        target: { table: "bath", item: "面盆龍頭" },
+        require: { includesAny: ["退", "點交"] },
+        message: "當檯面石材為「退」時，面盆龍頭需包含「退」或「點交」。"
+      },
+      {
+        name: "面盆檯面退 -> 面盆龍頭需退/點交",
+        spaces: ["主浴", "浴室1", "浴室2"],
+        trigger: { table: "area2", item: "面盆檯面", equalsAny: ["退"] },
+        target: { table: "bath", item: "面盆龍頭" },
+        require: { includesAny: ["退", "點交"] },
+        message: "當面盆檯面為「退」時，面盆龍頭需包含「退」或「點交」。"
+      },
+      {
+        name: "平頂天花退 -> 暖風機需退/點交",
+        spaces: ["主浴", "浴室1", "浴室2"],
+        trigger: { table: "area2", item: "平頂天花", equalsAny: ["退"] },
+        target: { table: "bath", item: "暖風機" },
+        require: { includesAny: ["退", "點交"] },
+        message: "當平頂天花為「退」時，暖風機需包含「退」或「點交」。"
+      },
+      {
+        name: "平頂天花退 -> 送風機需退/點交",
+        spaces: ["主浴", "浴室1", "浴室2"],
+        trigger: { table: "area2", item: "平頂天花", equalsAny: ["退"] },
+        target: { table: "bath", item: "送風機" },
+        require: { includesAny: ["退", "點交"] },
+        message: "當平頂天花為「退」時，送風機需包含「退」或「點交」。"
+      },
+      {
+        name: "牆磚退 -> 地磚需退",
+        spaces: ["主浴", "浴室1", "浴室2"],
+        trigger: { table: "area2", item: "牆磚", equalsAny: ["退"] },
+        target: { table: "area2", item: "地磚" },
+        require: { includesAny: ["退"] },
+        message: "當牆磚為「退」時，地磚需為「退」。"
+      },
+      {
+        name: "地磚退 -> 馬桶需退/點交",
+        spaces: ["主浴", "浴室1", "浴室2"],
+        trigger: { table: "area2", item: "地磚", equalsAny: ["退"] },
+        target: { table: "bath", item: "馬桶" },
+        require: { includesAny: ["退", "點交"] },
+        message: "當地磚為「退」時，馬桶需包含「退」或「點交」。"
+      },
+      {
+        name: "地磚退 -> 浴缸需退/點交",
+        spaces: ["主浴", "浴室1", "浴室2"],
+        trigger: { table: "area2", item: "地磚", equalsAny: ["退"] },
+        target: { table: "bath", item: "浴缸" },
+        require: { includesAny: ["退", "點交"] },
+        message: "當地磚為「退」時，浴缸需包含「退」或「點交」。"
+      },
+      {
+        name: "地磚退 -> 淋浴拉門需退",
+        spaces: ["主浴", "浴室1", "浴室2"],
+        trigger: { table: "area2", item: "地磚", equalsAny: ["退"] },
+        target: { table: "bath", item: "淋浴拉門" },
+        require: { includesAny: ["退"] },
+        message: "當地磚為「退」時，淋浴拉門需為「退」。"
+      },
+      {
+        name: "地磚退 -> 面盆需退/點交",
+        spaces: ["主浴", "浴室1", "浴室2"],
+        trigger: { table: "area2", item: "地磚", equalsAny: ["退"] },
+        target: { table: "bath", item: "面盆" },
+        require: { includesAny: ["退", "點交"] },
+        message: "當地磚為「退」時，面盆需包含「退」或「點交」。"
+      }
+    ];
+
+    let stateTemplateSnapshot = null;
+    let linkedRules = JSON.parse(JSON.stringify(SAMPLE_LINKED_RULES));
+    let draftSaveTimer = null;
+
+    function isTileRowLabel(label) {
+      const t = (label || "").replace(/\s/g, "");
+      return t === "牆磚代號" || t === "地磚代號";
+    }
+
+    function buildAreaMaterialCells(layout, itemKey) {
+      return layout.map((col) => {
+        const spare = col.spareKey ? " spare-dependent data-spare-key=\"" + col.spareKey + "\"" : "";
+        return "<td><input list=\"materialCodeList\" class=\"fill center mono material-code\"" + spare + " data-space=\"" + col.space + "\" data-item=\"" + itemKey + "\" readonly></td>";
+      }).join("");
+    }
+
+    function buildAreaEquipmentFlexCells(layout, itemKey, areaNum) {
+      return layout.map((col) => {
+        const spare = col.spareKey ? " spare-dependent data-spare-key=\"" + col.spareKey + "\"" : "";
+        const cls = "fill center mono equipment-code area-flex-code" + (areaNum === 1 ? " area1-flex" : "");
+        return "<td><input list=\"equipmentOrRtList\" class=\"" + cls + "\"" + spare + " data-space=\"" + col.space + "\" data-item=\"" + itemKey + "\"></td>";
+      }).join("");
+    }
+
+    function buildAreaRowBodyCells(areaNum, layout, itemKey, label) {
+      return isTileRowLabel(label)
+        ? buildAreaMaterialCells(layout, itemKey)
+        : buildAreaEquipmentFlexCells(layout, itemKey, areaNum);
+    }
+
+    function rebuildAreaRowIfNeeded(tr, areaNum) {
+      const labelInp = tr.querySelector(".area-row-label");
+      if (!labelInp) return;
+      const label = labelInp.value.trim();
+      const wantTile = isTileRowLabel(label);
+      const wasTile = tr.dataset.rowKind === "tile";
+      if (wantTile === wasTile) {
+        syncAreaRowFields(tr);
+        return;
+      }
+      const layout = areaNum === 1 ? AREA1_LAYOUT : AREA2_LAYOUT;
+      const itemKey = inferItemKeyFromAreaLabel(label, wantTile ? "material" : "status");
+      tr.dataset.itemKey = itemKey;
+      tr.dataset.rowKind = wantTile ? "tile" : "flex";
+      const bodyHtml = buildAreaRowBodyCells(areaNum, layout, itemKey, label);
+      const th = tr.querySelector("th");
+      tr.innerHTML = th.outerHTML + bodyHtml;
+      syncAreaRowFields(tr);
+      initMaterialCodeFields();
+      ensureStatusEditableOptions();
+      updateSpareColumnsState();
+      applyDashPlaceholders(tr);
+      refreshCodeDatalists();
+      updateStats();
+    }
+
+    function inferItemKeyFromAreaLabel(label, kind) {
+      const t = (label || "").replace(/\s/g, "");
+      if (kind === "material") {
+        if (t.indexOf("地磚") !== -1) return "地磚";
+        return "牆磚";
+      }
+      if (t.indexOf("踢腳") !== -1) return "踢腳";
+      if (t.indexOf("木門") !== -1) return "木門";
+      if (t.indexOf("平頂") !== -1) return "平頂天花";
+      if (t.indexOf("面盆") !== -1) return "面盆檯面";
+      if (t.indexOf("檯面石材") !== -1 || (t.indexOf("檯面") !== -1 && t.indexOf("面盆") === -1)) return "檯面石材";
+      if (t.indexOf("浴櫃") !== -1) return "浴櫃";
+      return "木門";
+    }
+
+    function syncAreaRowFields(tr) {
+      const labelInp = tr.querySelector(".area-row-label");
+      if (!labelInp) return;
+      const label = labelInp.value;
+      const inferKind = isTileRowLabel(label) ? "material" : "status";
+      const itemKey = inferItemKeyFromAreaLabel(label, inferKind);
+      tr.dataset.itemKey = itemKey;
+      tr.querySelectorAll(".material-code").forEach((inp) => {
+        inp.dataset.item = itemKey;
+      });
+      tr.querySelectorAll(".area-flex-code").forEach((inp) => {
+        inp.dataset.item = itemKey;
+      });
+    }
+
+    function addAreaRow(areaNum, kind, preset) {
+      const layout = areaNum === 1 ? AREA1_LAYOUT : AREA2_LAYOUT;
+      const tbody = document.getElementById(areaNum === 1 ? "area1Body" : "area2Body");
+      const defaultLabel = kind === "material" ? "新項目（建材）" : "新項目（狀態）";
+      const label = preset && preset.label ? preset.label : defaultLabel;
+      const inferKind = isTileRowLabel(label) ? "material" : "status";
+      const itemKey = preset && preset.itemKey ? preset.itemKey : inferItemKeyFromAreaLabel(label, inferKind);
+      const tr = document.createElement("tr");
+      tr.className = "area-data-row";
+      tr.dataset.rowKind = isTileRowLabel(label) ? "tile" : "flex";
+      tr.dataset.itemKey = itemKey;
+      const headHtml = "<th><div class=\"row-label-wrap\"><input type=\"text\" class=\"fill center area-row-label\" value=\"" + label.replace(/"/g, "&quot;") + "\"><button type=\"button\" class=\"row-delete-btn\" title=\"刪除此列\">×</button></div></th>";
+      const bodyHtml = buildAreaRowBodyCells(areaNum, layout, itemKey, label);
+      tr.innerHTML = headHtml + bodyHtml;
+      tbody.appendChild(tr);
+      syncAreaRowFields(tr);
+      initMaterialCodeFields();
+      ensureStatusEditableOptions();
+      updateSpareColumnsState();
+      refreshCodeDatalists();
+      updateStats();
+    }
+
+    function addBathEquipmentRow(preset) {
+      const tbody = document.getElementById("bathEquipmentBody");
+      const itemKey = preset && preset.itemKey ? preset.itemKey : "新設備";
+      const label = preset && preset.label ? preset.label : "新設備項目";
+      const tr = document.createElement("tr");
+      tr.className = "bath-data-row";
+      tr.dataset.itemKey = itemKey;
+      const cells = BATH_SPACES.map((space) =>
+        "<td><input class=\"fill center mono equipment-code\" autocomplete=\"off\" data-space=\"" + space + "\" data-item=\"" + itemKey + "\"></td>"
+      ).join("");
+      tr.innerHTML = "<th><div class=\"row-label-wrap\"><input type=\"text\" class=\"fill center bath-row-label\" value=\"" + label.replace(/"/g, "&quot;") + "\"><button type=\"button\" class=\"row-delete-btn\" title=\"刪除此列\">×</button></div></th>" + cells;
+      tbody.appendChild(tr);
+      tr.querySelector(".bath-row-label").addEventListener("input", () => {
+        const k = tr.querySelector(".bath-row-label").value.trim() || "新設備";
+        tr.dataset.itemKey = k;
+        tr.querySelectorAll(".equipment-code").forEach((inp) => {
+          inp.dataset.item = k;
+        });
+        refreshTemplateAndRemarks();
+        updateStats();
+      });
+      applyDashPlaceholders(tr);
+      refreshCodeDatalists();
+      updateStats();
+    }
+
+    function initDynamicTables() {
+      if (!document.getElementById("area1Body").children.length) {
+        addAreaRow(1, "material", { itemKey: "牆磚", label: "牆磚代號" });
+        addAreaRow(1, "material", { itemKey: "地磚", label: "地磚代號" });
+        addAreaRow(1, "status", { itemKey: "木門", label: "木門" });
+        addAreaRow(1, "status", { itemKey: "踢腳", label: "踢腳" });
+      }
+      if (!document.getElementById("area2Body").children.length) {
+        addAreaRow(2, "material", { itemKey: "牆磚", label: "牆磚代號" });
+        addAreaRow(2, "material", { itemKey: "地磚", label: "地磚代號" });
+        addAreaRow(2, "status", { itemKey: "木門", label: "木門" });
+        addAreaRow(2, "status", { itemKey: "平頂天花", label: "平頂天花" });
+        addAreaRow(2, "status", { itemKey: "面盆檯面", label: "面盆檯面" });
+        addAreaRow(2, "status", { itemKey: "檯面石材", label: "檯面石材" });
+        addAreaRow(2, "status", { itemKey: "浴櫃", label: "浴櫃" });
+      }
+      if (!document.getElementById("bathEquipmentBody").children.length) {
+        addBathEquipmentRow({ itemKey: "馬桶", label: "馬桶" });
+        addBathEquipmentRow({ itemKey: "面盆", label: "面盆" });
+        addBathEquipmentRow({ itemKey: "面盆龍頭", label: "面盆龍頭" });
+        addBathEquipmentRow({ itemKey: "浴缸", label: "浴缸" });
+        addBathEquipmentRow({ itemKey: "淋浴拉門", label: "淋浴拉門" });
+        addBathEquipmentRow({ itemKey: "暖風機", label: "暖風機" });
+        addBathEquipmentRow({ itemKey: "送風機", label: "送風機" });
+      }
+    }
+
+    function tableSectionToAoA(tableEl, includeMetaKind) {
+      const aoa = [];
+      const headRow = tableEl.querySelector("thead tr");
+      if (headRow) {
+        const hr = [];
+        headRow.querySelectorAll("th").forEach((th) => {
+          const spareInp = th.querySelector("input.spare-space-name");
+          if (spareInp) hr.push(spareInp.value || "");
+          else hr.push((th.textContent || "").trim());
+        });
+        if (includeMetaKind) hr.push("__kind");
+        aoa.push(hr);
+      }
+      tableEl.querySelectorAll("tbody tr").forEach((tr) => {
+        const row = [];
+        const labInp = tr.querySelector(".area-row-label, .bath-row-label");
+        row.push(labInp ? labInp.value : "");
+        tr.querySelectorAll("td").forEach((td) => {
+          const el = td.querySelector("input, select");
+          row.push(el ? el.value : "");
+        });
+        if (includeMetaKind) row.push(tr.dataset.rowKind || "");
+        aoa.push(row);
+      });
+      return aoa;
+    }
+
+    function applyHeaderStyle(ws, rowIndex, colCount) {
+      if (!ws || typeof XLSX === "undefined" || !XLSX.utils || !colCount) return;
+      const fill = { fgColor: { rgb: "ECE9D6" } };
+      for (let c = 0; c < colCount; c++) {
+        const addr = XLSX.utils.encode_cell({ r: rowIndex, c: c });
+        if (!ws[addr]) ws[addr] = { t: "s", v: "" };
+        ws[addr].s = { font: { bold: true, name: "PMingLiU" }, fill: fill, alignment: { horizontal: "center", vertical: "center" } };
+      }
+    }
+
+    function getWorkbookSheet(wb, name) {
+      if (!wb || !wb.Sheets) return null;
+      if (wb.Sheets[name]) return wb.Sheets[name];
+      const found = wb.SheetNames.find((n) => n.replace(/\s/g, "") === String(name).replace(/\s/g, ""));
+      return found ? wb.Sheets[found] : null;
+    }
+
+    function refTableToAoA(tbodySelector, includeDefaultCol) {
+      const aoa = [];
+      const table = document.querySelector(tbodySelector).closest("table");
+      const head = table.querySelector("thead tr");
+      if (head) {
+        const hr = [];
+        head.querySelectorAll("th").forEach((th) => hr.push((th.textContent || "").trim()));
+        aoa.push(hr);
+      }
+      document.querySelectorAll(tbodySelector + " tr").forEach((tr) => {
+        const row = [];
+        tr.querySelectorAll("input").forEach((inp) => {
+          if (inp.type === "checkbox") return;
+          row.push(inp.value);
+        });
+        aoa.push(row);
+      });
+      return aoa;
+    }
+
+    function buildFullWorkbook() {
+      const wb = XLSX.utils.book_new();
+      const baseAoA = [
+        ["客戶名稱", document.getElementById("clientName").value],
+        ["日期", document.getElementById("formDate").value],
+        ["棟別", document.getElementById("buildingNo").value],
+        ["樓層", document.getElementById("floorNo").value],
+        ["戶別", document.getElementById("unitNo").value],
+        ["變更次數", document.getElementById("changeRound").value],
+        ["案件編號", document.getElementById("caseNo").value]
+      ];
+      const wsBase = XLSX.utils.aoa_to_sheet(baseAoA);
+      applyHeaderStyle(wsBase, 0, 2);
+      XLSX.utils.book_append_sheet(wb, wsBase, "基本資料");
+
+      const aoa1 = tableSectionToAoA(document.getElementById("area1Table"), true);
+      const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
+      applyHeaderStyle(ws1, 0, aoa1[0] ? aoa1[0].length : 0);
+      XLSX.utils.book_append_sheet(wb, ws1, "區域1");
+
+      const aoa2 = tableSectionToAoA(document.getElementById("area2Table"), true);
+      const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+      applyHeaderStyle(ws2, 0, aoa2[0] ? aoa2[0].length : 0);
+      XLSX.utils.book_append_sheet(wb, ws2, "區域2");
+
+      const aoaB = tableSectionToAoA(document.getElementById("bathEquipmentTable"), false);
+      const wsB = XLSX.utils.aoa_to_sheet(aoaB);
+      applyHeaderStyle(wsB, 0, aoaB[0] ? aoaB[0].length : 0);
+      XLSX.utils.book_append_sheet(wb, wsB, "區域3浴室設備");
+
+      const aoaMat = refTableToAoA("#materialRefBody");
+      const wsMat = XLSX.utils.aoa_to_sheet(aoaMat);
+      applyHeaderStyle(wsMat, 0, aoaMat[0] ? aoaMat[0].length : 0);
+      XLSX.utils.book_append_sheet(wb, wsMat, "建材代號表");
+
+      const aoaEq = refTableToAoA("#equipmentRefBody");
+      const wsEq = XLSX.utils.aoa_to_sheet(aoaEq);
+      applyHeaderStyle(wsEq, 0, aoaEq[0] ? aoaEq[0].length : 0);
+      XLSX.utils.book_append_sheet(wb, wsEq, "設備代號表");
+
+      const aoaStats = statsSummaryToAoA();
+      const wsStats = XLSX.utils.aoa_to_sheet(aoaStats);
+      applyHeaderStyle(wsStats, 0, 2);
+      const matN = Object.keys(getStatsMapsForExport().materialMap).length;
+      const matDataRows = matN === 0 ? 1 : matN;
+      const rowMaterialSection = 2;
+      const rowMaterialCols = 3;
+      const rowEquipmentSection = 3 + matDataRows + 2;
+      const rowEquipmentCols = rowEquipmentSection + 1;
+      applyHeaderStyle(wsStats, rowMaterialSection, 2);
+      applyHeaderStyle(wsStats, rowMaterialCols, 2);
+      applyHeaderStyle(wsStats, rowEquipmentSection, 2);
+      applyHeaderStyle(wsStats, rowEquipmentCols, 2);
+      XLSX.utils.book_append_sheet(wb, wsStats, "統計摘要");
+
+      const aoaRm = remarksExportToAoA();
+      const wsRm = XLSX.utils.aoa_to_sheet(aoaRm);
+      applyHeaderStyle(wsRm, 0, aoaRm[0] ? aoaRm[0].length : 0);
+      XLSX.utils.book_append_sheet(wb, wsRm, "檢查");
+
+      return wb;
+    }
+
+    function linkedRulesToText() {
+      if (!Array.isArray(linkedRules) || !linkedRules.length) {
+        return "（尚未設定連動規則）\n";
+      }
+      const lines = [];
+      linkedRules.forEach((rule, index) => {
+        const trigger = rule && rule.trigger ? rule.trigger : {};
+        const target = rule && rule.target ? rule.target : {};
+        const require = rule && rule.require ? rule.require : {};
+        const triggerItems = Array.isArray(trigger.items) && trigger.items.length ? trigger.items : [trigger.item].filter(Boolean);
+        const triggerValues = Array.isArray(trigger.equalsAny) ? trigger.equalsAny : [];
+        const spaces = Array.isArray(rule.spaces) ? rule.spaces : [];
+        const requiredWords = Array.isArray(require.includesAny) ? require.includesAny : [];
+        lines.push("規則 #" + (index + 1));
+        if (rule.name) lines.push("名稱：" + rule.name);
+        lines.push("觸發區塊：" + normalizeRuleText(trigger.table));
+        lines.push("觸發項目：" + triggerItems.join("、"));
+        lines.push("觸發值：" + triggerValues.join("、"));
+        lines.push("限制區塊：" + normalizeRuleText(target.table));
+        lines.push("限制項目：" + normalizeRuleText(target.item));
+        lines.push("必含字詞：" + requiredWords.join("、"));
+        lines.push("適用空間：" + spaces.join("、"));
+        if (rule.message) lines.push("說明：" + rule.message);
+        lines.push(""); // 空行分隔
+      });
+      return lines.join("\n");
+    }
+
+    function formatExportStatus(date) {
+      if (!(date instanceof Date)) return "";
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      const hh = String(date.getHours()).padStart(2, "0");
+      const mm = String(date.getMinutes()).padStart(2, "0");
+      return y + "/" + m + "/" + d + " " + hh + ":" + mm + " 已匯出";
+    }
+
+    function setExportStatus(text) {
+      const el = document.getElementById("exportStatus");
+      if (!el) return;
+      el.textContent = text || "";
+    }
+
+    function saveDraftNow() {
+      if (typeof XLSX === "undefined") return;
+      try {
+        const wb = buildFullWorkbook();
+        const excelBase64 = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+        const payload = {
+          excelBase64: excelBase64,
+          linkedRules: Array.isArray(linkedRules) ? linkedRules : []
+        };
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+      } catch (err) {
+        // 若暫存失敗則略過，避免影響使用者操作
+        console.error("save draft failed:", err);
+      }
+    }
+
+    function scheduleDraftSave() {
+      if (draftSaveTimer) {
+        clearTimeout(draftSaveTimer);
+      }
+      draftSaveTimer = setTimeout(saveDraftNow, 1500);
+    }
+
+    function loadDraftIfAny() {
+      try {
+        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw) return;
+        const ok = window.confirm("偵測到暫存資料，是否載入？\n（若選擇否，暫存將被刪除）");
+        if (!ok) {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+          return;
+        }
+        const payload = JSON.parse(raw);
+        if (payload && payload.excelBase64 && typeof XLSX !== "undefined") {
+          const wb = XLSX.read(payload.excelBase64, { type: "base64" });
+          importFromWorkbook(wb);
+        }
+        if (payload && Array.isArray(payload.linkedRules)) {
+          linkedRules = payload.linkedRules;
+          evaluateLinkedRules();
+        }
+      } catch (err) {
+        console.error("load draft failed:", err);
+      }
+    }
+
+    function exportExcelFull() {
+      if (typeof XLSX === "undefined") {
+        alert("Excel 函式庫未載入，請重新整理頁面。");
+        return;
+      }
+      const wb = buildFullWorkbook();
+      XLSX.writeFile(wb, getExportExcelFilename());
+      const now = new Date();
+      const text = formatExportStatus(now);
+      localStorage.setItem(EXPORT_STATUS_KEY, text);
+      setExportStatus(text);
+    }
+
+    async function exportExcelJsonZip() {
+      if (typeof XLSX === "undefined") {
+        alert("Excel 函式庫未載入，請重新整理頁面。");
+        return;
+      }
+      if (typeof JSZip === "undefined") {
+        alert("ZIP 函式庫未載入，請重新整理頁面。");
+        return;
+      }
+      const excelName = getExportExcelFilename();
+      const jsonName = excelName.replace(/\.xlsx$/i, ".json");
+      const txtName = excelName.replace(/\.xlsx$/i, "-rules.txt");
+      const zipName = excelName.replace(/\.xlsx$/i, ".zip");
+      const wb = buildFullWorkbook();
+      const xlsxBuf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+      const zip = new JSZip();
+      zip.file(excelName, xlsxBuf);
+      zip.file(jsonName, JSON.stringify(collectFormData(), null, 2));
+      zip.file(txtName, linkedRulesToText());
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = zipName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      const now = new Date();
+      const text = formatExportStatus(now);
+      localStorage.setItem(EXPORT_STATUS_KEY, text);
+      setExportStatus(text);
+    }
+
+    function importFromWorkbook(wb) {
+      if (!wb) return;
+
+      const baseSh = getWorkbookSheet(wb, "基本資料");
+      if (baseSh) {
+        const ba = XLSX.utils.sheet_to_json(baseSh, { header: 1, raw: false });
+        ba.forEach((row) => {
+          if (!row || row.length < 2) return;
+          const k = String(row[0] || "").trim();
+          const v = row[1] == null ? "" : String(row[1]);
+          if (k === "客戶名稱") document.getElementById("clientName").value = v;
+          if (k === "日期") document.getElementById("formDate").value = v;
+          if (k === "棟別") document.getElementById("buildingNo").value = v;
+          if (k === "樓層") document.getElementById("floorNo").value = v;
+          if (k === "戶別") document.getElementById("unitNo").value = v;
+          if (k === "變更次數") document.getElementById("changeRound").value = v;
+          if (k === "案件編號") document.getElementById("caseNo").value = v;
+        });
+        updateCaseNo();
+      }
+
+      function importAreaTable(sheetName, areaNum) {
+        const sh = getWorkbookSheet(wb, sheetName);
+        if (!sh) return;
+        const aoa = XLSX.utils.sheet_to_json(sh, { header: 1, raw: false });
+        if (!aoa || aoa.length < 2) return;
+        const head = aoa[0].map((c) => (c == null ? "" : String(c)));
+        const spareKey1 = areaNum === 1 ? "area1-spare1" : "area2-spare1";
+        const spareKey2 = areaNum === 1 ? "area1-spare2" : "area2-spare2";
+        const s1 = document.querySelector(".spare-space-name[data-spare-key=\"" + spareKey1 + "\"]");
+        const s2 = document.querySelector(".spare-space-name[data-spare-key=\"" + spareKey2 + "\"]");
+        if (head.length >= 8 && s1 && s2) {
+          s1.value = head[6] || "";
+          s2.value = head[7] || "";
+        }
+        const tbody = document.getElementById(areaNum === 1 ? "area1Body" : "area2Body");
+        tbody.innerHTML = "";
+        const kindCol = head.indexOf("__kind");
+        for (let r = 1; r < aoa.length; r++) {
+          const row = aoa[r];
+          if (!row || !row[0]) continue;
+          const label = String(row[0]).trim();
+          const preset = {
+            label: label,
+            itemKey: inferItemKeyFromAreaLabel(label, isTileRowLabel(label) ? "material" : "status")
+          };
+          addAreaRow(areaNum, "material", preset);
+          const tr = tbody.lastElementChild;
+          const tds = tr.querySelectorAll("td");
+          const lastValIdx = kindCol >= 0 ? kindCol : row.length;
+          for (let c = 0; c < tds.length && c + 1 < lastValIdx; c++) {
+            const el = tds[c].querySelector("input, select");
+            if (el && row[c + 1] != null) el.value = String(row[c + 1]);
+          }
+          syncAreaRowFields(tr);
+        }
+        initMaterialCodeFields();
+        ensureStatusEditableOptions();
+        updateSpareColumnsState();
+      }
+
+      importAreaTable("區域1", 1);
+      importAreaTable("區域2", 2);
+
+      const bathSh = getWorkbookSheet(wb, "區域3浴室設備") || getWorkbookSheet(wb, "浴室設備");
+      if (bathSh) {
+        const aoa = XLSX.utils.sheet_to_json(bathSh, { header: 1, raw: false });
+        if (aoa && aoa.length >= 2) {
+          document.getElementById("bathEquipmentBody").innerHTML = "";
+          for (let r = 1; r < aoa.length; r++) {
+            const row = aoa[r];
+            if (!row || !row[0]) continue;
+            const label = String(row[0]).trim();
+            addBathEquipmentRow({ itemKey: label, label: label });
+            const tr = document.getElementById("bathEquipmentBody").lastElementChild;
+            const bathTds = tr.querySelectorAll("td");
+            const maxC = Math.min(bathTds.length, Math.max(0, row.length - 1));
+            for (let c = 0; c < maxC; c++) {
+              const el = bathTds[c].querySelector("input");
+              if (el && row[c + 1] != null) el.value = String(row[c + 1]);
+            }
+          }
+        }
+      }
+
+      function importRefTable(bodyId, aoa) {
+        if (!aoa || aoa.length < 2) return;
+        const tbody = document.getElementById(bodyId);
+        tbody.innerHTML = "";
+        const isMat = bodyId === "materialRefBody";
+        for (let r = 1; r < aoa.length; r++) {
+          const row = aoa[r];
+          if (!row || row.length < 3) continue;
+          addRefRow(isMat ? "material" : "equipment");
+          const tr = tbody.lastElementChild;
+          const inputs = tr.querySelectorAll("input");
+          if (inputs[0]) inputs[0].value = row[0] || "";
+          if (inputs[1]) inputs[1].value = row[1] || "";
+          if (inputs[2]) inputs[2].value = row[2] || "";
+        }
+        syncRefTable(isMat ? "material" : "equipment");
+      }
+
+      const matSh = getWorkbookSheet(wb, "建材代號表");
+      if (matSh) importRefTable("materialRefBody", XLSX.utils.sheet_to_json(matSh, { header: 1, raw: false }));
+      const eqSh = getWorkbookSheet(wb, "設備代號表");
+      if (eqSh) importRefTable("equipmentRefBody", XLSX.utils.sheet_to_json(eqSh, { header: 1, raw: false }));
+
+      const checkSh = getWorkbookSheet(wb, "檢查") || getWorkbookSheet(wb, "備註");
+      if (checkSh) {
+        const ra = XLSX.utils.sheet_to_json(checkSh, { header: 1, raw: false });
+        const manualEl = document.getElementById("remarksManual");
+        const signatureEl = document.getElementById("remarksSignature");
+        if (manualEl && ra && ra.length) {
+          manualEl.value = "";
+          if (signatureEl) signatureEl.value = "";
+          const h0 = ra[0] && ra[0][0] != null ? String(ra[0][0]).trim() : "";
+          const h1 = ra[0] && ra[0][1] != null ? String(ra[0][1]).trim() : "";
+          const legacyTable = h0.indexOf("項次") !== -1 && (h0.indexOf("內容") !== -1 || h1.indexOf("內容") !== -1);
+          if (legacyTable) {
+            const parts = [];
+            for (let r = 1; r < ra.length; r++) {
+              const row = ra[r];
+              if (!row) continue;
+              const c = row[1] != null ? String(row[1]) : "";
+              if (c || parts.length) parts.push(c);
+            }
+            manualEl.value = parts.join("\n");
+          } else {
+            let manualStart = -1;
+            let signatureStart = -1;
+            for (let r = 0; r < ra.length; r++) {
+              const row = ra[r];
+              const cell0 = row && row[0] != null ? String(row[0]).trim() : "";
+              if (cell0.indexOf("人工註記") !== -1) {
+                manualStart = r + 1;
+              }
+              if (cell0.indexOf("簽名") !== -1) {
+                signatureStart = r + 1;
+              }
+            }
+            if (manualStart >= 0) {
+              const parts = [];
+              const manualEnd = signatureStart >= 0 ? signatureStart - 1 : ra.length;
+              for (let r = manualStart; r < manualEnd; r++) {
+                const row = ra[r];
+                if (!row) continue;
+                parts.push(row[0] == null ? "" : String(row[0]));
+              }
+              manualEl.value = parts.join("\n").replace(/\n+$/, "");
+            }
+            if (signatureEl) {
+              if (signatureStart >= 0 && ra[signatureStart]) {
+                signatureEl.value = ra[signatureStart][0] == null ? "" : String(ra[signatureStart][0]).trim();
+              } else {
+                signatureEl.value = "";
+              }
+            }
+          }
+        }
+      }
+
+      stateTemplateSnapshot = captureSnapshot();
+      refreshTemplateAndRemarks();
+
+      refreshCodeDatalists();
+      updateStats();
+    }
+
+    function importExcelFull(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file || typeof XLSX === "undefined") {
+        event.target.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, { type: "array" });
+          importFromWorkbook(wb);
+        } catch (err) {
+          alert("匯入失敗：" + err.message);
+        }
+        event.target.value = "";
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function importZip(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file || typeof JSZip === "undefined") {
+        event.target.value = "";
+        if (file && typeof JSZip === "undefined") {
+          alert("ZIP 函式庫未載入，請重新整理頁面。");
+        }
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        try {
+          const data = e.target.result;
+          const zip = await JSZip.loadAsync(data);
+          const names = Object.keys(zip.files);
+          const excelName = names.find((n) => /\.xlsx$/i.test(n));
+          if (excelName && typeof XLSX !== "undefined") {
+            const excelBuf = await zip.files[excelName].async("arraybuffer");
+            const wb = XLSX.read(new Uint8Array(excelBuf), { type: "array" });
+            importFromWorkbook(wb);
+          }
+          const jsonName = names.find((n) => /\.json$/i.test(n));
+          if (jsonName) {
+            const jsonText = await zip.files[jsonName].async("string");
+            try {
+              const obj = JSON.parse(jsonText);
+              if (obj && Array.isArray(obj.linkedRules)) {
+                linkedRules = obj.linkedRules;
+              }
+            } catch (_) {
+              // ignore JSON parse error
+            }
+          }
+          evaluateLinkedRules();
+        } catch (err) {
+          alert("匯入 ZIP 失敗：" + err.message);
+        }
+        event.target.value = "";
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function countCodes(nodeList) {
+      const map = {};
+      nodeList.forEach((node) => {
+        const code = node.value.trim().toUpperCase();
+        if (!code) return;
+        map[code] = (map[code] || 0) + 1;
+      });
+      return map;
+    }
+
+    function countEquipmentCodesExcludingRt(nodeList) {
+      const map = {};
+      nodeList.forEach((node) => {
+        const raw = node.value.trim();
+        if (!raw) return;
+        if (raw === "保留" || raw.indexOf("退") !== -1) return;
+        const code = raw.toUpperCase();
+        map[code] = (map[code] || 0) + 1;
+      });
+      return map;
+    }
+
+    function getExportExcelFilename() {
+      const raw = document.getElementById("caseNo").value.trim();
+      const base = raw || "export";
+      const safe = base.replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, "");
+      return (safe || "export") + ".xlsx";
+    }
+
+    function renderCountList(targetId, mapObject) {
+      const target = document.getElementById(targetId);
+      const entries = Object.entries(mapObject).sort((a, b) => a[0].localeCompare(b[0]));
+      if (entries.length === 0) {
+        target.innerHTML = "<li>（尚無資料）</li>";
+        return;
+      }
+      target.innerHTML = entries.map(([key, value]) => "<li><span class='mono'>" + key + "</span>： " + value + " 項</li>").join("");
+    }
+
+    function updateStats() {
+      const materialMap = countCodes(document.querySelectorAll(".material-code"));
+      const equipmentMap = countEquipmentCodesExcludingRt(document.querySelectorAll(".equipment-code"));
+      renderCountList("materialStats", materialMap);
+      renderCountList("equipmentStats", equipmentMap);
+      refreshTriggerItemOptions(document.getElementById("ruleTriggerItem")?.value || "");
+      refreshTargetItemOptions(document.getElementById("ruleTargetItem")?.value || "");
+      evaluateLinkedRules();
+      scheduleDraftSave();
+    }
+
+    function getStatsMapsForExport() {
+      return {
+        materialMap: countCodes(document.querySelectorAll(".material-code")),
+        equipmentMap: countEquipmentCodesExcludingRt(document.querySelectorAll(".equipment-code"))
+      };
+    }
+
+    function statsSummaryToAoA() {
+      const { materialMap, equipmentMap } = getStatsMapsForExport();
+      const matEntries = Object.entries(materialMap).sort((a, b) => a[0].localeCompare(b[0]));
+      const eqEntries = Object.entries(equipmentMap).sort((a, b) => a[0].localeCompare(b[0]));
+      const aoa = [
+        ["統計摘要"],
+        [],
+        ["建材代號使用次數"],
+        ["代號", "次數"]
+      ];
+      matEntries.forEach(([k, v]) => aoa.push([k, v]));
+      if (matEntries.length === 0) aoa.push(["（尚無資料）", ""]);
+      aoa.push([]);
+      aoa.push(["設備代號使用次數"]);
+      aoa.push(["代號", "次數"]);
+      eqEntries.forEach(([k, v]) => aoa.push([k, v]));
+      if (eqEntries.length === 0) aoa.push(["（尚無資料）", ""]);
+      return aoa;
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function getSpaceDisplayNameForAreaMaterialInput(input) {
+      const td = input.closest("td");
+      const tr = input.closest("tr");
+      const table = input.closest("table");
+      if (!td || !tr || !table) return (input.dataset.space || "").trim();
+      const tds = tr.querySelectorAll("td");
+      let tdIndex = -1;
+      tds.forEach((cell, i) => {
+        if (cell === td) tdIndex = i;
+      });
+      if (tdIndex < 0) return (input.dataset.space || "").trim();
+      const theadRow = table.querySelector("thead tr");
+      if (!theadRow || !theadRow.children[tdIndex + 1]) return (input.dataset.space || "").trim();
+      const th = theadRow.children[tdIndex + 1];
+      const spareInp = th.querySelector("input.spare-space-name");
+      if (spareInp) {
+        const v = (spareInp.value || "").trim();
+        if (v) return v;
+      }
+      return (th.textContent || "").trim() || (input.dataset.space || "").trim();
+    }
+
+    function getBathSpaceHeaderName(tdIndex) {
+      const ths = document.querySelectorAll("#bathEquipmentTable thead th");
+      return ths[tdIndex + 1] ? (ths[tdIndex + 1].textContent || "").trim() : "";
+    }
+
+    function getAutoRemarkLines() {
+      if (!stateTemplateSnapshot) return [];
+      const lines = [];
+      const pushAreaDiffs = (tableId, templateRows) => {
+        if (!templateRows) return;
+        const tbody = document.querySelector("#" + tableId + " tbody");
+        if (!tbody) return;
+        const trs = tbody.querySelectorAll("tr");
+        trs.forEach((tr, ri) => {
+          const tpl = templateRows[ri];
+          if (!tpl) return;
+          const rowLabel = (tr.querySelector(".area-row-label")?.value || "").trim();
+          tr.querySelectorAll("td").forEach((td, ci) => {
+            const el = td.querySelector("input, select");
+            if (!el) return;
+            const cur = normalizeStoredTemplateValue(el);
+            const prev = tpl.cells[ci] != null ? tpl.cells[ci] : "";
+            if (normalizeCompareString(cur) === normalizeCompareString(prev)) return;
+            if (!cur && !prev) return;
+            const space = el.classList.contains("material-code") || el.classList.contains("area-flex-code")
+              ? (getSpaceDisplayNameForAreaMaterialInput(el) || (el.dataset.space || "").trim())
+              : "";
+            const displayCur = (el.value || "").trim() || "（空）";
+            const displayPrev = (prev || "").trim() || "（空）";
+            lines.push(space + " " + rowLabel + " " + displayCur + "（範本 " + displayPrev + "）");
+          });
+        });
+      };
+      pushAreaDiffs("area1Table", stateTemplateSnapshot.area1);
+      pushAreaDiffs("area2Table", stateTemplateSnapshot.area2);
+      if (stateTemplateSnapshot.bath) {
+        document.querySelectorAll("#bathEquipmentBody tr").forEach((tr, ri) => {
+          const tpl = stateTemplateSnapshot.bath[ri];
+          if (!tpl) return;
+          const rowLabel = (tr.querySelector(".bath-row-label")?.value || "").trim();
+          tr.querySelectorAll("td").forEach((td, ci) => {
+            const inp = td.querySelector(".equipment-code");
+            if (!inp) return;
+            const cur = inp.value.trim().toUpperCase();
+            const prev = (tpl.cells[ci] || "").trim().toUpperCase();
+            if (normalizeCompareString(cur) === normalizeCompareString(prev)) return;
+            if (!cur && !prev) return;
+            const space = getBathSpaceHeaderName(ci);
+            const displayCur = inp.value.trim() || "（空）";
+            const displayPrev = (tpl.cells[ci] || "").trim() || "（空）";
+            lines.push(space + " " + rowLabel + " " + displayCur + "（範本 " + displayPrev + "）");
+          });
+        });
+      }
+      return lines;
+    }
+
+    function refreshAutoRemarks() {
+      const el = document.getElementById("remarksAutoBody");
+      if (!el) return;
+      if (!stateTemplateSnapshot) {
+        el.innerHTML = "<div class=\"remarks-empty\">（尚未設定範本：請先匯入 Excel，匯入後會自動以該次內容作為比對範本）</div>";
+        return;
+      }
+      const lines = getAutoRemarkLines();
+      if (!lines.length) {
+        el.innerHTML = "<div class=\"remarks-empty\">（無）</div>";
+        return;
+      }
+      el.innerHTML = "<ul class=\"remarks-auto-list\">" + lines.map((l) => "<li>" + escapeHtml(l) + "</li>").join("") + "</ul>";
+    }
+
+    function remarksExportToAoA() {
+      const aoa = [["電腦自動判斷（與範本不同）", ""]];
+      const lines = getAutoRemarkLines();
+      if (lines.length === 0) {
+        aoa.push(["（無）", ""]);
+      } else {
+        lines.forEach((line) => aoa.push([line]));
+      }
+      aoa.push([]);
+      aoa.push(["人工註記", ""]);
+      const manual = (document.getElementById("remarksManual")?.value || "").trim();
+      if (manual) {
+        manual.split(/\r?\n/).forEach((line) => aoa.push([line]));
+      } else {
+        aoa.push(["", ""]);
+      }
+      aoa.push([]);
+      aoa.push(["簽名", ""]);
+      aoa.push([(document.getElementById("remarksSignature")?.value || "").trim(), ""]);
+      return aoa;
+    }
+
+    function parseCodeParts(code) {
+      const value = (code || "").trim().toUpperCase();
+      const match = value.match(/^([A-Z\u4E00-\u9FFF]+)?(\d+)?(.*)$/i);
+      return {
+        text: (match?.[1] || "").toUpperCase(),
+        number: match?.[2] ? Number(match[2]) : null,
+        rest: (match?.[3] || "").toUpperCase(),
+        raw: value
+      };
+    }
+
+    function compareCodeCustom(a, b) {
+      const pa = parseCodeParts(a);
+      const pb = parseCodeParts(b);
+
+      const textCmp = pa.text.localeCompare(pb.text, undefined, { sensitivity: "base" });
+      if (textCmp !== 0) return textCmp; // 文字 A -> Z
+
+      if (pa.number !== null && pb.number !== null && pa.number !== pb.number) {
+        return pa.number - pb.number; // 數字 小 -> 大
+      }
+
+      if (pa.number !== null && pb.number === null) return -1;
+      if (pa.number === null && pb.number !== null) return 1;
+
+      const restCmp = pa.rest.localeCompare(pb.rest, undefined, { sensitivity: "base" });
+      if (restCmp !== 0) return restCmp;
+
+      return pa.raw.localeCompare(pb.raw, undefined, { sensitivity: "base" });
+    }
+
+    function getRefTableConfig(type) {
+      return type === "material"
+        ? { bodyId: "materialRefBody", codeSelector: ".ref-material-code" }
+        : { bodyId: "equipmentRefBody", codeSelector: ".ref-equipment-code" };
+    }
+
+    function removeEmptyRefRows(type) {
+      const config = getRefTableConfig(type);
+      const tbody = document.getElementById(config.bodyId);
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      rows.forEach((row) => {
+        const textInputs = Array.from(row.querySelectorAll("input[type='text'], input:not([type])"));
+        if (textInputs.length < 3) return;
+        const isAllEmpty = textInputs.every((input) => !input.value.trim());
+        if (isAllEmpty) row.remove();
+      });
+    }
+
+    function sortRefRowsByCode(type) {
+      const config = getRefTableConfig(type);
+      const tbody = document.getElementById(config.bodyId);
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      rows.sort((rowA, rowB) => {
+        const codeA = (rowA.querySelector(config.codeSelector)?.value || "").trim().toUpperCase();
+        const codeB = (rowB.querySelector(config.codeSelector)?.value || "").trim().toUpperCase();
+        if (!codeA && !codeB) return 0;
+        if (!codeA) return 1;
+        if (!codeB) return -1;
+        return compareCodeCustom(codeA, codeB);
+      });
+      rows.forEach((row) => tbody.appendChild(row));
+    }
+
+    function syncRefTable(type) {
+      removeEmptyRefRows(type);
+      sortRefRowsByCode(type);
+      refreshCodeDatalists();
+      if (type === "material") {
+        refreshTemplateAndRemarks();
+      }
+    }
+
+    function addRefRow(type) {
+      const config = getRefTableConfig(type);
+      const codeClass = type === "material" ? "ref-material-code" : "ref-equipment-code";
+      const tbody = document.getElementById(config.bodyId);
+      const row = document.createElement("tr");
+      row.innerHTML = "<td><input class='fill center mono " + codeClass + "'></td>" +
+        "<td><input class='fill center ref-category'></td>" +
+        "<td><input class='fill ref-name'></td>";
+      tbody.appendChild(row);
+      sortRefRowsByCode(type);
+      refreshCodeDatalists();
+      applyDashPlaceholders(row);
+      const codeInput = row.querySelector("." + codeClass);
+      if (codeInput) codeInput.focus();
+    }
+
+    function getMaterialCodesByCategory(category) {
+      const values = [];
+      document.querySelectorAll("#materialRefBody tr").forEach((row) => {
+        const code = (row.querySelector(".ref-material-code")?.value || "").trim().toUpperCase();
+        const rowCategory = (row.querySelector(".ref-category")?.value || "").trim();
+        if (!code) return;
+        if (category && rowCategory !== category) return;
+        if (!values.includes(code)) values.push(code);
+      });
+      return values.sort(compareCodeCustom);
+    }
+
+    function getMaterialCycleOptions(input) {
+      const category = (input.dataset.item || "").trim();
+      const codes = getMaterialCodesByCategory(category);
+      const options = [];
+      codes.forEach((code) => {
+        if (!options.includes(code)) options.push(code);
+      });
+      if (!options.includes("退")) options.push("退");
+      return options;
+    }
+
+    function cycleMaterialCode(input, direction) {
+      if (input.classList.contains("spare-dependent") && input.dataset.spareEnabled === "0") {
+        return;
+      }
+      const options = getMaterialCycleOptions(input);
+      if (!options.length) return;
+      const current = input.value.trim().toUpperCase();
+      let idx = options.indexOf(current);
+      if (idx === -1) {
+        idx = direction >= 0 ? -1 : 0;
+      }
+      const next = (idx + direction + options.length) % options.length;
+      input.value = options[next];
+      refreshTemplateAndRemarks();
+      updateStats();
+    }
+
+    function normalizeCompareString(s) {
+      const v = (s || "").trim();
+      if (v === "保留" || v === "退") return v;
+      return v.toUpperCase();
+    }
+
+    function normalizeStoredTemplateValue(el) {
+      const v = el.value.trim();
+      if (el.classList.contains("material-code")) return v.toUpperCase();
+      if (el.classList.contains("area-flex-code")) {
+        if (v === "保留" || v === "退") return v;
+        return v.toUpperCase();
+      }
+      return v;
+    }
+
+    function captureAreaTableSnapshot(tableId) {
+      const rows = [];
+      const tbody = document.querySelector("#" + tableId + " tbody");
+      if (!tbody) return rows;
+      tbody.querySelectorAll("tr").forEach((tr) => {
+        const label = (tr.querySelector(".area-row-label")?.value || "").trim();
+        const kind = tr.dataset.rowKind || "";
+        const cells = [];
+        tr.querySelectorAll("td").forEach((td) => {
+          const el = td.querySelector("input, select");
+          cells.push(el ? normalizeStoredTemplateValue(el) : "");
+        });
+        rows.push({ label: label, kind: kind, cells: cells });
+      });
+      return rows;
+    }
+
+    function captureBathSnapshot() {
+      const rows = [];
+      document.querySelectorAll("#bathEquipmentBody tr").forEach((tr) => {
+        const label = (tr.querySelector(".bath-row-label")?.value || "").trim();
+        const cells = [];
+        tr.querySelectorAll("td").forEach((td) => {
+          const inp = td.querySelector(".equipment-code");
+          cells.push(inp ? inp.value.trim().toUpperCase() : "");
+        });
+        rows.push({ label: label, cells: cells });
+      });
+      return rows;
+    }
+
+    function captureSnapshot() {
+      return {
+        area1: captureAreaTableSnapshot("area1Table"),
+        area2: captureAreaTableSnapshot("area2Table"),
+        bath: captureBathSnapshot()
+      };
+    }
+
+    function applyTemplateDiffHighlight() {
+      document.querySelectorAll(".material-code, .area-flex-code, #bathEquipmentBody .equipment-code").forEach((input) => {
+        input.classList.remove("non-default-code");
+      });
+      if (!stateTemplateSnapshot) return;
+      const highlightArea = (tableId, templateRows) => {
+        if (!templateRows) return;
+        const tbody = document.querySelector("#" + tableId + " tbody");
+        if (!tbody) return;
+        const trs = tbody.querySelectorAll("tr");
+        trs.forEach((tr, ri) => {
+          const tpl = templateRows[ri];
+          if (!tpl) return;
+          tr.querySelectorAll("td").forEach((td, ci) => {
+            const el = td.querySelector("input, select");
+            if (!el) return;
+            const cur = normalizeStoredTemplateValue(el);
+            const prev = tpl.cells[ci] != null ? tpl.cells[ci] : "";
+            if (normalizeCompareString(cur) !== normalizeCompareString(prev)) {
+              if (!cur && !prev) return;
+              el.classList.add("non-default-code");
+            }
+          });
+        });
+      };
+      highlightArea("area1Table", stateTemplateSnapshot.area1);
+      highlightArea("area2Table", stateTemplateSnapshot.area2);
+      if (stateTemplateSnapshot.bath) {
+        const trs = document.querySelectorAll("#bathEquipmentBody tr");
+        trs.forEach((tr, ri) => {
+          const tpl = stateTemplateSnapshot.bath[ri];
+          if (!tpl) return;
+          tr.querySelectorAll("td").forEach((td, ci) => {
+            const inp = td.querySelector(".equipment-code");
+            if (!inp) return;
+            const cur = inp.value.trim().toUpperCase();
+            const prev = (tpl.cells[ci] || "").trim().toUpperCase();
+            if (normalizeCompareString(cur) !== normalizeCompareString(prev)) {
+              if (!cur && !prev) return;
+              inp.classList.add("non-default-code");
+            }
+          });
+        });
+      }
+    }
+
+    function refreshTemplateAndRemarks() {
+      applyTemplateDiffHighlight();
+      refreshAutoRemarks();
+      updateWithdrawRedStyles();
+    }
+
+    function ensureStatusEditableOptions() {
+      document.querySelectorAll(".option-rt").forEach((select) => {
+        if (!select.querySelector("option[value='__custom__']")) {
+          const option = document.createElement("option");
+          option.value = "__custom__";
+          option.textContent = "其他（手填）";
+          select.appendChild(option);
+        }
+      });
+    }
+
+    function initMaterialCodeFields() {
+      document.querySelectorAll(".material-code").forEach((input) => {
+        input.readOnly = true;
+        if (!input.classList.contains("spare-dependent")) {
+          input.dataset.spareEnabled = "1";
+        }
+      });
+    }
+
+    function updateWithdrawRedStyles() {
+      document.querySelectorAll(".area-flex-code").forEach((input) => {
+        input.classList.toggle("status-withdraw", input.value.trim() === "退");
+      });
+      document.querySelectorAll(".material-code").forEach((input) => {
+        input.classList.toggle("status-withdraw", input.value.trim() === "退");
+      });
+      document.querySelectorAll("#bathEquipmentBody .equipment-code").forEach((input) => {
+        input.classList.toggle("status-withdraw", input.value.trim() === "退");
+      });
+    }
+
+    function updateSpareColumnsState() {
+      document.querySelectorAll(".spare-space-name").forEach((nameInput) => {
+        const key = nameInput.dataset.spareKey;
+        const enabled = Boolean(nameInput.value.trim());
+        document.querySelectorAll(".spare-dependent[data-spare-key='" + key + "']").forEach((field) => {
+          if (field.tagName === "INPUT") {
+            if (!enabled) {
+              field.value = "";
+              field.classList.remove("non-default-code");
+            }
+            field.dataset.spareEnabled = enabled ? "1" : "0";
+            if (field.classList.contains("area-flex-code")) {
+              field.disabled = !enabled;
+            } else {
+              field.readOnly = true;
+            }
+          } else if (field.tagName === "SELECT") {
+            if (!enabled) {
+              field.value = "";
+            }
+            field.disabled = !enabled;
+          }
+        });
+      });
+      refreshTemplateAndRemarks();
+    }
+
+    function getRefCodes(selector) {
+      const values = [];
+      document.querySelectorAll(selector).forEach((node) => {
+        const code = node.value.trim().toUpperCase();
+        if (code && !values.includes(code)) values.push(code);
+      });
+      return values.sort(compareCodeCustom);
+    }
+
+    function fillDatalist(id, values) {
+      const list = document.getElementById(id);
+      list.innerHTML = values.map((value) => "<option value='" + value + "'></option>").join("");
+    }
+
+    function refreshCodeDatalists() {
+      fillDatalist("materialCodeList", getRefCodes(".ref-material-code"));
+      const eqCodes = getRefCodes(".ref-equipment-code");
+      fillDatalist("equipmentOrRtList", ["保留", "退"].concat(eqCodes));
+    }
+
+    function normalizeRuleText(value) {
+      return String(value == null ? "" : value).trim();
+    }
+
+    function getRuleItemsByTable(table) {
+      const values = [];
+      const pushValue = (value) => {
+        const text = normalizeRuleText(value);
+        if (text && !values.includes(text)) values.push(text);
+      };
+      if (table === "area1" || table === "area2") {
+        const tbodyId = table === "area1" ? "area1Body" : "area2Body";
+        document.querySelectorAll("#" + tbodyId + " tr").forEach((tr) => {
+          pushValue(tr.dataset.itemKey);
+        });
+      } else if (table === "bath") {
+        document.querySelectorAll("#bathEquipmentBody tr").forEach((tr) => {
+          pushValue(tr.dataset.itemKey);
+        });
+      }
+      return values;
+    }
+
+    function refreshTriggerItemOptions(selectedItem) {
+      const select = document.getElementById("ruleTriggerItem");
+      const table = normalizeRuleText(document.getElementById("ruleTriggerTable")?.value || "area2");
+      if (!select) return;
+      const selected = normalizeRuleText(selectedItem);
+      const items = getRuleItemsByTable(table);
+      select.innerHTML = items.map((item) => {
+        const isSelected = selected === item ? " selected" : "";
+        return "<option value=\"" + escapeHtml(item) + "\"" + isSelected + ">" + escapeHtml(item) + "</option>";
+      }).join("");
+      if (!select.value && items[0]) {
+        select.value = items[0];
+      }
+    }
+
+    function refreshTargetItemOptions(selectedItem) {
+      const select = document.getElementById("ruleTargetItem");
+      const table = normalizeRuleText(document.getElementById("ruleTargetTable")?.value || "bath");
+      if (!select) return;
+      const selected = normalizeRuleText(selectedItem);
+      const items = getRuleItemsByTable(table);
+      select.innerHTML = items.map((item) => {
+        const isSelected = selected === item ? " selected" : "";
+        return "<option value=\"" + escapeHtml(item) + "\"" + isSelected + ">" + escapeHtml(item) + "</option>";
+      }).join("");
+      if (!select.value && items[0]) {
+        select.value = items[0];
+      }
+    }
+
+    function getSelectedTriggerItems() {
+      const select = document.getElementById("ruleTriggerItem");
+      if (!select) return [];
+      const value = normalizeRuleText(select.value);
+      return value ? [value] : [];
+    }
+
+    function getRuleInput(table, item, space) {
+      const itemText = normalizeRuleText(item);
+      const spaceText = normalizeRuleText(space);
+      if (!itemText || !spaceText) return null;
+      if (table === "area1" || table === "area2") {
+        const tbodyId = table === "area1" ? "area1Body" : "area2Body";
+        const rows = document.querySelectorAll("#" + tbodyId + " tr");
+        for (const tr of rows) {
+          if (normalizeRuleText(tr.dataset.itemKey) !== itemText) continue;
+          const selector = "[data-space='" + spaceText + "']";
+          return tr.querySelector("input" + selector + ", select" + selector);
+        }
+        return null;
+      }
+      if (table === "bath") {
+        const rows = document.querySelectorAll("#bathEquipmentBody tr");
+        for (const tr of rows) {
+          const itemKey = normalizeRuleText(tr.dataset.itemKey);
+          const itemLabel = normalizeRuleText(tr.querySelector(".bath-row-label")?.value || "");
+          if (itemKey !== itemText && itemLabel !== itemText) continue;
+          return tr.querySelector(".equipment-code[data-space='" + spaceText + "']");
+        }
+        return null;
+      }
+      return null;
+    }
+
+    function clearRuleHighlights() {
+      document.querySelectorAll(".rule-invalid").forEach((el) => {
+        el.classList.remove("rule-invalid");
+        if (el.dataset.prevTitle != null) {
+          el.title = el.dataset.prevTitle;
+        } else {
+          el.removeAttribute("title");
+        }
+        delete el.dataset.prevTitle;
+      });
+    }
+
+    function renderLinkedRuleWarnings(messages) {
+      const box = document.getElementById("linkedRuleWarnings");
+      if (!box) return;
+      if (!messages.length) {
+        box.textContent = "（無）";
+        return;
+      }
+      box.innerHTML = "<ul>" + messages.map((msg) => "<li>" + escapeHtml(msg) + "</li>").join("") + "</ul>";
+    }
+
+    function renderConfiguredLinkedRules() {
+      const box = document.getElementById("configuredLinkedRules");
+      if (!box) return;
+      if (!Array.isArray(linkedRules) || !linkedRules.length) {
+        box.textContent = "（尚未設定）";
+        return;
+      }
+      const items = linkedRules.map((rule, index) => {
+        const trigger = rule && rule.trigger ? rule.trigger : {};
+        const target = rule && rule.target ? rule.target : {};
+        const require = rule && rule.require ? rule.require : {};
+        const triggerItems = Array.isArray(trigger.items) && trigger.items.length ? trigger.items : [trigger.item].filter(Boolean);
+        const triggerValues = Array.isArray(trigger.equalsAny) ? trigger.equalsAny : [];
+        const spaces = Array.isArray(rule.spaces) ? rule.spaces : [];
+        const requiredWords = Array.isArray(require.includesAny) ? require.includesAny : [];
+        const summary = "觸發區塊：" + normalizeRuleText(trigger.table) +
+          "；觸發項目：" + triggerItems.join("、") +
+          "；觸發值：" + triggerValues.join("、") +
+          "；限制區塊：" + normalizeRuleText(target.table) +
+          "；限制項目：" + normalizeRuleText(target.item) +
+          "；必含字詞：" + requiredWords.join("、") +
+          "；適用空間：" + spaces.join("、");
+        return "<div class=\"configured-rule-item\"><span class=\"configured-rule-text\">" + escapeHtml(summary) + "</span><button type=\"button\" class=\"configured-rule-delete\" onclick=\"removeLinkedRule(" + index + ")\">刪除</button></div>";
+      });
+      box.innerHTML = "<ul>" + items.map((item) => "<li>" + item + "</li>").join("") + "</ul>";
+    }
+
+    function removeLinkedRule(index) {
+      if (!Array.isArray(linkedRules)) {
+        linkedRules = [];
+      }
+      if (index < 0 || index >= linkedRules.length) return;
+      linkedRules.splice(index, 1);
+      localStorage.setItem(LINK_RULES_STORAGE_KEY, JSON.stringify(linkedRules));
+      renderConfiguredLinkedRules();
+      evaluateLinkedRules();
+    }
+
+    function evaluateLinkedRules() {
+      renderConfiguredLinkedRules();
+      clearRuleHighlights();
+      const warnings = [];
+      if (!Array.isArray(linkedRules)) {
+        renderLinkedRuleWarnings(["規則格式錯誤：請用 JSON 陣列。"]);
+        return;
+      }
+      linkedRules.forEach((rule, ruleIndex) => {
+        const trigger = rule && rule.trigger ? rule.trigger : {};
+        const target = rule && rule.target ? rule.target : {};
+        const requirement = rule && rule.require ? rule.require : {};
+        const spaces = Array.isArray(rule.spaces) && rule.spaces.length ? rule.spaces : BATH_SPACES;
+        const triggerItems = Array.isArray(trigger.items) && trigger.items.length
+          ? trigger.items
+          : [trigger.item];
+        spaces.forEach((space) => {
+          const targetInput = getRuleInput(target.table, target.item, space);
+          if (!targetInput) return;
+          const triggerValues = Array.isArray(trigger.equalsAny) ? trigger.equalsAny.map((v) => normalizeRuleText(v)) : [];
+          const isTriggered = triggerItems.some((triggerItem) => {
+            const sourceInput = getRuleInput(trigger.table, triggerItem, space);
+            if (!sourceInput) return false;
+            const sourceValue = normalizeRuleText(sourceInput.value);
+            return triggerValues.includes(sourceValue);
+          });
+          if (!isTriggered) return;
+          const targetValue = normalizeRuleText(targetInput.value);
+          const requiredWords = Array.isArray(requirement.includesAny) ? requirement.includesAny.map((v) => normalizeRuleText(v).toLowerCase()) : [];
+          if (!requiredWords.length) return;
+          const ok = requiredWords.some((word) => word && targetValue.toLowerCase().indexOf(word) !== -1);
+          if (ok) return;
+          const msg = rule.message || ("規則#" + (ruleIndex + 1) + "：" + space + " 不符合連動規則");
+          warnings.push(space + "｜" + msg + "（目前值：" + (targetValue || "-") + "）");
+          if (targetInput.dataset.prevTitle == null) {
+            targetInput.dataset.prevTitle = targetInput.title || "";
+          }
+          targetInput.title = msg;
+          targetInput.classList.add("rule-invalid");
+        });
+      });
+      renderLinkedRuleWarnings(warnings);
+    }
+
+    function parseCommaSeparatedValues(text) {
+      return String(text || "")
+        .split(",")
+        .map((v) => normalizeRuleText(v))
+        .filter((v) => Boolean(v));
+    }
+
+    function getSelectedRuleSpaces() {
+      const spaces = [];
+      document.querySelectorAll(".rule-space:checked").forEach((node) => {
+        spaces.push(normalizeRuleText(node.value));
+      });
+      return spaces;
+    }
+
+    function fillLinkedRuleForm(rule) {
+      const source = rule && rule.trigger ? rule.trigger : {};
+      const target = rule && rule.target ? rule.target : {};
+      const req = rule && rule.require ? rule.require : {};
+      const spaces = Array.isArray(rule && rule.spaces) ? rule.spaces.map((v) => normalizeRuleText(v)) : [];
+      const triggerTableEl = document.getElementById("ruleTriggerTable");
+      const triggerValuesEl = document.getElementById("ruleTriggerValues");
+      const targetTableEl = document.getElementById("ruleTargetTable");
+      const requiredEl = document.getElementById("ruleRequiredKeywords");
+      const triggerItems = Array.isArray(source.items) && source.items.length ? source.items : [source.item];
+      if (triggerTableEl) triggerTableEl.value = source.table || "area2";
+      refreshTriggerItemOptions(triggerItems[0] || "");
+      if (triggerValuesEl) triggerValuesEl.value = (Array.isArray(source.equalsAny) ? source.equalsAny : []).join(",");
+      if (targetTableEl) targetTableEl.value = target.table || "bath";
+      refreshTargetItemOptions(target.item || "");
+      if (requiredEl) requiredEl.value = (Array.isArray(req.includesAny) ? req.includesAny : []).join(",");
+      document.querySelectorAll(".rule-space").forEach((node) => {
+        node.checked = !spaces.length || spaces.includes(normalizeRuleText(node.value));
+      });
+    }
+
+    function buildLinkedRuleFromForm() {
+      const triggerTable = normalizeRuleText(document.getElementById("ruleTriggerTable")?.value || "area2");
+      const triggerItems = getSelectedTriggerItems();
+      const triggerValues = parseCommaSeparatedValues(document.getElementById("ruleTriggerValues")?.value || "");
+      const targetTable = normalizeRuleText(document.getElementById("ruleTargetTable")?.value || "bath");
+      const targetItem = normalizeRuleText(document.getElementById("ruleTargetItem")?.value || "");
+      const requiredWords = parseCommaSeparatedValues(document.getElementById("ruleRequiredKeywords")?.value || "");
+      const spaces = getSelectedRuleSpaces();
+      if (!triggerItems.length) throw new Error("請至少選擇一個「觸發項目」。");
+      if (!triggerValues.length) throw new Error("請輸入至少一個「觸發值」。");
+      if (!targetItem) throw new Error("請輸入「限制項目」。");
+      if (!requiredWords.length) throw new Error("請輸入至少一個「必含字詞」。");
+      if (!spaces.length) throw new Error("請至少勾選一個「適用空間」。");
+      return {
+        name: "使用者設定規則",
+        spaces: spaces,
+        trigger: { table: triggerTable, items: triggerItems, equalsAny: triggerValues },
+        target: { table: targetTable, item: targetItem },
+        require: { includesAny: requiredWords },
+        message: "當指定觸發項目符合條件時，「" + targetItem + "」需包含指定字詞。"
+      };
+    }
+
+    function applyLinkedRuleFromForm() {
+      try {
+        const rule = buildLinkedRuleFromForm();
+        if (!Array.isArray(linkedRules)) {
+          linkedRules = [];
+        }
+        linkedRules.push(rule);
+        localStorage.setItem(LINK_RULES_STORAGE_KEY, JSON.stringify(linkedRules));
+        evaluateLinkedRules();
+        alert("連動規則已儲存並套用。");
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    function loadSampleLinkedRuleForm() {
+      const sample = JSON.parse(JSON.stringify(SAMPLE_LINKED_RULES))[0];
+      if (!sample) return;
+      if (!Array.isArray(linkedRules)) {
+        linkedRules = [];
+      }
+      linkedRules.push(sample);
+      fillLinkedRuleForm(sample);
+      localStorage.setItem(LINK_RULES_STORAGE_KEY, JSON.stringify(linkedRules));
+      evaluateLinkedRules();
+    }
+
+    function initLinkedRuleForm() {
+      try {
+        const raw = localStorage.getItem(LINK_RULES_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length) {
+            linkedRules = parsed;
+          }
+        }
+      } catch (error) {
+        linkedRules = JSON.parse(JSON.stringify(SAMPLE_LINKED_RULES));
+      }
+      refreshTriggerItemOptions();
+      refreshTargetItemOptions();
+      fillLinkedRuleForm((Array.isArray(linkedRules) && linkedRules.length) ? linkedRules[0] : SAMPLE_LINKED_RULES[0]);
+      const triggerTable = document.getElementById("ruleTriggerTable");
+      if (triggerTable && !triggerTable.dataset.bound) {
+        triggerTable.addEventListener("change", () => {
+          refreshTriggerItemOptions();
+        });
+        triggerTable.dataset.bound = "1";
+      }
+      const targetTable = document.getElementById("ruleTargetTable");
+      if (targetTable && !targetTable.dataset.bound) {
+        targetTable.addEventListener("change", () => {
+          refreshTargetItemOptions();
+        });
+        targetTable.dataset.bound = "1";
+      }
+      evaluateLinkedRules();
+    }
+
+    function applyDashPlaceholders(scope) {
+      const root = scope || document;
+      root.querySelectorAll("input:not([type='file']):not(.spare-space-name), textarea").forEach((field) => {
+        field.placeholder = "-";
+      });
+    }
+
+    function collectFormData() {
+      const base = {
+        clientName: document.getElementById("clientName").value.trim(),
+        date: document.getElementById("formDate").value.trim(),
+        buildingNo: document.getElementById("buildingNo").value.trim(),
+        floorNo: document.getElementById("floorNo").value.trim(),
+        unitNo: document.getElementById("unitNo").value.trim(),
+        changeRound: document.getElementById("changeRound").value.trim(),
+        caseNo: document.getElementById("caseNo").value.trim()
+      };
+
+      const materialUsage = [];
+      document.querySelectorAll(".material-code").forEach((node) => {
+        const code = node.value.trim().toUpperCase();
+        if (!code) return;
+        materialUsage.push({
+          space: node.dataset.space,
+          item: node.dataset.item,
+          code
+        });
+      });
+
+      const equipmentUsage = [];
+      document.querySelectorAll(".equipment-code").forEach((node) => {
+        const code = node.value.trim().toUpperCase();
+        if (!code) return;
+        equipmentUsage.push({
+          space: node.dataset.space,
+          item: node.dataset.item,
+          code
+        });
+      });
+
+      const retainWithdrawUsage = [];
+      document.querySelectorAll(".option-rt").forEach((node) => {
+        retainWithdrawUsage.push({
+          space: node.dataset.space,
+          item: node.dataset.item,
+          choice: node.value
+        });
+      });
+      document.querySelectorAll(".area-flex-code").forEach((node) => {
+        const v = node.value.trim();
+        if (v !== "保留" && v !== "退") return;
+        retainWithdrawUsage.push({
+          space: node.dataset.space,
+          item: node.dataset.item,
+          choice: v
+        });
+      });
+
+      const materialRef = [];
+      document.querySelectorAll("#materialRefBody tr").forEach((row) => {
+        const inputs = row.querySelectorAll("input");
+        if (inputs.length < 3) return;
+        const code = inputs[0].value.trim().toUpperCase();
+        if (!code) return;
+        materialRef.push({
+          code,
+          category: inputs[1].value.trim(),
+          name: inputs[2].value.trim()
+        });
+      });
+
+      const equipmentRef = [];
+      document.querySelectorAll("#equipmentRefBody tr").forEach((row) => {
+        const inputs = row.querySelectorAll("input");
+        if (inputs.length < 3) return;
+        const code = inputs[0].value.trim().toUpperCase();
+        if (!code) return;
+        equipmentRef.push({
+          code,
+          category: inputs[1].value.trim(),
+          name: inputs[2].value.trim()
+        });
+      });
+
+      const { materialMap, equipmentMap } = getStatsMapsForExport();
+
+      return {
+        base,
+        statsSummary: {
+          material: materialMap,
+          equipment: equipmentMap
+        },
+        remarks: {
+          auto: getAutoRemarkLines(),
+          manual: (document.getElementById("remarksManual")?.value || ""),
+          signature: (document.getElementById("remarksSignature")?.value || "").trim()
+        },
+        linkedRules,
+        materialRef,
+        equipmentRef,
+        materialUsage,
+        equipmentUsage,
+        retainWithdrawUsage
+      };
+    }
+
+    document.addEventListener("input", (event) => {
+      if (event.target.matches("#remarksManual, #remarksSignature")) {
+        scheduleDraftSave();
+        return;
+      }
+      if (event.target.matches(".area-row-label")) {
+        const tr = event.target.closest("tr");
+        if (tr) syncAreaRowFields(tr);
+        updateStats();
+        return;
+      }
+      if (
+        event.target.matches(".spare-space-name") ||
+        event.target.matches(".material-code") ||
+        event.target.matches(".equipment-code") ||
+        event.target.matches(".option-rt") ||
+        event.target.matches(".ref-category") ||
+        event.target.matches(".ref-name") ||
+        event.target.matches(".ref-material-code") ||
+        event.target.matches(".ref-equipment-code")
+      ) {
+        if (event.target.matches(".ref-material-code")) {
+          event.target.value = event.target.value.toUpperCase();
+          syncRefTable("material");
+        } else if (event.target.matches(".ref-equipment-code")) {
+          event.target.value = event.target.value.toUpperCase();
+          syncRefTable("equipment");
+        } else if (event.target.matches(".ref-category") || event.target.matches(".ref-name")) {
+          if (event.target.closest("#materialRefBody")) {
+            refreshTemplateAndRemarks();
+          }
+          refreshCodeDatalists();
+        } else if (event.target.matches(".material-code") || event.target.matches(".equipment-code")) {
+          refreshTemplateAndRemarks();
+        } else if (event.target.matches(".spare-space-name")) {
+          updateSpareColumnsState();
+        }
+        updateStats();
+      }
+    });
+
+    document.addEventListener("focusout", (event) => {
+      if (event.target.matches(".area-row-label")) {
+        const tr = event.target.closest("tr");
+        const tbody = tr && tr.parentElement;
+        if (tbody && (tbody.id === "area1Body" || tbody.id === "area2Body")) {
+          rebuildAreaRowIfNeeded(tr, tbody.id === "area1Body" ? 1 : 2);
+        }
+        return;
+      }
+      if (event.target.matches("#materialRefBody input")) {
+        syncRefTable("material");
+      } else if (event.target.matches("#equipmentRefBody input")) {
+        syncRefTable("equipment");
+      } else if (event.target.matches(".material-code")) {
+        refreshTemplateAndRemarks();
+        updateStats();
+      }
+    });
+
+    document.addEventListener("focusin", (event) => {
+      if (event.target.matches(".option-rt")) {
+        event.target.dataset.prev = event.target.value;
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      const delBtn = event.target.closest(".row-delete-btn");
+      if (delBtn) {
+        const tr = delBtn.closest("tr");
+        const tbody = tr && tr.parentElement;
+        if (tbody && (tbody.id === "area1Body" || tbody.id === "area2Body" || tbody.id === "bathEquipmentBody")) {
+          if (tbody.querySelectorAll("tr").length <= 1) {
+            alert("至少保留一列。");
+            return;
+          }
+          tr.remove();
+          initMaterialCodeFields();
+          ensureStatusEditableOptions();
+          updateSpareColumnsState();
+          refreshCodeDatalists();
+          updateStats();
+        }
+        return;
+      }
+      if (event.target.matches(".material-code")) {
+        cycleMaterialCode(event.target, 1);
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (!event.target.matches(".material-code")) return;
+      if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+        event.preventDefault();
+        cycleMaterialCode(event.target, 1);
+      } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        event.preventDefault();
+        cycleMaterialCode(event.target, 1);
+      } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        event.preventDefault();
+        cycleMaterialCode(event.target, -1);
+      }
+    });
+
+    document.addEventListener("change", (event) => {
+      if (event.target.matches(".option-rt")) {
+        if (event.target.value === "__custom__") {
+          const custom = window.prompt("請輸入自訂狀態：", "");
+          if (custom && custom.trim()) {
+            const value = custom.trim();
+            let existing = Array.from(event.target.options).find((opt) => opt.value === value);
+            if (!existing) {
+              existing = document.createElement("option");
+              existing.value = value;
+              existing.textContent = value;
+              event.target.insertBefore(existing, event.target.querySelector("option[value='__custom__']"));
+            }
+            event.target.value = value;
+          } else {
+            event.target.value = event.target.dataset.prev || "";
+          }
+        }
+        updateStats();
+        refreshTemplateAndRemarks();
+      }
+    });
+
+    ["formDate", "buildingNo", "floorNo", "unitNo", "changeRound"].forEach((id) => {
+      const input = document.getElementById(id);
+      if (!input) return;
+      input.addEventListener("input", updateCaseNo);
+    });
+
+    setToday();
+    updateCaseNo();
+    initDynamicTables();
+    applyDashPlaceholders();
+    initLinkedRuleForm();
+    const lastExport = localStorage.getItem(EXPORT_STATUS_KEY);
+    if (lastExport) setExportStatus(lastExport);
+    loadDraftIfAny();
+    sortRefRowsByCode("material");
+    sortRefRowsByCode("equipment");
+    initMaterialCodeFields();
+    ensureStatusEditableOptions();
+    updateSpareColumnsState();
+    refreshCodeDatalists();
+    updateStats();
+  </script>
+</body>
+</html>
