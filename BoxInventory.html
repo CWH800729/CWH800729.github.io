@@ -9,10 +9,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * { box-sizing: border-box; }
         html { -webkit-tap-highlight-color: transparent; }
+        :root {
+            --qr-preview-px: 180px;
+        }
         body {
             font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
             margin: 0;
@@ -234,6 +236,132 @@
             font-weight: 600;
             color: #1a535c;
         }
+        /* 顯示區：左箱名、右內容，同列換行 */
+        .result-row-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 8px 14px;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 1.05rem;
+            line-height: 1.55;
+        }
+        .result-row-line:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .result-col-id {
+            flex: 0 1 auto;
+            min-width: 6.5em;
+            max-width: 42%;
+            font-weight: 800;
+            color: #1a535c;
+            word-break: break-all;
+        }
+        .result-col-body {
+            flex: 1 1 160px;
+            min-width: 0;
+            color: #334155;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+        .result-mode-single[hidden] { display: none !important; }
+        #result-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        /* 懸浮：試算表清單 */
+        .inv-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.45);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: env(safe-area-inset-top, 0) 12px calc(12px + env(safe-area-inset-bottom, 0));
+            box-sizing: border-box;
+        }
+        .inv-modal-overlay[hidden] { display: none !important; }
+        .inv-modal {
+            width: 100%;
+            max-width: 480px;
+            max-height: min(85vh, 640px);
+            background: #fff;
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        @media (min-width: 540px) {
+            .inv-modal-overlay { align-items: center; }
+            .inv-modal { border-radius: 16px; max-height: 80vh; }
+        }
+        .inv-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 14px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            background: linear-gradient(135deg, #f8fafc, #fff);
+        }
+        .inv-modal-header h2 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #1a535c;
+        }
+        .inv-modal-close {
+            border: none;
+            background: #e2e8f0;
+            color: #475569;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            font-size: 1.25rem;
+            line-height: 1;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .inv-modal-close:active { opacity: 0.9; }
+        #inv-modal-search {
+            margin: 10px 14px 6px;
+            width: calc(100% - 28px);
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .inv-modal-body {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: 8px 14px 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .inv-modal-body .result-row-line {
+            font-size: 0.92rem;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+        }
+        .inv-modal-hint {
+            margin: 0 14px 10px;
+            font-size: 0.76rem;
+            color: #64748b;
+        }
+        #inv-modal-loading {
+            padding: 16px;
+            text-align: center;
+            font-weight: 700;
+            color: #1a535c;
+        }
         input:focus, textarea:focus {
             outline: none;
             border-color: #1a535c;
@@ -267,7 +395,7 @@
         #result-body[hidden], #result-empty[hidden], #result-error[hidden] {
             display: none !important;
         }
-        #result-line-box, #result-line-keyword {
+        #result-line-keyword {
             margin: 0 0 12px;
             font-size: 1.25rem;
             line-height: 1.45;
@@ -280,42 +408,9 @@
             font-weight: 700;
             color: #1e293b;
         }
-        #result-box-id, #result-keyword {
+        #result-keyword {
             font-weight: 800;
             color: #1a535c;
-        }
-        #result-list {
-            margin: 0;
-            padding-left: 1.35em;
-            font-size: 1.12rem;
-            line-height: 1.75;
-            color: #334155;
-        }
-        #result-list li {
-            margin-bottom: 10px;
-            word-break: break-word;
-        }
-        #result-list li.result-item-block {
-            list-style: none;
-            margin-left: 0;
-            padding-left: 0;
-            margin-bottom: 1.35rem;
-        }
-        .result-box-heading {
-            margin: 0 0 8px;
-            font-size: 1.12rem;
-            font-weight: 800;
-            color: #1a535c;
-        }
-        ul.result-sublist {
-            margin: 0 0 0 0;
-            padding-left: 1.35em;
-            font-size: 1.05rem;
-            line-height: 1.65;
-            color: #334155;
-        }
-        ul.result-sublist li {
-            margin-bottom: 6px;
         }
         .loading-block {
             margin-bottom: 14px;
@@ -407,7 +502,7 @@
         }
         @media print {
             body { background: #fff; }
-            .top, .tabs, #panel-query, .config-note, .qr-batch-block { display: none !important; }
+            .top, .tabs, #panel-query, .config-note, .qr-batch-block, .inv-modal-overlay { display: none !important; }
             #panel-qr { display: block !important; }
             #panel-qr .main-inner { padding: 0; max-width: none; }
             .qr-print-block {
@@ -421,6 +516,7 @@
             .qr-print-block input,
             .qr-print-block textarea,
             .qr-print-block .chk-row,
+            .qr-print-block .qr-size-row,
             .qr-print-block .btn-row,
             .qr-print-block > .hint,
             .qr-print-block .err,
@@ -449,11 +545,32 @@
         #qrcode img, #qrcode canvas {
             border-radius: 4px;
             box-shadow: none;
-            width: 3.2cm !important;
-            height: 3.2cm !important;
-            max-width: 3.2cm;
-            max-height: 3.2cm;
+            width: var(--qr-preview-px, 180px) !important;
+            height: var(--qr-preview-px, 180px) !important;
+            max-width: min(var(--qr-preview-px, 180px), 92vw);
+            max-height: min(var(--qr-preview-px, 180px), 92vw);
             object-fit: contain;
+        }
+        .qr-size-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 10px 0 4px;
+        }
+        .qr-size-row label {
+            margin-bottom: 0;
+            flex: 1 1 auto;
+        }
+        #f-qr-size-range {
+            flex: 1 1 200px;
+            max-width: 280px;
+            margin-bottom: 0;
+        }
+        #f-qr-size-val {
+            font-weight: 800;
+            color: #1a535c;
+            min-width: 4.5em;
         }
         .gen-below {
             width: 100%;
@@ -509,7 +626,10 @@
                     <button type="button" class="btn btn-primary" id="btn-scan-start"><i class="fas fa-camera"></i> 開始掃描</button>
                     <button type="button" class="btn btn-secondary" id="btn-scan-stop" disabled><i class="fas fa-stop"></i> 停止</button>
                 </div>
-                <p class="hint">可掃<strong>純箱子編號</strong>，或貼標 <code>homeqr:</code> JSON（含 <code>boxId</code> 時會查試算表）。結果顯示於下方「顯示區」。</p>
+                <p class="hint">可掃<strong>純箱子編號</strong>，或貼標 <code>homeqr:</code> JSON（含 <code>boxId</code> 時會查試算表）。結果顯示於下方「顯示區」（掃描／查詢用）。試算表<strong>全部清單</strong>請用「試算表清單」按鈕。</p>
+                <div class="btn-row" style="margin-top:10px">
+                    <button type="button" class="btn btn-secondary" id="btn-open-inventory-modal"><i class="fas fa-table-list"></i> 試算表清單</button>
+                </div>
                 <p class="err" id="scan-local-err" hidden></p>
             </section>
 
@@ -523,16 +643,20 @@
                     </div>
                     <div id="result-empty">尚無查詢結果</div>
                     <div id="result-body" hidden>
-                        <p id="result-line-box" hidden><strong>箱子：</strong><span id="result-box-id"></span></p>
                         <p id="result-line-keyword" hidden><strong>關鍵字：</strong><span id="result-keyword"></span></p>
                         <p id="result-line-item-intro" hidden>以下箱子符合關鍵字（各箱內容物）：</p>
+                        <div id="result-mode-single" class="result-mode-single" hidden>
+                            <div class="result-row-line">
+                                <div class="result-col-id" id="result-single-id"></div>
+                                <div class="result-col-body" id="result-single-body"></div>
+                            </div>
+                        </div>
                         <ul id="result-list"></ul>
                     </div>
                     <div id="result-label-only" hidden>
-                        <p class="lbl-row"><strong>箱子編號：</strong><span id="result-lbl-box"></span></p>
-                        <p class="lbl-row" id="result-lbl-note-h" hidden><strong>內容物：</strong></p>
-                        <div id="result-lbl-note-wrap" hidden>
-                            <div id="result-lbl-note"></div>
+                        <div class="result-row-line">
+                            <div class="result-col-id" id="result-lbl-box"></div>
+                            <div class="result-col-body" id="result-lbl-note"></div>
                         </div>
                     </div>
                     <p class="err" id="result-error" hidden></p>
@@ -554,7 +678,7 @@
                 <div class="btn-row">
                     <button type="button" class="btn btn-primary" id="btn-item-query"><i class="fas fa-magnifying-glass"></i> 反向查找</button>
                 </div>
-                <p class="hint">開啟頁面時會自動載入試算表內已有清單；亦可在此依單箱或關鍵字手動查詢。</p>
+                <p class="hint">此處以<strong>單箱</strong>或<strong>關鍵字</strong>查詢；試算表完整清單請點上方「試算表清單」。</p>
             </section>
         </div>
     </div>
@@ -572,6 +696,11 @@
                     <input type="checkbox" id="f-qr-show-note-label">
                     貼標預覽、列印與下載圖上顯示內容物
                 </label>
+                <div class="qr-size-row">
+                    <label for="f-qr-size-range">預覽 QR 圖像素（不增加可儲存字數，僅放大／縮小方便掃描）</label>
+                    <input type="range" id="f-qr-size-range" min="96" max="400" value="180" step="4">
+                    <span id="f-qr-size-val">180</span><span style="font-size:0.85rem;color:#64748b">px</span>
+                </div>
                 <div class="btn-row">
                     <button type="button" class="btn btn-primary" id="btn-qr-gen"><i class="fas fa-qrcode"></i> 產生 QR</button>
                     <button type="button" class="btn btn-secondary" id="btn-qr-dl" disabled><i class="fas fa-download"></i> 下載圖（5cm）</button>
@@ -592,13 +721,13 @@
                     <div class="loading-track" role="progressbar" aria-busy="true"><div class="loading-track-fill"></div></div>
                 </div>
                 <p id="qr-sync-msg" class="hint" hidden style="margin-top:8px;"></p>
-                <p class="hint">預覽約 <strong>5cm×5cm</strong>；箱子名稱於貼標下方以較大字級顯示。QR 為 <code>homeqr:</code> JSON（<code>boxId</code>、<code>note</code> 可為空）。成功後寫入試算表 <code>QA</code>。</p>
+                <p class="hint">列印／下載仍以約 <strong>5cm×5cm</strong> 排版；螢幕上可調 QR 像素僅影響清晰度。可儲存資料量由編碼決定，與像素大小無關。QR 為 <code>homeqr:</code> JSON（<code>boxId</code>、<code>note</code> 可為空）。成功後寫入試算表 <code>QA</code>。</p>
             </section>
 
             <section class="card qr-batch-block" aria-labelledby="title-qr-batch">
                 <h2 id="title-qr-batch"><i class="fas fa-file-archive"></i> 批次匯出 QR（備份／列印）</h2>
                 <hr class="divider">
-                <p class="hint" style="margin-top:0">使用與查詢分頁相同的試算表清單；勾選後可<strong>單張下載</strong> 5cm 貼標圖，或將<strong>所選多張打包 ZIP</strong>，日後貼紙遺失時可重印。</p>
+                <p class="hint" style="margin-top:0">使用與查詢分頁相同的試算表清單；可<strong>單張下載</strong> 5cm 貼標，或將<strong>所選全部拼成一張 PNG</strong>（含虛線裁切格線），列印後自行裁切即可。</p>
                 <div class="btn-row qr-batch-toolbar">
                     <button type="button" class="btn btn-secondary" id="btn-qr-batch-reload"><i class="fas fa-rotate"></i> 重新載入清單</button>
                     <button type="button" class="btn btn-secondary" id="btn-qr-batch-all"><i class="fas fa-check-double"></i> 全選</button>
@@ -612,9 +741,21 @@
                 <p class="err" id="qr-batch-err" hidden></p>
                 <p class="hint" id="qr-batch-progress" hidden></p>
                 <div class="btn-row">
-                    <button type="button" class="btn btn-primary" id="btn-qr-batch-zip"><i class="fas fa-file-zipper"></i> 下載所選 ZIP</button>
+                    <button type="button" class="btn btn-primary" id="btn-qr-batch-collage"><i class="fas fa-border-all"></i> 下載拼圖 PNG（含裁切線）</button>
                 </div>
             </section>
+        </div>
+    </div>
+
+    <div id="inventory-modal-overlay" class="inv-modal-overlay" hidden aria-hidden="true">
+        <div class="inv-modal" role="dialog" aria-modal="true" aria-labelledby="inv-modal-title">
+            <div class="inv-modal-header">
+                <h2 id="inv-modal-title">試算表清單</h2>
+                <button type="button" class="inv-modal-close" id="btn-inv-modal-close" aria-label="關閉">×</button>
+            </div>
+            <p class="inv-modal-hint">搜尋框可篩選箱子編號或內容物文字。</p>
+            <input type="search" id="inv-modal-search" placeholder="搜尋箱子或內容…" autocomplete="off">
+            <div id="inv-modal-body" class="inv-modal-body"></div>
         </div>
     </div>
 
@@ -629,6 +770,8 @@
 
     /** 與查詢分頁同步，供「批次匯出」勾選 */
     var inventoryRowsForQr = [];
+    /** 第一次 list=1 完成前，清單浮層顯示載入中 */
+    var inventoryListFetchDone = false;
 
     var html5Qr = null;
     var scanning = false;
@@ -642,6 +785,7 @@
         $("result-loading").hidden = false;
         $("result-empty").hidden = true;
         $("result-body").hidden = true;
+        if ($("result-mode-single")) $("result-mode-single").hidden = true;
     }
 
     function hideResultLoading() {
@@ -742,15 +886,8 @@
         }
         $("result-lbl-box").textContent = bid || "（無）";
         var note = obj && obj.note != null ? String(obj.note) : "";
-        if (note.trim() !== "") {
-            $("result-lbl-note-h").hidden = false;
-            $("result-lbl-note-wrap").hidden = false;
-            $("result-lbl-note").textContent = note;
-        } else {
-            $("result-lbl-note-h").hidden = true;
-            $("result-lbl-note-wrap").hidden = true;
-            $("result-lbl-note").textContent = "";
-        }
+        $("result-lbl-note").textContent = note.trim() !== "" ? note : "（無）";
+        $("result-lbl-note").style.color = note.trim() !== "" ? "#334155" : "#94a3b8";
     }
 
     function showBoxResult(boxId, items) {
@@ -760,23 +897,24 @@
         $("result-empty").textContent = "尚無查詢結果";
         $("result-empty").hidden = true;
         $("result-body").hidden = false;
-        $("result-line-box").hidden = false;
         $("result-line-keyword").hidden = true;
         $("result-line-item-intro").hidden = true;
-        $("result-box-id").textContent = boxId;
-        var ul = $("result-list");
-        ul.innerHTML = "";
-        (items || []).forEach(function (name) {
-            var li = document.createElement("li");
-            li.textContent = name === "" ? "（空白）" : String(name);
-            ul.appendChild(li);
-        });
-        if (!items || items.length === 0) {
-            var li0 = document.createElement("li");
-            li0.textContent = "（此箱子尚無物品）";
-            li0.style.color = "#94a3b8";
-            ul.appendChild(li0);
+        $("result-mode-single").hidden = false;
+        $("result-list").hidden = true;
+        $("result-list").innerHTML = "";
+        $("result-single-id").textContent = boxId;
+        var arr = items || [];
+        var bodyTxt;
+        if (arr.length === 0) {
+            bodyTxt = "（此箱子尚無物品）";
+            $("result-single-body").style.color = "#94a3b8";
+        } else {
+            bodyTxt = arr.map(function (name) {
+                return name === "" ? "（空白）" : String(name);
+            }).join("\n");
+            $("result-single-body").style.color = "#334155";
         }
+        $("result-single-body").textContent = bodyTxt;
     }
 
     /**
@@ -789,7 +927,8 @@
         $("result-empty").textContent = "尚無查詢結果";
         $("result-empty").hidden = true;
         $("result-body").hidden = false;
-        $("result-line-box").hidden = true;
+        $("result-mode-single").hidden = true;
+        $("result-list").hidden = false;
         $("result-line-keyword").hidden = false;
         $("result-line-item-intro").hidden = false;
         $("result-line-item-intro").textContent = "以下箱子符合關鍵字（各箱內容物）：";
@@ -799,8 +938,14 @@
         var list = rowsOrIds || [];
         if (list.length === 0) {
             var liEmpty = document.createElement("li");
-            liEmpty.textContent = "（找不到符合的箱子）";
-            liEmpty.style.color = "#94a3b8";
+            liEmpty.className = "result-row-line";
+            liEmpty.style.border = "none";
+            var e1 = document.createElement("div");
+            e1.className = "result-col-body";
+            e1.style.flex = "1";
+            e1.textContent = "（找不到符合的箱子）";
+            e1.style.color = "#94a3b8";
+            liEmpty.appendChild(e1);
             ul.appendChild(liEmpty);
             return;
         }
@@ -808,77 +953,178 @@
         if (detailed) {
             list.forEach(function (row) {
                 var li = document.createElement("li");
-                li.className = "result-item-block";
-                var head = document.createElement("p");
-                head.className = "result-box-heading";
-                head.textContent = String(row.boxId);
-                li.appendChild(head);
-                var sub = document.createElement("ul");
-                sub.className = "result-sublist";
+                li.className = "result-row-line";
+                var cid = document.createElement("div");
+                cid.className = "result-col-id";
+                cid.textContent = String(row.boxId);
+                var cbody = document.createElement("div");
+                cbody.className = "result-col-body";
                 var items = row.items || [];
                 if (items.length === 0) {
-                    var s0 = document.createElement("li");
-                    s0.textContent = row._err ? "（讀取失敗：" + row._err + "）" : "（此箱尚無物品列）";
-                    s0.style.color = "#94a3b8";
-                    sub.appendChild(s0);
+                    cbody.textContent = row._err ? "（讀取失敗：" + row._err + "）" : "（此箱尚無物品列）";
+                    cbody.style.color = "#94a3b8";
                 } else {
-                    items.forEach(function (it) {
-                        var sli = document.createElement("li");
-                        sli.textContent = it === "" ? "（空白）" : String(it);
-                        sub.appendChild(sli);
-                    });
+                    cbody.textContent = items.map(function (it) {
+                        return it === "" ? "（空白）" : String(it);
+                    }).join("\n");
                 }
-                li.appendChild(sub);
+                li.appendChild(cid);
+                li.appendChild(cbody);
                 ul.appendChild(li);
             });
         } else {
             list.forEach(function (bid) {
                 var li = document.createElement("li");
-                li.textContent = String(bid);
+                li.className = "result-row-line";
+                var cid = document.createElement("div");
+                cid.className = "result-col-id";
+                cid.textContent = String(bid);
+                var cbody = document.createElement("div");
+                cbody.className = "result-col-body";
+                cbody.textContent = "—";
+                cbody.style.color = "#94a3b8";
+                li.appendChild(cid);
+                li.appendChild(cbody);
                 ul.appendChild(li);
             });
         }
     }
 
-    /** 開啟頁面時：顯示試算表內所有箱子與內容物（需 API list=1） */
-    function showInventoryList(rows) {
-        hideResultLoading();
-        clearError();
-        hideLabelBlock();
-        $("result-empty").textContent = "尚無查詢結果";
-        $("result-empty").hidden = true;
-        $("result-body").hidden = false;
-        $("result-line-box").hidden = true;
-        $("result-line-keyword").hidden = true;
-        $("result-line-item-intro").hidden = false;
-        $("result-line-item-intro").textContent = "以下為目前試算表所有箱子與內容物：";
-        var ul = $("result-list");
-        ul.innerHTML = "";
-        (rows || []).forEach(function (row) {
-            var li = document.createElement("li");
-            li.className = "result-item-block";
-            var head = document.createElement("p");
-            head.className = "result-box-heading";
-            head.textContent = String(row.boxId);
-            li.appendChild(head);
-            var sub = document.createElement("ul");
-            sub.className = "result-sublist";
+    function renderInventoryModalBody() {
+        var body = $("inv-modal-body");
+        if (!body) return;
+        if (!inventoryListFetchDone) {
+            body.innerHTML = "<p class=\"hint\" style=\"text-align:center;margin:20px 0\"><i class=\"fas fa-circle-notch fa-spin\"></i> 清單載入中…</p>";
+            return;
+        }
+        var term = ($("inv-modal-search") && $("inv-modal-search").value || "").trim().toLowerCase();
+        body.innerHTML = "";
+        var rows = inventoryRowsForQr.slice();
+        if (term) {
+            rows = rows.filter(function (r) {
+                var j = itemsJoinNote(r.items).toLowerCase();
+                return String(r.boxId).toLowerCase().indexOf(term) >= 0 || j.indexOf(term) >= 0;
+            });
+        }
+        if (rows.length === 0) {
+            var p = document.createElement("p");
+            p.className = "hint";
+            p.style.textAlign = "center";
+            p.style.margin = "16px 0";
+            p.textContent = inventoryRowsForQr.length === 0 ? "試算表尚無箱子資料。" : "沒有符合搜尋的項目。";
+            body.appendChild(p);
+            return;
+        }
+        rows.forEach(function (row) {
+            var line = document.createElement("div");
+            line.className = "result-row-line";
+            var cid = document.createElement("div");
+            cid.className = "result-col-id";
+            cid.textContent = String(row.boxId);
+            var cbody = document.createElement("div");
+            cbody.className = "result-col-body";
             var items = row.items || [];
             if (items.length === 0) {
-                var s0 = document.createElement("li");
-                s0.textContent = "（此箱尚無內容物列）";
-                s0.style.color = "#94a3b8";
-                sub.appendChild(s0);
+                cbody.textContent = "（尚無內容物列）";
+                cbody.style.color = "#94a3b8";
             } else {
-                items.forEach(function (it) {
-                    var sli = document.createElement("li");
-                    sli.textContent = it === "" ? "（空白）" : String(it);
-                    sub.appendChild(sli);
-                });
+                cbody.textContent = items.map(function (it) {
+                    return it === "" ? "（空白）" : String(it);
+                }).join("\n");
             }
-            li.appendChild(sub);
-            ul.appendChild(li);
+            line.appendChild(cid);
+            line.appendChild(cbody);
+            body.appendChild(line);
         });
+    }
+
+    /** 套用 list=1 回傳資料並刷新貼標／清單浮層 */
+    function setInventoryData(data) {
+        inventoryRowsForQr = Array.isArray(data) ? data : [];
+        inventoryListFetchDone = true;
+        renderQrBatchList();
+        renderInventoryModalBody();
+    }
+
+    /** 從伺服器拉整份清單（與寫入路徑分離，供快取與本地搜尋） */
+    function refreshSheetCacheFromServer() {
+        return apiJsonp({ list: "1", _: String(Date.now()) }).then(function (data) {
+            if (!Array.isArray(data)) {
+                throw new Error("清單格式異常");
+            }
+            setInventoryData(data);
+            return data;
+        });
+    }
+
+    function findRowByBoxId(bid) {
+        bid = String(bid == null ? "" : bid).trim();
+        for (var i = 0; i < inventoryRowsForQr.length; i++) {
+            if (String(inventoryRowsForQr[i].boxId).trim() === bid) {
+                return inventoryRowsForQr[i];
+            }
+        }
+        return null;
+    }
+
+    /** 與後端 item 查詢一致：任一 B 欄儲存格字串含關鍵字即命中 */
+    function searchRowsByKeywordLocal(kw) {
+        var out = [];
+        inventoryRowsForQr.forEach(function (row) {
+            var items = row.items || [];
+            var hit = items.some(function (cell) {
+                return String(cell == null ? "" : cell).indexOf(kw) >= 0;
+            });
+            if (hit) {
+                out.push({ boxId: row.boxId, items: items.slice() });
+            }
+        });
+        out.sort(function (a, b) {
+            return String(a.boxId).localeCompare(String(b.boxId), undefined, { numeric: true });
+        });
+        return out;
+    }
+
+    function openInventoryModal() {
+        var ov = $("inventory-modal-overlay");
+        if (!ov) return;
+        ov.hidden = false;
+        ov.setAttribute("aria-hidden", "false");
+        inventoryListFetchDone = false;
+        renderInventoryModalBody();
+        refreshSheetCacheFromServer()
+            .then(function () {
+                clearError();
+            })
+            .catch(function (e) {
+                inventoryListFetchDone = true;
+                renderInventoryModalBody();
+                showError("無法更新清單：" + (e.message || String(e)));
+            });
+        var s = $("inv-modal-search");
+        if (s) setTimeout(function () { s.focus(); s.select(); }, 200);
+    }
+
+    function closeInventoryModal() {
+        var ov = $("inventory-modal-overlay");
+        if (!ov) return;
+        ov.hidden = true;
+        ov.setAttribute("aria-hidden", "true");
+    }
+
+    function getQrPixelSize() {
+        var el = $("f-qr-size-range");
+        if (!el) return 180;
+        var v = parseInt(el.value, 10);
+        if (isNaN(v)) return 180;
+        return Math.max(96, Math.min(400, v));
+    }
+
+    function applyQrPreviewCss() {
+        var px = getQrPixelSize();
+        document.documentElement.style.setProperty("--qr-preview-px", px + "px");
+        var lab = $("f-qr-size-val");
+        if (lab) lab.textContent = String(px);
     }
 
     function itemsJoinNote(items) {
@@ -932,7 +1178,7 @@
     function shrinkNoteUntilQrPayloadFits(boxId, note) {
         var bid = String(boxId == null ? "" : boxId).trim();
         var n = String(note == null ? "" : note).trim();
-        var maxUtf8 = 300;
+        var maxUtf8 = 260;
         var k = 0;
         while (k < 45) {
             var str = HOMEQR_PREFIX + JSON.stringify({ v: 2, boxId: bid, note: n });
@@ -962,6 +1208,11 @@
         return m;
     }
 
+    /** 單張貼標邊長（px，約 5cm @96dpi） */
+    function labelCellPx() {
+        return Math.round((5 * 96) / 2.54);
+    }
+
     function build5cmLabelCanvas(qrCanvasOrImg, boxId, note, showNoteLine) {
         var qrC = qrCanvasOrImg;
         if (qrC.tagName === "IMG") {
@@ -971,7 +1222,7 @@
             c.getContext("2d").drawImage(qrC, 0, 0);
             qrC = c;
         }
-        var W = Math.round((5 * 96) / 2.54);
+        var W = labelCellPx();
         var H = W;
         var out = document.createElement("canvas");
         out.width = W;
@@ -979,37 +1230,44 @@
         var ctx = out.getContext("2d");
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, W, H);
-        var qrSize = Math.round(W * 0.62);
+        var qrSize = Math.round(W * 0.58);
         var qx = (W - qrSize) / 2;
-        var qy = 6;
+        var qy = 8;
         ctx.drawImage(qrC, qx, qy, qrSize, qrSize);
+        var qrBottom = qy + qrSize;
+        var gapBelowQr = 14;
         ctx.fillStyle = "#0f172a";
         ctx.textAlign = "center";
-        var boxFontPx = Math.round(11 * 2.5);
+        ctx.textBaseline = "top";
+        var boxFontPx = Math.min(Math.round(11 * 2.5), Math.floor((H - qrBottom - gapBelowQr - 8) * 0.45));
+        if (boxFontPx < 14) {
+            boxFontPx = 14;
+        }
         ctx.font = "bold " + boxFontPx + "px " + FONT_STACK;
         var showNote = showNoteLine && String(note || "").trim().length > 0;
-        var y = qy + qrSize + (showNote ? 12 : 16);
-        ctx.fillText("箱子：" + boxId, W / 2, y);
+        var lineY = qrBottom + gapBelowQr;
+        ctx.fillText("箱子：" + boxId, W / 2, lineY);
+        lineY += Math.ceil(boxFontPx * 1.2);
         if (showNote) {
-            y += boxFontPx + 6;
             ctx.textAlign = "left";
+            ctx.textBaseline = "top";
             ctx.font = "10px " + FONT_STACK;
             var text = "內容：" + note;
-            var maxChars = 11;
-            var lineH = 11;
+            var maxChars = 12;
+            var lineH = 12;
             var pos = 0;
             var ln = 0;
-            while (pos < text.length && ln < 9 && y < H - 4) {
-                ctx.fillText(text.slice(pos, pos + maxChars), 6, y);
+            while (pos < text.length && ln < 10 && lineY < H - 6) {
+                ctx.fillText(text.slice(pos, pos + maxChars), 8, lineY);
                 pos += maxChars;
-                y += lineH;
+                lineY += lineH;
                 ln++;
             }
         }
         return out;
     }
 
-    function makeQrLabelDataUrl(boxId, note, showNoteLine) {
+    function makeQrLabelDataUrl(boxId, note, showNoteLine, fixedQrGenPx) {
         return new Promise(function (resolve, reject) {
             if (typeof QRCode === "undefined") {
                 reject(new Error("QR 程式庫未載入"));
@@ -1022,14 +1280,17 @@
                 reject(e);
                 return;
             }
+            var px = typeof fixedQrGenPx === "number" && fixedQrGenPx > 0
+                ? Math.max(96, Math.min(400, Math.round(fixedQrGenPx)))
+                : getQrPixelSize();
             var holder = document.createElement("div");
-            holder.style.cssText = "position:absolute;left:-9999px;top:0;width:140px;height:140px;";
+            holder.style.cssText = "position:absolute;left:-9999px;top:0;width:" + (px + 24) + "px;height:" + (px + 24) + "px;";
             document.body.appendChild(holder);
             try {
                 new QRCode(holder, {
                     text: payload,
-                    width: 120,
-                    height: 120,
+                    width: px,
+                    height: px,
                     colorDark: "#0f172a",
                     colorLight: "#ffffff",
                     correctLevel: QRCode.CorrectLevel.L
@@ -1132,21 +1393,17 @@
         hideQrBatchErr();
         $("qr-batch-progress").hidden = false;
         $("qr-batch-progress").textContent = "載入清單中…";
-        return apiJsonp({ list: "1", _: String(Date.now()) }).then(function (data) {
-            $("qr-batch-progress").hidden = true;
-            if (!Array.isArray(data)) {
-                showQrBatchErr("回傳格式異常（請確認後端已支援 list=1）。");
-                return;
-            }
-            inventoryRowsForQr = data;
-            renderQrBatchList();
-            if (data.length === 0) {
-                showQrBatchErr("試算表尚無箱子資料。");
-            }
-        }).catch(function (e) {
-            $("qr-batch-progress").hidden = true;
-            showQrBatchErr("載入失敗：" + (e.message || String(e)));
-        });
+        return refreshSheetCacheFromServer()
+            .then(function (data) {
+                $("qr-batch-progress").hidden = true;
+                if (data.length === 0) {
+                    showQrBatchErr("試算表尚無箱子資料。");
+                }
+            })
+            .catch(function (e) {
+                $("qr-batch-progress").hidden = true;
+                showQrBatchErr("載入失敗：" + (e.message || String(e)));
+            });
     }
 
     function downloadDataUrlPng(dataUrl, filename) {
@@ -1176,12 +1433,27 @@
         });
     }
 
-    function exportBatchZipSelected() {
-        hideQrBatchErr();
-        if (typeof JSZip === "undefined") {
-            showQrBatchErr("ZIP 程式庫未載入，請重新整理頁面。");
-            return;
+    /** 拼貼用：與螢幕預覽滑桿分開，固定產生 QR 像素較穩 */
+    var BATCH_EXPORT_QR_PX = 132;
+
+    function drawCollageCellGuides(sctx, margin, cellPx, gutter, cols, rows) {
+        sctx.save();
+        sctx.strokeStyle = "#64748b";
+        sctx.lineWidth = 1.25;
+        sctx.setLineDash([6, 5]);
+        for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+                var x = margin + c * (cellPx + gutter);
+                var y = margin + r * (cellPx + gutter);
+                sctx.strokeRect(x + 0.5, y + 0.5, cellPx, cellPx);
+            }
         }
+        sctx.setLineDash([]);
+        sctx.restore();
+    }
+
+    function exportBatchCollagePng() {
+        hideQrBatchErr();
         var cbs = document.querySelectorAll("#qr-batch-list .qr-batch-cb:checked");
         if (!cbs.length) {
             showQrBatchErr("請至少勾選一個箱子。");
@@ -1193,73 +1465,91 @@
             return !isNaN(n);
         });
         var showNote = $("f-qr-batch-show-note").checked;
-        var zip = new JSZip();
+        var COLS = 2;
+        var MARGIN = 24;
+        var GUTTER = 16;
+        var CELL = labelCellPx();
+        var n = indices.length;
+        var rows = Math.ceil(n / COLS);
+        var cols = COLS;
+        var sheetW = MARGIN * 2 + cols * CELL + (cols - 1) * GUTTER;
+        var sheetH = MARGIN * 2 + rows * CELL + (rows - 1) * GUTTER;
+
+        var sheet = document.createElement("canvas");
+        sheet.width = sheetW;
+        sheet.height = sheetH;
+        var sctx = sheet.getContext("2d");
+        sctx.fillStyle = "#ffffff";
+        sctx.fillRect(0, 0, sheetW, sheetH);
+
         var i = 0;
 
-        function runNext() {
-            if (i >= indices.length) {
-                $("qr-batch-progress").textContent = "打包 ZIP 中…";
-                return zip.generateAsync({ type: "blob" }).then(function (blob) {
-                    $("qr-batch-progress").hidden = true;
-                    var a = document.createElement("a");
-                    a.href = URL.createObjectURL(blob);
-                    a.download = "box-qr-labels-" + new Date().toISOString().slice(0, 10) + ".zip";
-                    a.click();
-                    URL.revokeObjectURL(a.href);
-                }).catch(function (err) {
-                    $("qr-batch-progress").hidden = true;
-                    showQrBatchErr("ZIP 失敗：" + (err.message || String(err)));
-                });
+        function fail(err, bid) {
+            $("qr-batch-progress").hidden = true;
+            showQrBatchErr((bid || "") + "：" + (err && err.message ? err.message : String(err)));
+        }
+
+        function step() {
+            if (i >= n) {
+                drawCollageCellGuides(sctx, MARGIN, CELL, GUTTER, cols, rows);
+                $("qr-batch-progress").hidden = true;
+                downloadDataUrlPng(
+                    sheet.toDataURL("image/png"),
+                    "box-qr-collage-" + new Date().toISOString().slice(0, 10) + ".png"
+                );
+                return;
             }
             var idx = indices[i];
             var row = inventoryRowsForQr[idx];
             if (!row) {
                 i += 1;
-                return runNext();
+                setTimeout(step, 0);
+                return;
             }
             var note = noteForQrExport(row.boxId, row.items);
             $("qr-batch-progress").hidden = false;
-            $("qr-batch-progress").textContent = "產生 QR 貼標 " + (i + 1) + "/" + indices.length + "…";
-            makeQrLabelDataUrl(row.boxId, note, showNote).then(function (url) {
-                var base64 = url.split(",")[1];
-                zip.file("box-label-" + safeFileSlug(row.boxId) + ".png", base64, { base64: true });
-                i += 1;
-                setTimeout(runNext, 0);
+            $("qr-batch-progress").textContent = "拼貼中 " + (i + 1) + "/" + n + "…";
+            makeQrLabelDataUrl(row.boxId, note, showNote, BATCH_EXPORT_QR_PX).then(function (url) {
+                var im = new Image();
+                im.onload = function () {
+                    var slot = i;
+                    var rr = Math.floor(slot / cols);
+                    var cc = slot % cols;
+                    var x = MARGIN + cc * (CELL + GUTTER);
+                    var y = MARGIN + rr * (CELL + GUTTER);
+                    sctx.drawImage(im, x, y);
+                    i += 1;
+                    setTimeout(step, 0);
+                };
+                im.onerror = function () {
+                    fail(new Error("無法載入貼標圖"), row.boxId);
+                };
+                im.src = url;
             }).catch(function (err) {
-                $("qr-batch-progress").hidden = true;
-                showQrBatchErr((row.boxId || "") + "：" + (err.message || String(err)));
+                fail(err, row.boxId);
             });
         }
-        runNext();
+        step();
     }
 
     function loadInitialInventoryList() {
-        showResultLoading("載入試算表清單中…");
+        inventoryListFetchDone = false;
         apiJsonp({ list: "1", _: String(Date.now()) }).then(function (data) {
-            hideResultLoading();
             if (!Array.isArray(data)) {
-                inventoryRowsForQr = [];
-                renderQrBatchList();
+                setInventoryData([]);
                 showError("載入清單失敗：回傳格式異常（請確認後端已支援 list=1，且已重新部署 GAS）。");
                 return;
             }
             if (data.length === 0) {
-                inventoryRowsForQr = [];
-                renderQrBatchList();
+                setInventoryData([]);
                 clearError();
                 hideLabelBlock();
-                $("result-body").hidden = true;
-                $("result-empty").hidden = false;
-                $("result-empty").textContent = "試算表尚無箱子資料。";
                 return;
             }
-            inventoryRowsForQr = data;
-            renderQrBatchList();
-            showInventoryList(data);
+            setInventoryData(data);
+            clearError();
         }).catch(function (e) {
-            hideResultLoading();
-            inventoryRowsForQr = [];
-            renderQrBatchList();
+            setInventoryData([]);
             showError("無法載入清單：" + (e.message || String(e)));
         });
     }
@@ -1303,6 +1593,15 @@
         }
         showResultLoading("查詢箱子中…");
         clearError();
+        if (inventoryListFetchDone) {
+            var bid = String(boxId).trim();
+            var found = findRowByBoxId(bid);
+            if (found) {
+                hideResultLoading();
+                showBoxResult(bid, found.items || []);
+                return Promise.resolve();
+            }
+        }
         return apiJsonp({ boxId: boxId }).then(function (data) {
             // 新版 GAS：直接回傳 itemName 陣列 JSON.stringify(result)
             if (Array.isArray(data)) {
@@ -1333,6 +1632,11 @@
         }
         showResultLoading("關鍵字查詢中…");
         clearError();
+        if (inventoryListFetchDone) {
+            hideResultLoading();
+            showItemResult(kw, searchRowsByKeywordLocal(kw));
+            return Promise.resolve();
+        }
         return apiJsonp({ item: kw }).then(function (data) {
             if (Array.isArray(data)) {
                 if (data.length === 0) {
@@ -1478,6 +1782,9 @@
 
     /** 試算表 QA 是否已有此箱子編號（A 欄至少一列相符） */
     function boxIdAlreadyExists(boxId) {
+        if (inventoryListFetchDone) {
+            return Promise.resolve(findRowByBoxId(boxId) != null);
+        }
         return apiJsonp({ boxId: boxId }).then(function (data) {
             return normalizeBoxItems(data).length > 0;
         });
@@ -1495,6 +1802,7 @@
             if (data && data.ok === true) {
                 msg.textContent = "已寫入試算表 QA：A=" + boxId + "，B=" + (note.length > 24 ? note.slice(0, 24) + "…" : note);
                 msg.style.color = "#15803d";
+                refreshSheetCacheFromServer().catch(function () {});
             } else {
                 msg.textContent = "寫入試算表失敗：" + ((data && data.error) || "未知錯誤");
                 msg.style.color = "#b91c1c";
@@ -1562,11 +1870,12 @@
             }
             var host = $("qrcode");
             host.innerHTML = "";
+            var px = getQrPixelSize();
             try {
                 new QRCode(host, {
                     text: payload,
-                    width: 120,
-                    height: 120,
+                    width: px,
+                    height: px,
                     colorDark: "#0f172a",
                     colorLight: "#ffffff",
                     correctLevel: QRCode.CorrectLevel.L
@@ -1638,7 +1947,7 @@
             cb.checked = false;
         });
     });
-    $("btn-qr-batch-zip").addEventListener("click", exportBatchZipSelected);
+    $("btn-qr-batch-collage").addEventListener("click", exportBatchCollagePng);
     $("qr-batch-list").addEventListener("click", function (ev) {
         var b = ev.target.closest(".qr-batch-dl-one");
         if (!b) return;
@@ -1648,6 +1957,19 @@
         }
     });
 
+    $("btn-open-inventory-modal").addEventListener("click", openInventoryModal);
+    $("btn-inv-modal-close").addEventListener("click", closeInventoryModal);
+    $("inventory-modal-overlay").addEventListener("click", function (ev) {
+        if (ev.target === ev.currentTarget) {
+            closeInventoryModal();
+        }
+    });
+    $("inv-modal-search").addEventListener("input", function () {
+        renderInventoryModalBody();
+    });
+    $("f-qr-size-range").addEventListener("input", applyQrPreviewCss);
+
+    applyQrPreviewCss();
     renderQrBatchList();
     loadInitialInventoryList();
 })();
