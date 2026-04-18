@@ -721,7 +721,7 @@
                     <div class="loading-track" role="progressbar" aria-busy="true"><div class="loading-track-fill"></div></div>
                 </div>
                 <p id="qr-sync-msg" class="hint" hidden style="margin-top:8px;"></p>
-                <p class="hint">列印／下載仍以約 <strong>5cm×5cm</strong> 排版；螢幕上可調 QR 像素僅影響清晰度。可儲存資料量由編碼決定，與像素大小無關。QR 為 <code>homeqr:</code> JSON（<code>boxId</code>、<code>note</code> 可為空）。成功後寫入試算表 <code>QA</code>。</p>
+                <p class="hint">列印／下載仍以約 <strong>5cm×5cm</strong> 排版；螢幕上可調 QR 像素僅影響清晰度。QR 內僅編碼<strong>箱子編號</strong>（<code>homeqr:</code> JSON）；掃描後會依編號自試算表載入內容物到查詢結果區。貼標上的內容物文字僅供人眼閱讀，不寫入 QR。舊版曾把內文編入 QR 者仍可掃描。成功後寫入試算表 <code>QA</code>。</p>
             </section>
 
             <section class="card qr-batch-block" aria-labelledby="title-qr-batch">
@@ -735,7 +735,7 @@
                 </div>
                 <label class="chk-row" for="f-qr-batch-show-note">
                     <input type="checkbox" id="f-qr-batch-show-note">
-                    匯出圖上顯示內容物（試算表多列 B 欄以「；」串成 QR 的 note）
+                    匯出圖上顯示內容物（多列 B 欄以「；」串成摘要，僅印在貼標上；QR 仍只含編號）
                 </label>
                 <div id="qr-batch-list" class="qr-batch-list" aria-live="polite"></div>
                 <p class="err" id="qr-batch-err" hidden></p>
@@ -1153,15 +1153,6 @@
         $("qr-batch-err").hidden = false;
     }
 
-    function buildHomeQrPayloadStr(boxId, note) {
-        var obj = { v: 2, boxId: String(boxId).trim(), note: String(note || "").trim() };
-        var str = HOMEQR_PREFIX + JSON.stringify(obj);
-        if (str.length > 1200) {
-            throw new Error("QR 內容過長（請縮短內容物）");
-        }
-        return str;
-    }
-
     /** UTF-8 長度（QR 容量看位元組，中文約 3 byte／字） */
     function utf8ByteLength(s) {
         try {
@@ -1172,38 +1163,26 @@
     }
 
     /**
-     * 將 note 縮到 QR 編碼可容納（避免 qrcode.js「code length overflow」）。
-     * 預設庫在 120×120、Byte 模式約數百 byte 即滿；保守以 UTF-8 總長控制。
+     * QR 僅編碼箱子編號；內容物由掃描後 fetchBox／試算表載入顯示（v3）。
+     * 舊版 v2 曾含 note，掃描端仍相容。
      */
-    function shrinkNoteUntilQrPayloadFits(boxId, note) {
+    function buildHomeQrPayloadStr(boxId) {
         var bid = String(boxId == null ? "" : boxId).trim();
-        var n = String(note == null ? "" : note).trim();
-        var maxUtf8 = 260;
-        var k = 0;
-        while (k < 45) {
-            var str = HOMEQR_PREFIX + JSON.stringify({ v: 2, boxId: bid, note: n });
-            if (utf8ByteLength(str) <= maxUtf8 && str.length <= 1100) {
-                return n;
-            }
-            if (n.length <= 0) {
-                return "";
-            }
-            n = n.slice(0, Math.max(0, Math.floor(n.length * 0.82)));
-            k++;
+        if (!bid) {
+            throw new Error("請填寫箱子編號");
         }
-        return n;
-    }
-
-    /** 匯出／批次：先合併試算表欄位再縮短，避免 overflow */
-    function noteForQrExport(boxId, items) {
-        var joined = itemsJoinNote(items);
-        return shrinkNoteUntilQrPayloadFits(boxId, joined);
+        var obj = { v: 3, boxId: bid };
+        var str = HOMEQR_PREFIX + JSON.stringify(obj);
+        if (utf8ByteLength(str) > 800) {
+            throw new Error("箱子編號過長，請縮短後再試。");
+        }
+        return str;
     }
 
     function formatQrLibraryError(err) {
         var m = err && err.message ? String(err.message) : String(err);
         if (/overflow|length|code length/i.test(m)) {
-            return "QR 圖可編碼量不足（內文過長，含中文時負荷更大）。請縮短內容物或編號，或於「批次匯出」讓系統自動略縮。技術訊息：" + m;
+            return "QR 產生失敗（編碼異常）。請重新整理頁面後再試。";
         }
         return m;
     }
@@ -1211,6 +1190,17 @@
     /** 單張貼標邊長（px，約 5cm @96dpi） */
     function labelCellPx() {
         return Math.round((5 * 96) / 2.54);
+    }
+
+    /** 與拼貼裁切格線相同樣式，方便列印後沿虛線裁切 */
+    function drawLabelCutGuide(ctx, W, H) {
+        ctx.save();
+        ctx.strokeStyle = "#64748b";
+        ctx.lineWidth = 1.25;
+        ctx.setLineDash([6, 5]);
+        ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+        ctx.setLineDash([]);
+        ctx.restore();
     }
 
     function build5cmLabelCanvas(qrCanvasOrImg, boxId, note, showNoteLine) {
@@ -1264,6 +1254,7 @@
                 ln++;
             }
         }
+        drawLabelCutGuide(ctx, W, H);
         return out;
     }
 
@@ -1275,7 +1266,7 @@
             }
             var payload;
             try {
-                payload = buildHomeQrPayloadStr(boxId, note);
+                payload = buildHomeQrPayloadStr(boxId);
             } catch (e) {
                 reject(e);
                 return;
@@ -1293,7 +1284,7 @@
                     height: px,
                     colorDark: "#0f172a",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.L
+                    correctLevel: QRCode.CorrectLevel.M
                 });
             } catch (err) {
                 document.body.removeChild(holder);
@@ -1420,7 +1411,7 @@
             showQrBatchErr("找不到該列資料。");
             return;
         }
-        var note = noteForQrExport(row.boxId, row.items);
+        var note = itemsJoinNote(row.items);
         var showNote = $("f-qr-batch-show-note").checked;
         $("qr-batch-progress").hidden = false;
         $("qr-batch-progress").textContent = "產生「" + row.boxId + "」貼標中…";
@@ -1435,22 +1426,6 @@
 
     /** 拼貼用：與螢幕預覽滑桿分開，固定產生 QR 像素較穩 */
     var BATCH_EXPORT_QR_PX = 132;
-
-    function drawCollageCellGuides(sctx, margin, cellPx, gutter, cols, rows) {
-        sctx.save();
-        sctx.strokeStyle = "#64748b";
-        sctx.lineWidth = 1.25;
-        sctx.setLineDash([6, 5]);
-        for (var r = 0; r < rows; r++) {
-            for (var c = 0; c < cols; c++) {
-                var x = margin + c * (cellPx + gutter);
-                var y = margin + r * (cellPx + gutter);
-                sctx.strokeRect(x + 0.5, y + 0.5, cellPx, cellPx);
-            }
-        }
-        sctx.setLineDash([]);
-        sctx.restore();
-    }
 
     function exportBatchCollagePng() {
         hideQrBatchErr();
@@ -1491,7 +1466,6 @@
 
         function step() {
             if (i >= n) {
-                drawCollageCellGuides(sctx, MARGIN, CELL, GUTTER, cols, rows);
                 $("qr-batch-progress").hidden = true;
                 downloadDataUrlPng(
                     sheet.toDataURL("image/png"),
@@ -1506,7 +1480,7 @@
                 setTimeout(step, 0);
                 return;
             }
-            var note = noteForQrExport(row.boxId, row.items);
+            var note = itemsJoinNote(row.items);
             $("qr-batch-progress").hidden = false;
             $("qr-batch-progress").textContent = "拼貼中 " + (i + 1) + "/" + n + "…";
             makeQrLabelDataUrl(row.boxId, note, showNote, BATCH_EXPORT_QR_PX).then(function (url) {
@@ -1676,10 +1650,11 @@
     }
 
     function handleDecodedScan(raw) {
-        var t = String(raw == null ? "" : raw).replace(/\s+/g, " ").trim();
+        var t = String(raw == null ? "" : raw).replace(/^\uFEFF/, "").replace(/\s+/g, " ").trim();
         if (t.indexOf(HOMEQR_PREFIX) === 0) {
             try {
-                var obj = JSON.parse(t.slice(HOMEQR_PREFIX.length));
+                var jsonPart = t.slice(HOMEQR_PREFIX.length).trim();
+                var obj = JSON.parse(jsonPart);
                 var bid = obj.boxId != null ? String(obj.boxId).trim() : "";
                 if (bid) {
                     return fetchBox(bid);
@@ -1687,7 +1662,7 @@
                 showLabelScanResult(obj);
                 return Promise.resolve();
             } catch (err) {
-                showError("QR 內容無法解析。");
+                showError("QR 內容無法解析（請確認為本頁產生之貼標，或重新掃描）。");
                 return Promise.resolve();
             }
         }
@@ -1830,19 +1805,11 @@
             $("gen-below").hidden = true;
             return;
         }
-        if (shrinkNoteUntilQrPayloadFits(boxId, note) !== note) {
-            $("qr-gen-err").textContent = "內容物與編號合計過長，無法完整編入 QR（中文會占用較多容量）。請刪減內容物或縮短編號後再試。";
-            $("qr-gen-err").hidden = false;
-            $("btn-qr-dl").disabled = true;
-            $("btn-qr-print").disabled = true;
-            $("gen-below").hidden = true;
-            return;
-        }
         var payload;
         try {
-            payload = buildHomeQrPayloadStr(boxId, note);
+            payload = buildHomeQrPayloadStr(boxId);
         } catch (e0) {
-            $("qr-gen-err").textContent = (e0 && e0.message) || "內容過長";
+            $("qr-gen-err").textContent = (e0 && e0.message) || "編號無效";
             $("qr-gen-err").hidden = false;
             $("btn-qr-dl").disabled = true;
             $("btn-qr-print").disabled = true;
@@ -1878,7 +1845,7 @@
                     height: px,
                     colorDark: "#0f172a",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.L
+                    correctLevel: QRCode.CorrectLevel.M
                 });
                 updateQrGenCaption(boxId, note);
                 $("btn-qr-dl").disabled = false;
