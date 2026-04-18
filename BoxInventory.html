@@ -537,7 +537,7 @@
                     </div>
                     <p class="err" id="result-error" hidden></p>
                 </div>
-                <p class="config-note">API 須支援 JSONP、<code>list=1</code> 與 <code>append=1</code>（見 <code>box-inventory-spa.appscript.gs</code>）。試算表 <code>QA</code>：A=boxId、B=內容物。</p>
+                <p class="config-note">API 須支援 JSONP、<code>list=1</code> 與 <code>append=1</code>（見 <code>box-inventory-spa.appscript.gs</code>）。試算表分頁名稱須為 <code>QA</code>。若明明有資料卻顯示空白：請將<strong>整份</strong> gs 貼入 Apps Script 後，在「部署 → 管理部署」<strong>新增版本並重新部署</strong>（僅儲存檔案不會更新線上網址）。獨立腳本請設定指令碼屬性 <code>SPREADSHEET_ID</code>。</p>
             </section>
 
             <section class="card" aria-labelledby="title-query-combined">
@@ -621,7 +621,7 @@
     <script>
 (function () {
     /** 請改為你的 GAS Web App 部署網址（結尾 /exec） */
-    var API_BASE_URL = "https://script.google.com/macros/s/AKfycbz4pK0TffLuOAokwN3l0dSINP2Bio1Vx6LEL81nOC7Ikfw3tO70DKIFutSUmqAqDQujrw/exec";
+    var API_BASE_URL = "https://script.google.com/macros/s/AKfycbzR14k1VbuOAbZlM0DGGQ3-ElcEhmLPCSfN5snzu4TH1k_pjw7-AaqzAiqfYsBtfC8omQ/exec";
 
     var HOMEQR_PREFIX = "homeqr:";
 
@@ -916,6 +916,52 @@
         return str;
     }
 
+    /** UTF-8 長度（QR 容量看位元組，中文約 3 byte／字） */
+    function utf8ByteLength(s) {
+        try {
+            return new TextEncoder().encode(s).length;
+        } catch (e) {
+            return String(s || "").length * 2;
+        }
+    }
+
+    /**
+     * 將 note 縮到 QR 編碼可容納（避免 qrcode.js「code length overflow」）。
+     * 預設庫在 120×120、Byte 模式約數百 byte 即滿；保守以 UTF-8 總長控制。
+     */
+    function shrinkNoteUntilQrPayloadFits(boxId, note) {
+        var bid = String(boxId == null ? "" : boxId).trim();
+        var n = String(note == null ? "" : note).trim();
+        var maxUtf8 = 300;
+        var k = 0;
+        while (k < 45) {
+            var str = HOMEQR_PREFIX + JSON.stringify({ v: 2, boxId: bid, note: n });
+            if (utf8ByteLength(str) <= maxUtf8 && str.length <= 1100) {
+                return n;
+            }
+            if (n.length <= 0) {
+                return "";
+            }
+            n = n.slice(0, Math.max(0, Math.floor(n.length * 0.82)));
+            k++;
+        }
+        return n;
+    }
+
+    /** 匯出／批次：先合併試算表欄位再縮短，避免 overflow */
+    function noteForQrExport(boxId, items) {
+        var joined = itemsJoinNote(items);
+        return shrinkNoteUntilQrPayloadFits(boxId, joined);
+    }
+
+    function formatQrLibraryError(err) {
+        var m = err && err.message ? String(err.message) : String(err);
+        if (/overflow|length|code length/i.test(m)) {
+            return "QR 圖可編碼量不足（內文過長，含中文時負荷更大）。請縮短內容物或編號，或於「批次匯出」讓系統自動略縮。技術訊息：" + m;
+        }
+        return m;
+    }
+
     function build5cmLabelCanvas(qrCanvasOrImg, boxId, note, showNoteLine) {
         var qrC = qrCanvasOrImg;
         if (qrC.tagName === "IMG") {
@@ -986,11 +1032,11 @@
                     height: 120,
                     colorDark: "#0f172a",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.M
+                    correctLevel: QRCode.CorrectLevel.L
                 });
             } catch (err) {
                 document.body.removeChild(holder);
-                reject(err);
+                reject(new Error(formatQrLibraryError(err)));
                 return;
             }
             function tryFinish() {
@@ -1086,7 +1132,7 @@
         hideQrBatchErr();
         $("qr-batch-progress").hidden = false;
         $("qr-batch-progress").textContent = "載入清單中…";
-        return apiJsonp({ list: "1" }).then(function (data) {
+        return apiJsonp({ list: "1", _: String(Date.now()) }).then(function (data) {
             $("qr-batch-progress").hidden = true;
             if (!Array.isArray(data)) {
                 showQrBatchErr("回傳格式異常（請確認後端已支援 list=1）。");
@@ -1117,7 +1163,7 @@
             showQrBatchErr("找不到該列資料。");
             return;
         }
-        var note = itemsJoinNote(row.items);
+        var note = noteForQrExport(row.boxId, row.items);
         var showNote = $("f-qr-batch-show-note").checked;
         $("qr-batch-progress").hidden = false;
         $("qr-batch-progress").textContent = "產生「" + row.boxId + "」貼標中…";
@@ -1171,7 +1217,7 @@
                 i += 1;
                 return runNext();
             }
-            var note = itemsJoinNote(row.items);
+            var note = noteForQrExport(row.boxId, row.items);
             $("qr-batch-progress").hidden = false;
             $("qr-batch-progress").textContent = "產生 QR 貼標 " + (i + 1) + "/" + indices.length + "…";
             makeQrLabelDataUrl(row.boxId, note, showNote).then(function (url) {
@@ -1189,12 +1235,12 @@
 
     function loadInitialInventoryList() {
         showResultLoading("載入試算表清單中…");
-        apiJsonp({ list: "1" }).then(function (data) {
+        apiJsonp({ list: "1", _: String(Date.now()) }).then(function (data) {
             hideResultLoading();
             if (!Array.isArray(data)) {
                 inventoryRowsForQr = [];
                 renderQrBatchList();
-                showError("載入清單失敗：回傳格式異常（請確認後端已支援 list=1）。");
+                showError("載入清單失敗：回傳格式異常（請確認後端已支援 list=1，且已重新部署 GAS）。");
                 return;
             }
             if (data.length === 0) {
@@ -1403,14 +1449,6 @@
         if (ev.key === "Enter") fetchItem($("input-item-kw").value);
     });
 
-    function buildQrPayload() {
-        var bid = $("f-qr-box-id").value.trim();
-        if (!bid) return null;
-        var note = $("f-qr-note").value.trim();
-        var obj = { v: 2, boxId: bid, note: note };
-        return HOMEQR_PREFIX + JSON.stringify(obj);
-    }
-
     function updateQrGenCaption(boxId, note) {
         var showNote = $("f-qr-show-note-label").checked && String(note || "").trim() !== "";
         $("gen-display-boxid").textContent = "箱子：" + boxId;
@@ -1476,8 +1514,7 @@
         hideQrWriteLoading();
         var boxId = $("f-qr-box-id").value.trim();
         var note = $("f-qr-note").value.trim();
-        var payload = buildQrPayload();
-        if (!payload) {
+        if (!boxId) {
             $("qr-gen-err").textContent = "請填寫箱子編號。";
             $("qr-gen-err").hidden = false;
             $("btn-qr-dl").disabled = true;
@@ -1485,8 +1522,19 @@
             $("gen-below").hidden = true;
             return;
         }
-        if (payload.length > 1200) {
-            $("qr-gen-err").textContent = "內容過長，請縮短內容物。";
+        if (shrinkNoteUntilQrPayloadFits(boxId, note) !== note) {
+            $("qr-gen-err").textContent = "內容物與編號合計過長，無法完整編入 QR（中文會占用較多容量）。請刪減內容物或縮短編號後再試。";
+            $("qr-gen-err").hidden = false;
+            $("btn-qr-dl").disabled = true;
+            $("btn-qr-print").disabled = true;
+            $("gen-below").hidden = true;
+            return;
+        }
+        var payload;
+        try {
+            payload = buildHomeQrPayloadStr(boxId, note);
+        } catch (e0) {
+            $("qr-gen-err").textContent = (e0 && e0.message) || "內容過長";
             $("qr-gen-err").hidden = false;
             $("btn-qr-dl").disabled = true;
             $("btn-qr-print").disabled = true;
@@ -1521,14 +1569,14 @@
                     height: 120,
                     colorDark: "#0f172a",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.M
+                    correctLevel: QRCode.CorrectLevel.L
                 });
                 updateQrGenCaption(boxId, note);
                 $("btn-qr-dl").disabled = false;
                 $("btn-qr-print").disabled = false;
                 syncQrRowToSheet(boxId, note);
             } catch (err) {
-                $("qr-gen-err").textContent = "無法產生 QR（內容可能過長）：" + (err && err.message ? err.message : String(err));
+                $("qr-gen-err").textContent = formatQrLibraryError(err);
                 $("qr-gen-err").hidden = false;
                 $("btn-qr-dl").disabled = true;
                 $("btn-qr-print").disabled = true;
