@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>照片日期整理工具</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --ok: #16a34a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft JhengHei", Arial, sans-serif;
+      background: var(--bg);
+      color: #0f172a;
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      margin-bottom: 14px;
+    }
+
+    .header {
+      padding: 16px 18px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.45rem;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+    }
+
+    button, .file-btn {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.95rem;
+    }
+
+    button:hover, .file-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .ghost {
+      background: #475569;
+    }
+
+    .ghost:hover {
+      background: #334155;
+    }
+
+    .file-btn input {
+      display: none;
+    }
+
+    .status {
+      padding: 12px 18px 16px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .status.ok {
+      color: var(--ok);
+      font-weight: 600;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: calc(100vh - 280px);
+      border-top: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px 10px;
+      vertical-align: middle;
+      text-align: left;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      z-index: 2;
+      font-size: 0.9rem;
+    }
+
+    .thumb {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+    }
+
+    .name-edit {
+      width: 100%;
+      min-width: 240px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 7px 8px;
+      font-size: 0.9rem;
+    }
+
+    .date-cell {
+      white-space: nowrap;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .path {
+      max-width: 360px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #475569;
+      font-size: 0.86rem;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="header">
+        <h1>照片日期整理工具</h1>
+        <p>支援批次匯入、預覽、顯示拍攝日期、可編輯檔名，並可一鍵依日期分類輸出。</p>
+      </div>
+
+      <div class="actions">
+        <label class="file-btn">
+          匯入照片（多選）
+          <input id="fileInput" type="file" accept="image/*,.heic,.heif,.dng,.avif" multiple>
+        </label>
+        <button id="organizeBtn">一鍵日期整理</button>
+        <button id="zipBtn" class="ghost">下載日期分類 ZIP</button>
+        <button id="clearBtn" class="ghost">清空清單</button>
+      </div>
+
+      <div id="status" class="status">尚未匯入照片。</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 90px;">預覽</th>
+              <th style="width: 280px;">新檔名（可編輯）</th>
+              <th style="width: 140px;">照片日期</th>
+              <th>原始路徑</th>
+            </tr>
+          </thead>
+          <tbody id="photoBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPPORTED_EXTENSIONS = new Set([
+      ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp",
+      ".heic", ".heif", ".avif", ".dng", ".jpe"
+    ]);
+
+    const items = [];
+    const photoBody = document.getElementById("photoBody");
+    const statusEl = document.getElementById("status");
+    const fileInput = document.getElementById("fileInput");
+    const organizeBtn = document.getElementById("organizeBtn");
+    const zipBtn = document.getElementById("zipBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    fileInput.addEventListener("change", async (event) => {
+      await importFiles(event.target.files);
+      fileInput.value = "";
+    });
+
+    clearBtn.addEventListener("click", () => {
+      for (const item of items) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+      items.length = 0;
+      renderRows();
+      setStatus("已清空清單。");
+    });
+
+    organizeBtn.addEventListener("click", async () => {
+      if (!items.length) {
+        setStatus("請先匯入照片。");
+        return;
+      }
+
+      if (!("showDirectoryPicker" in window)) {
+        setStatus("此瀏覽器不支援直接輸出資料夾，改為下載 ZIP。");
+        await exportAsZip();
+        return;
+      }
+
+      await exportToFolderByDate();
+    });
+
+    zipBtn.addEventListener("click", async () => {
+      if (!items.length) {
+        setStatus("請先匯入照片。");
+        return;
+      }
+      await exportAsZip();
+    });
+
+    function setStatus(text, ok = false) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle("ok", ok);
+    }
+
+    function itemDedupeKey(it) {
+      return `p:${it.file.name}|${it.file.lastModified}|${it.file.size}`;
+    }
+
+    async function importFiles(fileList) {
+      const files = Array.from(fileList || []);
+      if (!files.length) return;
+
+      const existingKeys = new Set(items.map((it) => itemDedupeKey(it)));
+      let addedCount = 0;
+
+      setStatus(`正在讀取 ${files.length} 個檔案...`);
+
+      for (const file of files) {
+        const ext = getExtension(file.name);
+        if (!SUPPORTED_EXTENSIONS.has(ext)) continue;
+
+        const relPath = (file.webkitRelativePath || file.name).replace(/\\/g, "/");
+        const key = `p:${file.name}|${file.lastModified}|${file.size}`;
+        if (existingKeys.has(key)) continue;
+
+        const shotDate = await extractDateFromExif(file);
+        const previewUrl = URL.createObjectURL(file);
+        const baseName = removeExtension(file.name);
+
+        items.push({
+          id: crypto.randomUUID(),
+          file,
+          shotDate,
+          editedName: baseName,
+          previewUrl,
+          sourcePath: relPath
+        });
+        existingKeys.add(key);
+        addedCount += 1;
+      }
+
+      renderRows();
+      setStatus(`已匯入 ${addedCount} 張，清單共 ${items.length} 張。`, addedCount > 0);
+    }
+
+    function renderRows() {
+      photoBody.innerHTML = "";
+      for (const item of items) {
+        const tr = document.createElement("tr");
+        tr.dataset.id = item.id;
+
+        const tdThumb = document.createElement("td");
+        const img = document.createElement("img");
+        img.src = item.previewUrl;
+        img.className = "thumb";
+        img.alt = item.file.name;
+        tdThumb.appendChild(img);
+
+        const tdName = document.createElement("td");
+        const input = document.createElement("input");
+        input.className = "name-edit";
+        input.type = "text";
+        input.value = item.editedName;
+        input.addEventListener("input", () => {
+          item.editedName = input.value;
+        });
+        tdName.appendChild(input);
+
+        const tdDate = document.createElement("td");
+        tdDate.className = "date-cell";
+        tdDate.textContent = item.shotDate;
+
+        const tdPath = document.createElement("td");
+        tdPath.className = "path";
+        tdPath.title = item.sourcePath;
+        tdPath.textContent = item.sourcePath;
+
+        tr.appendChild(tdThumb);
+        tr.appendChild(tdName);
+        tr.appendChild(tdDate);
+        tr.appendChild(tdPath);
+        photoBody.appendChild(tr);
+      }
+    }
+
+    async function extractDateFromExif(file) {
+      try {
+        const meta = await exifr.parse(file, {
+          pick: ["DateTimeOriginal", "CreateDate", "ModifyDate", "DateTimeDigitized"],
+          tiff: true,
+          exif: true,
+          ifd0: true,
+          ifd1: true,
+          iptc: true,
+          jfif: true,
+          icc: true,
+          heic: true,
+          mergeOutput: true
+        });
+        const dt = meta?.DateTimeOriginal
+          || meta?.DateTimeDigitized
+          || meta?.CreateDate
+          || meta?.ModifyDate;
+        if (dt instanceof Date && !Number.isNaN(dt.getTime())) {
+          return formatDate(dt);
+        }
+      } catch (_) {
+        // ignore and fallback to file modified time
+      }
+      return formatDate(new Date(file.lastModified));
+    }
+
+    function formatDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function getExtension(fileName) {
+      const idx = fileName.lastIndexOf(".");
+      return idx >= 0 ? fileName.slice(idx).toLowerCase() : "";
+    }
+
+    function removeExtension(fileName) {
+      const idx = fileName.lastIndexOf(".");
+      return idx >= 0 ? fileName.slice(0, idx) : fileName;
+    }
+
+    function sanitizeName(name) {
+      return name.replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_").trim();
+    }
+
+    function buildFinalName(item) {
+      const originalExt = getExtension(item.file.name);
+      const fallbackBase = removeExtension(item.file.name);
+      const edited = sanitizeName(item.editedName || "");
+      const base = edited || fallbackBase || "untitled";
+
+      if (getExtension(base)) {
+        return base;
+      }
+      return `${base}${originalExt || ".jpg"}`;
+    }
+
+    async function exportToFolderByDate() {
+      try {
+        setStatus("請選擇輸出根資料夾（將建立日期子資料夾）…");
+        const rootHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+        let written = 0;
+
+        for (let i = 0; i < items.length; i += 1) {
+          const item = items[i];
+          setStatus(`處理中 ${i + 1}/${items.length}：${item.file.name}`);
+
+          const folderName = item.shotDate || "UnknownDate";
+          const dateHandle = await rootHandle.getDirectoryHandle(folderName, { create: true });
+          const filename = await resolveUniqueFileName(dateHandle, buildFinalName(item));
+          const dstHandle = await dateHandle.getFileHandle(filename, { create: true });
+          const writable = await dstHandle.createWritable();
+          await writable.write(item.file);
+          await writable.close();
+          written += 1;
+        }
+
+        setStatus(`完成：已依日期輸出 ${written} 張。`, true);
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          setStatus("已取消輸出。");
+          return;
+        }
+        console.error(err);
+        setStatus(`輸出失敗：${err.message || "未知錯誤"}`);
+      }
+    }
+
+    async function resolveUniqueFileName(directoryHandle, proposedName) {
+      const ext = getExtension(proposedName);
+      const stem = ext ? proposedName.slice(0, -ext.length) : proposedName;
+      let name = proposedName;
+      let counter = 1;
+
+      while (await fileExists(directoryHandle, name)) {
+        name = `${stem}_${counter}${ext}`;
+        counter += 1;
+      }
+      return name;
+    }
+
+    async function fileExists(directoryHandle, name) {
+      try {
+        await directoryHandle.getFileHandle(name, { create: false });
+        return true;
+      } catch (err) {
+        if (err && err.name === "NotFoundError") return false;
+        throw err;
+      }
+    }
+
+    async function exportAsZip() {
+      try {
+        const zip = new JSZip();
+        const usedNames = new Map();
+
+        for (let i = 0; i < items.length; i += 1) {
+          const item = items[i];
+          setStatus(`ZIP 打包中 ${i + 1}/${items.length}：${item.file.name}`);
+          const folder = item.shotDate || "UnknownDate";
+          const fileData = await item.file.arrayBuffer();
+          const unique = resolveUniqueInMap(usedNames, folder, buildFinalName(item));
+          zip.file(`${folder}/${unique}`, fileData);
+        }
+
+        setStatus("正在產生 ZIP 檔案...");
+        const blob = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `photos-by-date-${Date.now()}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setStatus("ZIP 已下載。", true);
+      } catch (err) {
+        console.error(err);
+        setStatus(`ZIP 匯出失敗：${err.message || "未知錯誤"}`);
+      }
+    }
+
+    function resolveUniqueInMap(map, folder, proposedName) {
+      if (!map.has(folder)) map.set(folder, new Set());
+      const used = map.get(folder);
+      const ext = getExtension(proposedName);
+      const stem = ext ? proposedName.slice(0, -ext.length) : proposedName;
+      let name = proposedName;
+      let counter = 1;
+      while (used.has(name)) {
+        name = `${stem}_${counter}${ext}`;
+        counter += 1;
+      }
+      used.add(name);
+      return name;
+    }
+  </script>
+</body>
+</html>
