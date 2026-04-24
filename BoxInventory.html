@@ -669,6 +669,10 @@
                 <hr class="divider">
                 <label for="input-box-id">箱子編號（boxId）</label>
                 <input type="text" id="input-box-id" placeholder="例如：BOX_002" autocomplete="off" autocapitalize="characters">
+                <label class="chk-row" for="input-box-id-contains">
+                    <input type="checkbox" id="input-box-id-contains">
+                    包含此字眼（勾選後會列出所有箱號包含該字眼的箱子）
+                </label>
                 <div class="btn-row">
                     <button type="button" class="btn btn-primary" id="btn-box-query"><i class="fas fa-search"></i> 查詢此箱</button>
                 </div>
@@ -886,8 +890,38 @@
         }
         $("result-lbl-box").textContent = bid || "（無）";
         var note = obj && obj.note != null ? String(obj.note) : "";
-        $("result-lbl-note").textContent = note.trim() !== "" ? note : "（無）";
+        setTextWithLinks($("result-lbl-note"), note.trim() !== "" ? note : "（無）");
         $("result-lbl-note").style.color = note.trim() !== "" ? "#334155" : "#94a3b8";
+    }
+
+    function setTextWithLinks(el, text) {
+        if (!el) return;
+        var raw = String(text == null ? "" : text);
+        var lines = raw.split("\n");
+        var urlRe = /(https?:\/\/[^\s]+)/g;
+        el.textContent = "";
+        lines.forEach(function (line, lineIdx) {
+            var last = 0;
+            line.replace(urlRe, function (url, offset) {
+                if (offset > last) {
+                    el.appendChild(document.createTextNode(line.slice(last, offset)));
+                }
+                var a = document.createElement("a");
+                a.href = url;
+                a.target = "_blank";
+                a.rel = "noopener noreferrer";
+                a.textContent = url;
+                el.appendChild(a);
+                last = offset + url.length;
+                return url;
+            });
+            if (last < line.length) {
+                el.appendChild(document.createTextNode(line.slice(last)));
+            }
+            if (lineIdx < lines.length - 1) {
+                el.appendChild(document.createElement("br"));
+            }
+        });
     }
 
     function showBoxResult(boxId, items) {
@@ -914,13 +948,13 @@
             }).join("\n");
             $("result-single-body").style.color = "#334155";
         }
-        $("result-single-body").textContent = bodyTxt;
+        setTextWithLinks($("result-single-body"), bodyTxt);
     }
 
     /**
      * rows：{ boxId, items: string[] }[]；或僅 boxId 字串陣列（僅顯示編號）
      */
-    function showItemResult(keyword, rowsOrIds) {
+    function showItemResult(keyword, rowsOrIds, introText) {
         hideResultLoading();
         clearError();
         hideLabelBlock();
@@ -931,7 +965,7 @@
         $("result-list").hidden = false;
         $("result-line-keyword").hidden = false;
         $("result-line-item-intro").hidden = false;
-        $("result-line-item-intro").textContent = "以下箱子符合關鍵字（各箱內容物）：";
+        $("result-line-item-intro").textContent = introText || "以下箱子符合關鍵字（各箱內容物）：";
         $("result-keyword").textContent = keyword;
         var ul = $("result-list");
         ul.innerHTML = "";
@@ -964,9 +998,9 @@
                     cbody.textContent = row._err ? "（讀取失敗：" + row._err + "）" : "（此箱尚無物品列）";
                     cbody.style.color = "#94a3b8";
                 } else {
-                    cbody.textContent = items.map(function (it) {
+                    setTextWithLinks(cbody, items.map(function (it) {
                         return it === "" ? "（空白）" : String(it);
-                    }).join("\n");
+                    }).join("\n"));
                 }
                 li.appendChild(cid);
                 li.appendChild(cbody);
@@ -1028,9 +1062,9 @@
                 cbody.textContent = "（尚無內容物列）";
                 cbody.style.color = "#94a3b8";
             } else {
-                cbody.textContent = items.map(function (it) {
+                setTextWithLinks(cbody, items.map(function (it) {
                     return it === "" ? "（空白）" : String(it);
-                }).join("\n");
+                }).join("\n"));
             }
             line.appendChild(cid);
             line.appendChild(cbody);
@@ -1077,6 +1111,22 @@
             });
             if (hit) {
                 out.push({ boxId: row.boxId, items: items.slice() });
+            }
+        });
+        out.sort(function (a, b) {
+            return String(a.boxId).localeCompare(String(b.boxId), undefined, { numeric: true });
+        });
+        return out;
+    }
+
+    function searchRowsByBoxIdLocal(term) {
+        var q = String(term == null ? "" : term).trim();
+        if (!q) return [];
+        var out = [];
+        inventoryRowsForQr.forEach(function (row) {
+            var bid = String(row.boxId == null ? "" : row.boxId).trim();
+            if (bid.indexOf(q) >= 0) {
+                out.push({ boxId: bid, items: (row.items || []).slice() });
             }
         });
         out.sort(function (a, b) {
@@ -1560,19 +1610,35 @@
         return step(0);
     }
 
-    function fetchBox(boxId) {
+    function fetchBox(boxId, containsMode) {
         if (!boxId) {
             showError("請輸入 boxId。");
             return;
         }
+        var useContains = !!containsMode;
         showResultLoading("查詢箱子中…");
         clearError();
+        var bid0 = String(boxId).trim();
+        if (useContains) {
+            function showContainsFromLocal() {
+                hideResultLoading();
+                showItemResult(bid0, searchRowsByBoxIdLocal(bid0), "以下箱子編號包含此字眼（各箱內容物）：");
+            }
+            if (inventoryListFetchDone) {
+                showContainsFromLocal();
+                return Promise.resolve();
+            }
+            return refreshSheetCacheFromServer().then(function () {
+                showContainsFromLocal();
+            }).catch(function (e0) {
+                showError("無法載入清單：" + (e0.message || String(e0)));
+            });
+        }
         if (inventoryListFetchDone) {
-            var bid = String(boxId).trim();
-            var found = findRowByBoxId(bid);
+            var found = findRowByBoxId(bid0);
             if (found) {
                 hideResultLoading();
-                showBoxResult(bid, found.items || []);
+                showBoxResult(bid0, found.items || []);
                 return Promise.resolve();
             }
         }
@@ -1713,11 +1779,11 @@
     });
 
     $("btn-box-query").addEventListener("click", function () {
-        fetchBox(normalizeBoxId($("input-box-id").value));
+        fetchBox(normalizeBoxId($("input-box-id").value), $("input-box-id-contains").checked);
     });
 
     $("input-box-id").addEventListener("keydown", function (ev) {
-        if (ev.key === "Enter") fetchBox(normalizeBoxId($("input-box-id").value));
+        if (ev.key === "Enter") fetchBox(normalizeBoxId($("input-box-id").value), $("input-box-id-contains").checked);
     });
 
     $("btn-item-query").addEventListener("click", function () {
