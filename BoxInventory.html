@@ -618,7 +618,7 @@
 </head>
 <body>
     <header class="top">
-        <h1><i class="fas fa-boxes-stacked"></i> 箱子物品查詢</h1>
+        <h1><i class="fas fa-boxes-stacked"></i> 編碼物品查詢</h1>
         <p>掃描、查詢與反向搜尋；貼標 QR 請切換下方分頁。</p>
     </header>
 
@@ -637,7 +637,7 @@
                     <button type="button" class="btn btn-primary" id="btn-scan-start"><i class="fas fa-camera"></i> 開始掃描</button>
                     <button type="button" class="btn btn-secondary" id="btn-scan-stop" disabled><i class="fas fa-stop"></i> 停止</button>
                 </div>
-                <p class="hint">可掃<strong>純箱子編號</strong>，或貼標 <code>homeqr:</code> JSON（含 <code>boxId</code> 時會查試算表）。結果顯示於下方「顯示區」（掃描／查詢用）。試算表<strong>全部清單</strong>請用「試算表清單」按鈕。</p>
+                <p class="hint">可掃<strong>編碼號</strong>，或貼標 <code>homeqr:</code> JSON（含 <code>boxId</code> 時會查試算表）。結果顯示於下方「顯示區」（掃描／查詢用）。試算表<strong>全部清單</strong>請用「試算表清單」按鈕。</p>
                 <div class="btn-row" style="margin-top:10px">
                     <button type="button" class="btn btn-secondary" id="btn-open-inventory-modal"><i class="fas fa-table-list"></i> 試算表清單</button>
                 </div>
@@ -655,7 +655,7 @@
                     <div id="result-empty">尚無查詢結果</div>
                     <div id="result-body" hidden>
                         <p id="result-line-keyword" hidden><strong>關鍵字：</strong><span id="result-keyword"></span></p>
-                        <p id="result-line-item-intro" hidden>以下箱子符合關鍵字（各箱內容物）：</p>
+                        <p id="result-line-item-intro" hidden>以下編碼符合關鍵字（各編碼內容物）：</p>
                         <div id="result-mode-single" class="result-mode-single" hidden>
                             <div class="result-row-line">
                                 <div class="result-col-id" id="result-single-id"></div>
@@ -678,18 +678,18 @@
             <section class="card" aria-labelledby="title-query-combined">
                 <h2 id="title-query-combined">查詢區</h2>
                 <hr class="divider">
-                <label for="input-box-id">箱子編號（boxId）</label>
+                <label for="input-box-id">編碼（boxId）</label>
                 <input type="text" id="input-box-id" placeholder="例如：BOX_002" autocomplete="off" autocapitalize="characters">
                 <label class="chk-row" for="input-box-id-contains">
                     <input type="checkbox" id="input-box-id-contains">
-                    包含此字眼（勾選後會列出所有箱號包含該字眼的箱子）
+                    包含此字眼（勾選後會列出所有包含該字眼的編碼）
                 </label>
                 <div class="btn-row">
                     <button type="button" class="btn btn-primary" id="btn-box-query"><i class="fas fa-search"></i> 查詢此箱</button>
                 </div>
                 <hr class="divider" style="margin:14px 0 12px;border-top-style:dashed">
                 <label for="input-item-kw">物品關鍵字（反向查找）</label>
-                <input type="text" id="input-item-kw" placeholder="例如：鍋子" autocomplete="off">
+                <input type="text" id="input-item-kw" placeholder="例如：物品關鍵字" autocomplete="off">
                 <div class="btn-row">
                     <button type="button" class="btn btn-primary" id="btn-item-query"><i class="fas fa-magnifying-glass"></i> 反向查找</button>
                 </div>
