@@ -6,6 +6,17 @@
     <meta name="theme-color" content="#1a535c">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>箱子物品查詢</title>
+    <script>
+        /**
+         * === 主要設定（檔案最前面，搬移環境時改這裡） ===
+         * API_BASE_URL: Google Apps Script Web App URL（結尾 /exec）
+         * SHEET_NAME:   要讀寫的工作表名稱（例如 QA）
+         */
+        window.BOX_INV_CONFIG = {
+            API_BASE_URL: "https://script.google.com/macros/s/AKfycbzR14k1VbuOAbZlM0DGGQ3-ElcEhmLPCSfN5snzu4TH1k_pjw7-AaqzAiqfYsBtfC8omQ/exec",
+            SHEET_NAME: "QA"
+        };
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -661,7 +672,7 @@
                     </div>
                     <p class="err" id="result-error" hidden></p>
                 </div>
-                <p class="config-note">API 須支援 JSONP、<code>list=1</code> 與 <code>append=1</code>（見 <code>box-inventory-spa.appscript.gs</code>）。試算表分頁名稱須為 <code>QA</code>。若明明有資料卻顯示空白：請將<strong>整份</strong> gs 貼入 Apps Script 後，在「部署 → 管理部署」<strong>新增版本並重新部署</strong>（僅儲存檔案不會更新線上網址）。獨立腳本請設定指令碼屬性 <code>SPREADSHEET_ID</code>。</p>
+                <p class="config-note">API 須支援 JSONP、<code>list=1</code> 與 <code>append=1</code>（見 <code>box-inventory-spa.appscript.gs</code>）。試算表分頁名稱須為 <code data-sheet-name>QA</code>。若明明有資料卻顯示空白：請將<strong>整份</strong> gs 貼入 Apps Script 後，在「部署 → 管理部署」<strong>新增版本並重新部署</strong>（僅儲存檔案不會更新線上網址）。獨立腳本請設定指令碼屬性 <code>SPREADSHEET_ID</code>。</p>
             </section>
 
             <section class="card" aria-labelledby="title-query-combined">
@@ -725,7 +736,7 @@
                     <div class="loading-track" role="progressbar" aria-busy="true"><div class="loading-track-fill"></div></div>
                 </div>
                 <p id="qr-sync-msg" class="hint" hidden style="margin-top:8px;"></p>
-                <p class="hint">列印／下載仍以約 <strong>5cm×5cm</strong> 排版；螢幕上可調 QR 像素僅影響清晰度。QR 內僅編碼<strong>箱子編號</strong>（<code>homeqr:</code> JSON）；掃描後會依編號自試算表載入內容物到查詢結果區。貼標上的內容物文字僅供人眼閱讀，不寫入 QR。舊版曾把內文編入 QR 者仍可掃描。成功後寫入試算表 <code>QA</code>。</p>
+                <p class="hint">列印／下載仍以約 <strong>5cm×5cm</strong> 排版；螢幕上可調 QR 像素僅影響清晰度。QR 內僅編碼<strong>箱子編號</strong>（<code>homeqr:</code> JSON）；掃描後會依編號自試算表載入內容物到查詢結果區。貼標上的內容物文字僅供人眼閱讀，不寫入 QR。舊版曾把內文編入 QR 者仍可掃描。成功後寫入試算表 <code data-sheet-name>QA</code>。</p>
             </section>
 
             <section class="card qr-batch-block" aria-labelledby="title-qr-batch">
@@ -765,8 +776,9 @@
 
     <script>
 (function () {
-    /** 請改為你的 GAS Web App 部署網址（結尾 /exec） */
-    var API_BASE_URL = "https://script.google.com/macros/s/AKfycbzR14k1VbuOAbZlM0DGGQ3-ElcEhmLPCSfN5snzu4TH1k_pjw7-AaqzAiqfYsBtfC8omQ/exec";
+    var USER_CFG = window.BOX_INV_CONFIG || {};
+    var API_BASE_URL = String(USER_CFG.API_BASE_URL || "").trim();
+    var SHEET_NAME = String(USER_CFG.SHEET_NAME || "QA").trim() || "QA";
 
     var HOMEQR_PREFIX = "homeqr:";
 
@@ -782,6 +794,12 @@
     var scanHandled = false;
 
     function $(id) { return document.getElementById(id); }
+
+    function applySheetNameToUi() {
+        document.querySelectorAll("[data-sheet-name]").forEach(function (el) {
+            el.textContent = SHEET_NAME;
+        });
+    }
 
     function showResultLoading(msg) {
         hideLabelBlock();
@@ -821,6 +839,7 @@
 
     $("tab-query").addEventListener("click", function () { switchTab("query"); });
     $("tab-qr").addEventListener("click", function () { switchTab("qr"); });
+    applySheetNameToUi();
 
     /**
      * Google Apps Script 跨網域：以 JSONP 取得 JSON（需後端支援 callback 參數）
@@ -834,10 +853,12 @@
                 if (s && s.parentNode) s.parentNode.removeChild(s);
                 resolve(data);
             };
+            var req = Object.assign({}, params || {});
+            if (!req.sheet) req.sheet = SHEET_NAME;
             var q = [];
-            Object.keys(params).forEach(function (k) {
-                if (params[k] != null && params[k] !== "") {
-                    q.push(encodeURIComponent(k) + "=" + encodeURIComponent(params[k]));
+            Object.keys(req).forEach(function (k) {
+                if (req[k] != null && req[k] !== "") {
+                    q.push(encodeURIComponent(k) + "=" + encodeURIComponent(req[k]));
                 }
             });
             q.push("callback=" + encodeURIComponent(cbName));
@@ -1821,7 +1842,7 @@
         return [];
     }
 
-    /** 試算表 QA 是否已有此箱子編號（A 欄至少一列相符） */
+    /** 試算表（SHEET_NAME）是否已有此箱子編號（A 欄至少一列相符） */
     function boxIdAlreadyExists(boxId) {
         if (inventoryListFetchDone) {
             return Promise.resolve(findRowByBoxId(boxId) != null);
@@ -1841,7 +1862,7 @@
             hideQrWriteLoading();
             msg.hidden = false;
             if (data && data.ok === true) {
-                msg.textContent = "已寫入試算表 QA：A=" + boxId + "，B=" + (note.length > 24 ? note.slice(0, 24) + "…" : note);
+                msg.textContent = "已寫入試算表 " + SHEET_NAME + "：A=" + boxId + "，B=" + (note.length > 24 ? note.slice(0, 24) + "…" : note);
                 msg.style.color = "#15803d";
                 refreshSheetCacheFromServer().catch(function () {});
             } else {
