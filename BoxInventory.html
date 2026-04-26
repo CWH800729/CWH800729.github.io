@@ -742,7 +742,7 @@
             <section class="card qr-batch-block" aria-labelledby="title-qr-batch">
                 <h2 id="title-qr-batch"><i class="fas fa-file-archive"></i> 批次匯出 QR（備份／列印）</h2>
                 <hr class="divider">
-                <p class="hint" style="margin-top:0">使用與查詢分頁相同的試算表清單；可<strong>單張下載</strong> 5cm 貼標，或將<strong>所選全部拼成一張 PNG</strong>（含虛線裁切格線），列印後自行裁切即可。</p>
+                <p class="hint" style="margin-top:0">使用與查詢分頁相同的試算表清單；可<strong>單張下載</strong> 5cm 貼標，或將<strong>所選全部拼成 PNG</strong>（含虛線裁切格線）。每頁固定為 A4 版面、最多 20 張（4×5）；超過會自動分頁，且各頁 QR 尺寸一致。</p>
                 <div class="btn-row qr-batch-toolbar">
                     <button type="button" class="btn btn-secondary" id="btn-qr-batch-reload"><i class="fas fa-rotate"></i> 重新載入清單</button>
                     <button type="button" class="btn btn-secondary" id="btn-qr-batch-all"><i class="fas fa-check-double"></i> 全選</button>
@@ -1511,70 +1511,94 @@
             return !isNaN(n);
         });
         var showNote = $("f-qr-batch-show-note").checked;
-        var COLS = 2;
-        var MARGIN = 24;
-        var GUTTER = 16;
+        var COLS = 4;
+        var ROWS_PER_PAGE = 5;
+        var GUTTER = 0;
         var CELL = labelCellPx();
-        var n = indices.length;
-        var rows = Math.ceil(n / COLS);
-        var cols = COLS;
-        var sheetW = MARGIN * 2 + cols * CELL + (cols - 1) * GUTTER;
-        var sheetH = MARGIN * 2 + rows * CELL + (rows - 1) * GUTTER;
-
-        var sheet = document.createElement("canvas");
-        sheet.width = sheetW;
-        sheet.height = sheetH;
-        var sctx = sheet.getContext("2d");
-        sctx.fillStyle = "#ffffff";
-        sctx.fillRect(0, 0, sheetW, sheetH);
-
-        var i = 0;
+        var A4_PX_W = Math.round((21 * 96) / 2.54);
+        var A4_PX_H = Math.round((29.7 * 96) / 2.54);
+        var gridW = COLS * CELL + (COLS - 1) * GUTTER;
+        var gridH = ROWS_PER_PAGE * CELL + (ROWS_PER_PAGE - 1) * GUTTER;
+        var MARGIN_X = Math.max(0, Math.floor((A4_PX_W - gridW) / 2));
+        var MARGIN_Y = Math.max(0, Math.floor((A4_PX_H - gridH) / 2));
+        var perPage = Math.max(1, COLS * ROWS_PER_PAGE);
+        var pageGroups = [];
+        for (var gi = 0; gi < indices.length; gi += perPage) {
+            pageGroups.push(indices.slice(gi, gi + perPage));
+        }
+        var pageNo = 0;
+        var totalPages = pageGroups.length;
+        var processedOverall = 0;
+        var totalOverall = indices.length;
 
         function fail(err, bid) {
             $("qr-batch-progress").hidden = true;
             showQrBatchErr((bid || "") + "：" + (err && err.message ? err.message : String(err)));
         }
 
-        function step() {
-            if (i >= n) {
+        function renderNextPage() {
+            if (pageNo >= totalPages) {
                 $("qr-batch-progress").hidden = true;
-                downloadDataUrlPng(
-                    sheet.toDataURL("image/png"),
-                    "box-qr-collage-" + new Date().toISOString().slice(0, 10) + ".png"
-                );
                 return;
             }
-            var idx = indices[i];
-            var row = inventoryRowsForQr[idx];
-            if (!row) {
-                i += 1;
-                setTimeout(step, 0);
-                return;
-            }
-            var note = itemsJoinNote(row.items);
-            $("qr-batch-progress").hidden = false;
-            $("qr-batch-progress").textContent = "拼貼中 " + (i + 1) + "/" + n + "…";
-            makeQrLabelDataUrl(row.boxId, note, showNote, BATCH_EXPORT_QR_PX).then(function (url) {
-                var im = new Image();
-                im.onload = function () {
-                    var slot = i;
-                    var rr = Math.floor(slot / cols);
-                    var cc = slot % cols;
-                    var x = MARGIN + cc * (CELL + GUTTER);
-                    var y = MARGIN + rr * (CELL + GUTTER);
-                    sctx.drawImage(im, x, y);
+            var pageIndices = pageGroups[pageNo];
+            var n = pageIndices.length;
+            var sheetW = A4_PX_W;
+            var sheetH = A4_PX_H;
+
+            var sheet = document.createElement("canvas");
+            sheet.width = sheetW;
+            sheet.height = sheetH;
+            var sctx = sheet.getContext("2d");
+            sctx.fillStyle = "#ffffff";
+            sctx.fillRect(0, 0, sheetW, sheetH);
+
+            var i = 0;
+
+            function stepPage() {
+                if (i >= n) {
+                    var base = "box-qr-collage-" + new Date().toISOString().slice(0, 10);
+                    var filename = totalPages > 1 ? (base + "-p" + (pageNo + 1) + ".png") : (base + ".png");
+                    downloadDataUrlPng(sheet.toDataURL("image/png"), filename);
+                    pageNo += 1;
+                    setTimeout(renderNextPage, 220);
+                    return;
+                }
+                var idx = pageIndices[i];
+                var row = inventoryRowsForQr[idx];
+                if (!row) {
                     i += 1;
-                    setTimeout(step, 0);
-                };
-                im.onerror = function () {
-                    fail(new Error("無法載入貼標圖"), row.boxId);
-                };
-                im.src = url;
-            }).catch(function (err) {
-                fail(err, row.boxId);
-            });
+                    processedOverall += 1;
+                    setTimeout(stepPage, 0);
+                    return;
+                }
+                var note = itemsJoinNote(row.items);
+                $("qr-batch-progress").hidden = false;
+                $("qr-batch-progress").textContent = "拼貼中（第 " + (pageNo + 1) + "/" + totalPages + " 張）" + (processedOverall + 1) + "/" + totalOverall + "…";
+                makeQrLabelDataUrl(row.boxId, note, showNote, BATCH_EXPORT_QR_PX).then(function (url) {
+                    var im = new Image();
+                    im.onload = function () {
+                        var slot = i;
+                        var rr = Math.floor(slot / COLS);
+                        var cc = slot % COLS;
+                        var x = MARGIN_X + cc * (CELL + GUTTER);
+                        var y = MARGIN_Y + rr * (CELL + GUTTER);
+                        sctx.drawImage(im, x, y);
+                        i += 1;
+                        processedOverall += 1;
+                        setTimeout(stepPage, 0);
+                    };
+                    im.onerror = function () {
+                        fail(new Error("無法載入貼標圖"), row.boxId);
+                    };
+                    im.src = url;
+                }).catch(function (err) {
+                    fail(err, row.boxId);
+                });
+            }
+            stepPage();
         }
-        step();
+        renderNextPage();
     }
 
     function loadInitialInventoryList() {
