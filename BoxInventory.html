@@ -13,7 +13,7 @@
          * SHEET_NAME:   要讀寫的工作表名稱（例如 QA）
          */
         window.BOX_INV_CONFIG = {
-            API_BASE_URL: "https://script.google.com/macros/s/AKfycbyZ_9zUjZ8d_3OFAkepbbTlnFMXF_vej_wu3fxNhDI7YObYQ4R9yXm6INVn7yxMHMGY8A/exec",
+            API_BASE_URL: "https://script.google.com/macros/s/AKfycbwBgkuGO_l4yyIJwfA9vgP2vPbcxn6JnPGmwnkDYnXteC4qju5LD72cWRR_1SP70xsU_w/exec",
             SHEET_NAME: "QA"
         };
     </script>
@@ -768,7 +768,7 @@
                 <h2 id="inv-modal-title">試算表清單</h2>
                 <button type="button" class="inv-modal-close" id="btn-inv-modal-close" aria-label="關閉">×</button>
             </div>
-            <p class="inv-modal-hint">搜尋框可篩選箱子編號或內容物文字。</p>
+            <p class="inv-modal-hint">搜尋框可篩選清單文字。顯示欄位／欄數可由試算表「設定setting」分頁控制。</p>
             <input type="search" id="inv-modal-search" placeholder="搜尋箱子或內容…" autocomplete="off">
             <div id="inv-modal-body" class="inv-modal-body"></div>
         </div>
@@ -786,6 +786,11 @@
 
     /** 與查詢分頁同步，供「批次匯出」勾選 */
     var inventoryRowsForQr = [];
+    /** 試算表清單顯示（table=1）用：欄位名稱與列資料 */
+    var inventoryModalHeaders = [];
+    var inventoryModalRows = [];
+    /** 清單每列顯示幾欄（可由設定setting 的 list_grid_columns 覆蓋） */
+    var inventoryModalGridCols = 2;
     /** 第一次 list=1 完成前，清單浮層顯示載入中 */
     var inventoryListFetchDone = false;
 
@@ -1054,6 +1059,62 @@
         }
         var term = ($("inv-modal-search") && $("inv-modal-search").value || "").trim().toLowerCase();
         body.innerHTML = "";
+        var useTableMode = inventoryModalHeaders.length > 0 && inventoryModalRows.length > 0;
+        if (useTableMode) {
+            var tableRows = inventoryModalRows.slice();
+            if (term) {
+                tableRows = tableRows.filter(function (r) {
+                    return inventoryModalHeaders.some(function (h) {
+                        return String(r[h] == null ? "" : r[h]).toLowerCase().indexOf(term) >= 0;
+                    });
+                });
+            }
+            if (tableRows.length === 0) {
+                var p0 = document.createElement("p");
+                p0.className = "hint";
+                p0.style.textAlign = "center";
+                p0.style.margin = "16px 0";
+                p0.textContent = inventoryModalRows.length === 0 ? "試算表尚無箱子資料。" : "沒有符合搜尋的項目。";
+                body.appendChild(p0);
+                return;
+            }
+            var headerLine = document.createElement("div");
+            headerLine.className = "result-row-line";
+            headerLine.style.display = "grid";
+            headerLine.style.gridTemplateColumns = "repeat(" + Math.max(1, inventoryModalGridCols) + ", minmax(0, 1fr))";
+            inventoryModalHeaders.forEach(function (h) {
+                var hd = document.createElement("div");
+                hd.className = "result-col-body";
+                hd.style.fontWeight = "800";
+                hd.style.color = "#0f172a";
+                hd.style.whiteSpace = "normal";
+                hd.textContent = h;
+                headerLine.appendChild(hd);
+            });
+            body.appendChild(headerLine);
+
+            tableRows.forEach(function (row) {
+                var line = document.createElement("div");
+                line.className = "result-row-line";
+                line.style.display = "grid";
+                line.style.gridTemplateColumns = "repeat(" + Math.max(1, inventoryModalGridCols) + ", minmax(0, 1fr))";
+                inventoryModalHeaders.forEach(function (h) {
+                    var cbody = document.createElement("div");
+                    cbody.className = "result-col-body";
+                    var val = String(row[h] == null ? "" : row[h]);
+                    if (val.trim() === "") {
+                        cbody.textContent = "（空白）";
+                        cbody.style.color = "#94a3b8";
+                    } else {
+                        setTextWithLinks(cbody, val);
+                    }
+                    line.appendChild(cbody);
+                });
+                body.appendChild(line);
+            });
+            return;
+        }
+
         var rows = inventoryRowsForQr.slice();
         if (term) {
             rows = rows.filter(function (r) {
@@ -1090,6 +1151,28 @@
             line.appendChild(cid);
             line.appendChild(cbody);
             body.appendChild(line);
+        });
+    }
+
+    /** 讀取 table=1：清單欄位與列資料（由 GAS 的 設定setting 分頁控制） */
+    function refreshInventoryTableFromServer() {
+        return apiJsonp({ table: "1", _: String(Date.now()) }).then(function (data) {
+            if (!data || !Array.isArray(data.headers) || !Array.isArray(data.rows)) {
+                inventoryModalHeaders = [];
+                inventoryModalRows = [];
+                inventoryModalGridCols = 2;
+                return;
+            }
+            inventoryModalHeaders = data.headers.slice();
+            inventoryModalRows = data.rows.slice();
+            var n = parseInt(data.list_grid_columns, 10);
+            if (!isNaN(n) && n > 0) {
+                inventoryModalGridCols = n;
+            }
+        }).catch(function () {
+            inventoryModalHeaders = [];
+            inventoryModalRows = [];
+            inventoryModalGridCols = 2;
         });
     }
 
@@ -1162,8 +1245,10 @@
         ov.hidden = false;
         ov.setAttribute("aria-hidden", "false");
         inventoryListFetchDone = false;
+        inventoryModalHeaders = [];
+        inventoryModalRows = [];
         renderInventoryModalBody();
-        refreshSheetCacheFromServer()
+        Promise.all([refreshSheetCacheFromServer(), refreshInventoryTableFromServer()])
             .then(function () {
                 clearError();
             })
